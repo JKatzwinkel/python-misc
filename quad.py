@@ -1,5 +1,6 @@
 #!/usr/bin/python
 import os
+from random import randrange as rnd
 
 _names=[]
 _diskusage={}
@@ -138,7 +139,7 @@ def table_vertical(items, full, level, attributes=''):
 def tableh(dirname, level):
 	items = largest(dirname)
 	directory = items.pop(0)
-	print indent(level)+'<table height="100%" class="namespace">'
+	print indent(level)+'<table height="100%" class="namespace" dir={0}>'.format(['RTL', 'LTR'][rnd(2)])
 	#print indent(level+1)+'<caption>{0}</caption>'.format(directory[0].split(os.sep)[-1])
 	size = directory[2]
 	full = size
@@ -198,7 +199,7 @@ print '''<!doctype html>
 			color: #A33;
 		}
 		td:hover {
-			background-color: #EDF;
+			background-color: white;
 		}
 		tr {
 			background-color: #FCD;
@@ -211,16 +212,19 @@ print '''<!doctype html>
 			background-color: #DFD;
 			margin:0px;
 		}
-		table.namespace {
-			background-color: #BBF;
-		}
 		table:hover {
-			background-color: #ADA;
+			background-color: #AFA;
+		}
+		table.namespace {
+			background-color: #99D;
+		}
+		table.namespace:hover {
+			background-color: #C0C0FF;
 		}
 	</style>
 </head>
 <body>
-<table width="1000" height="800">
+<table width="800" height="600">
 <tr><td>'''
 # print table_horizontal(largest('.'), 
 #tagg(largest('.'))
