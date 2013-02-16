@@ -134,6 +134,44 @@ def table_vertical(items, full, level, attributes=''):
 	print indent(level+2)+'</td>'
 	print indent(level+1)+'</tr>'
 	print indent(level)+'</table>'
+	
+def tableh(dirname, level):
+	items = largest(dirname)
+	directory = items.pop(0)
+	print indent(level)+'<table height="100%" class="namespace">'
+	#print indent(level+1)+'<caption>{0}</caption>'.format(directory[0].split(os.sep)[-1])
+	size = directory[2]
+	full = size
+	# loop through items / tr/td
+	# each tr contains two td
+	level += 1
+	while len(items)>0:
+		rowspan = int(round(len(items)/2.))
+		item = items.pop(0)
+		size = item[2]
+		print indent(level)+'<tr>'
+		# first td
+		width = size * 100 // full
+		print indent(level+1)+'<td rowspan="{0}" width="{1}%">'.format(rowspan, width)
+		if item[1] == '':
+			tableh(item[0], level+2)
+		else:
+			print indent(level+2)+item[1]
+		print indent(level+1)+'</td>'
+		# second td
+		if len(items) > 0:
+			colspan = int(round(len(items)/2.))
+			item = items.pop(0)
+			size = item[2]
+			height = size * 100 // full
+			print indent(level+1)+'<td colspan="{0}" height="{1}%">'.format(colspan, height)
+			if item[1] == '':
+				tableh(item[0], level+2)
+			else:
+				print indent(level+2)+item[1]
+			print indent(level+1)+'</td>'
+		print indent(level)+'</tr>'
+	print indent(level)+'</table>'
 
 def tagg(items):
 	full = items[0][2]
@@ -185,7 +223,8 @@ print '''<!doctype html>
 <table width="1000" height="800">
 <tr><td>'''
 # print table_horizontal(largest('.'), 
-tagg(largest('.'))
+#tagg(largest('.'))
+tableh('.', 0)
 print '''</td></tr></table>
 </body>
 </html>'''
