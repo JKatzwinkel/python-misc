@@ -5,6 +5,7 @@ from math import log10 as log
 
 _names=[]
 _diskusage={}
+_baseurl = 'https://192.168.178.1/wiki/doku.php?id='
 
 # http://wiki.python.org/moin/HowTo/Sorting/ 
 # http://stackoverflow.com/questions/955941/how-to-identify-whether-a-file-is-normal-file-or-directory-using-python
@@ -80,21 +81,22 @@ def label((path, filename, diskuse), level):
 	else:
 		ns = ':'.join(path.split(os.sep)[1:]+[''])
 		link = '<a href="{0}">{1}</a>'
-		baseurl = 'https://wiki.linie/doku.php?id='
-		href = baseurl + ns + filename
+		href = _baseurl + ns + filename
 		label = filename
-		element = '<font size="{0}">{1}</font>'.format(1+log(diskuse)-1, link.format(href, label))
+		element = '<font size="{0}pt">{1}</font>'.format(log(diskuse)-1, link.format(href, label))
 		print '<span>{0}</span>'.format(filename)
 		print indent(level+2)+element
+
 
 # http://stackoverflow.com/questions/9725836/css-keep-table-cell-from-expanding-and-truncate-long-text
 # http://stackoverflow.com/questions/2736021/super-simple-css-tooltip-in-a-table-why-is-it-not-displaying-and-can-i-make-it
 def tableh(dirname, level):
 	items = largest(dirname)
 	path, filename, size = items.pop(0)
-	print indent(level)+'<table height="100%" class="tooltip" dir="{0}">'.format(['RTL', 'LTR'][level%2])
-	print indent(level+1)+'<span>{0}</span>'.format(dirname.split(os.sep)[-1])
-	#print indent(level+1)+'<caption>{0}</caption>'.format(directory[0].split(os.sep)[-1])
+	print indent(level)+'<table width="100%" height="100%" class="tooltip" dir="{0}">'.format(['RTL', 'LTR'][level%2])
+	namespaces = dirname.split(os.sep)
+	if len(namespaces) > 1:
+		print indent(level+1)+'<span><a href="{0}">{0}</a></span>'.format(namespaces[-1])
 	full = size
 	# loop through items / tr/td
 	# each tr contains two td
@@ -134,14 +136,14 @@ def compute(dirname):
 	partition(dirname)
 
 
+
+scriptname = sys.argv[0]
 if len(sys.argv) < 2:
 	root = '.'
 else:
 	root = sys.argv[1]
 	if not os.path.isdir(root):
 		root = '.'
-	
-	
 _names = resources(root)
 
 print '''<!doctype html>
@@ -159,11 +161,17 @@ print '''<!doctype html>
 			text-overflow: ellipsis;
 			overflow:hidden;
 		}
+		a {
+			color: #3A3;
+			text-decoration: none;
+		}
+		a:visited, a:hover {
+			color: #171;
+		}
 		td:hover {
-			background-color: #DCF;
+			background-color: #F0FFE0;
 		}
 		table {
-			width: 100%;
 			background-color: white;
 			padding: 0px;
 			margin:0px;
@@ -185,9 +193,14 @@ print '''<!doctype html>
 		.tooltip:hover > span {
 			display: block;
 			position: absolute;
+			font-size: 7pt;
 			background-color: #FFF;
 			border: 1px solid #CCC;
-			margin: 2px 10px;
+			margin: 20px 10px;
+		}
+		.tooltip:hover > span a {
+			text-decoration: none;
+			color: #33A;
 		}
 		table:hover[class~=tooltip] > span {
 			background-color: #FDD;
@@ -195,12 +208,13 @@ print '''<!doctype html>
 	</style>
 </head>
 <body>
-<table width="800" height="600">
+<div width="100%" height="600" align="center">'''
+print '<h3>Namespace {0}</h4>'.format(root)
+print '''<table width="800" height="600">
 <tr><td>'''
-# print table_horizontal(largest('.'), 
-#tagg(largest('.'))
 tableh(root, 0)
 print '''</td></tr></table>
+</div>
 </body>
 </html>'''
 	
