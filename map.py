@@ -7,6 +7,7 @@ from math import log10 as log
 _names=[]
 _diskusage={}
 _baseurl = 'https://192.168.178.1/wiki/doku.php?id='
+_documentroot = '/var/lib/dokuwiki/data/pages'
 
 # http://wiki.python.org/moin/HowTo/Sorting/ 
 # http://stackoverflow.com/questions/955941/how-to-identify-whether-a-file-is-normal-file-or-directory-using-python
@@ -20,6 +21,7 @@ def is_subdir(dirname, entry):
 			return len(entry[0].split(dirname+os.sep)[1].split(os.sep)) is 1
 	return False
 
+
 def largest(dirname):
 	return filter(lambda x:x[0] == dirname or is_subdir(dirname, x), _names)
 
@@ -31,6 +33,10 @@ def disk_usage(path):
 		return os.path.getsize(path)
 
 
+def relpath(dirname):
+	return os.path.relpath(dirname, _documentroot)
+
+
 def resources(dirname):
 	results=[]
 	if not os.path.isdir(dirname):
@@ -40,16 +46,16 @@ def resources(dirname):
 		du = 0 
 		# disk usage of sub directories
 		for sd in subdirs:
-			filesize = disk_usage(os.path.join(dirname, sd))
+			filesize = disk_usage(os.path.join(relpath(dirname), sd))
 			du += filesize
 		 #disk usage of contained files
 		for fn in filter(lambda x:x.endswith('.txt'), files):
 			filesize = disk_usage(os.path.join(dirname, fn))
 			du += filesize
-			results.append((dirname, fn.split('.txt')[0], filesize))
-		results.append((dirname, '', du+1))
+			results.append((relpath(dirname), fn.split('.txt')[0], filesize))
+		results.append((relpath(dirname), '', du+1))
 		# save directory disk use in dictionary
-		_diskusage[dirname] = du+1
+		_diskusage[relpath(dirname)] = du+1
 	return sorted(results, key=lambda x:x[2], reverse=True)
 
 
@@ -92,6 +98,7 @@ def label((path, filename, diskuse), level):
 # http://stackoverflow.com/questions/9725836/css-keep-table-cell-from-expanding-and-truncate-long-text
 # http://stackoverflow.com/questions/2736021/super-simple-css-tooltip-in-a-table-why-is-it-not-displaying-and-can-i-make-it
 def tableh(dirname, level):
+	
 	items = largest(dirname)
 	path, filename, size = items.pop(0)
 	print indent(level)+'<table width="100%" height="100%" class="tooltip" dir="{0}">'.format(['RTL', 'LTR'][level%2])
@@ -132,6 +139,7 @@ def tableh(dirname, level):
 		print indent(level)+'</tr>'
 	print indent(level)+'</table>'
 
+
 def compute(dirname):
 	_names = resources(dirname)
 	partition(dirname)
@@ -139,11 +147,13 @@ def compute(dirname):
 
 
 fields = cgi.FieldStorage()
-root = fields.get('index', default='.')
+root = fields.get('index', default='')
 
-_names = resources(root)
+_names = resources(os.path.join(_documentroot, root))
 
-print '''<!doctype html>
+print '''print "Content-Type: text/html
+
+<!doctype html>
 <head>
 	<style type="text/css">
 		td {
