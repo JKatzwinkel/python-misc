@@ -1,11 +1,10 @@
 #!/usr/bin/python
 import os
-from random import randrange as rnd
+import sys
 from math import log10 as log
 
 _names=[]
 _diskusage={}
-_depth=40
 
 # http://wiki.python.org/moin/HowTo/Sorting/ 
 # http://stackoverflow.com/questions/955941/how-to-identify-whether-a-file-is-normal-file-or-directory-using-python
@@ -22,14 +21,14 @@ def is_subdir(dirname, entry):
 def largest(dirname):
 	return filter(lambda x:x[0] == dirname or is_subdir(dirname, x), _names)
 
-	
+
 def disk_usage(path):
 	if os.path.isdir(path):
 		return _diskusage.get(path, 0)
 	else:
 		return os.path.getsize(path)
-		
-	
+
+
 def resources(dirname):
 	results=[]
 	if not os.path.isdir(dirname):
@@ -50,8 +49,8 @@ def resources(dirname):
 		# save directory disk use in dictionary
 		_diskusage[dirname] = du+1
 	return sorted(results, key=lambda x:x[2], reverse=True)
-	
-	
+
+
 def partition(dirname, level=0):
 	partitions = largest(dirname)
 	if len(partitions) < 1:
@@ -70,74 +69,11 @@ def partition(dirname, level=0):
 			print " "*(level+1), part[1], 100*size/full
 		full -= size		
 
+
 def indent(level):
 	return '  '*level
-	
 
-def table_horizontal(items, full, level, attributes=''):
-	if len(items) < 1:
-		return
-	if len(items) < 2:
-		if items[0][0] != '':
-			print indent(level)+items[0][1]
-			return
-	print indent(level)+'<table width="100%" height="100%" {0}>'.format(attributes)
-	print indent(level+1)+'<tr>'
-	size = items[0][2]
-	print indent(level+2)+'<td width="{}%">'.format(size * 100 // full)
-	if items[0][1] == '':
-		if level < _depth:
-			sub_items = largest(items[0][0])
-			table_vertical(sub_items[1:], sub_items[0][2], level+3, attributes='class="namespace"')
-		else:
-			print indent(level+3)+items[0][0]
-	else:
-		print indent(level+3)+items[0][1]
-	print indent(level+2)+'</td>'
-	print indent(level+2)+'<td>'
-	if level < _depth:
-		table_vertical(items[1:], full - size, level+3)
-	else:
-		pass
-		#print indent(level+3)+items[1][1]
-	print indent(level+2)+'</td>'
-	print indent(level+1)+'</tr>'
-	print indent(level)+'</table>'
-	
-	
-def table_vertical(items, full, level, attributes=''):
-	if len(items) < 1:
-		return
-	if len(items) < 2:
-		if items[0][0] != '':
-			print indent(level)+items[0][1]
-			return
-	print indent(level)+'<table width="100%" height="100%" {0}>'.format(attributes)
-	size = items[0][2]
-	print indent(level+1)+'<tr height="{}%">'.format(size * 100 // full)
-	print indent(level+2)+'<td>'
-	if items[0][1] == '':
-		if level < _depth:
-			sub_items = largest(items[0][0])
-			table_horizontal(sub_items[1:], sub_items[0][2], level+3, attributes='class="namespace"')
-		else:
-			print indent(level+3)+items[0][0]
-	else:
-		print indent(level+3)+items[0][1]
-	print indent(level+2)+'</td>'
-	print indent(level+1)+'</tr>'
-	print indent(level+1)+'<tr>'
-	print indent(level+2)+'<td>'
-	if level < _depth:
-		table_horizontal(items[1:], full - size, level+3)
-	else:
-		pass
-		#print indent(level+3)+items[1][1]
-	print indent(level+2)+'</td>'
-	print indent(level+1)+'</tr>'
-	print indent(level)+'</table>'
-	
-	
+
 def label((path, filename, diskuse), level):
 	if filename == '':
 		tableh(path, level+2)
@@ -193,20 +129,20 @@ def tableh(dirname, level):
 		print indent(level)+'</tr>'
 	print indent(level)+'</table>'
 
-
-def tagg(items):
-	full = items[0][2]
-	table_horizontal(items[1:], full, 0)
-
 def compute(dirname):
 	_names = resources(dirname)
 	partition(dirname)
 
-_names = resources('.')
-#for t in _names:
-#	print t
 
-			#border-collapse:collapse;
+if len(sys.argv) < 2:
+	root = '.'
+else:
+	root = sys.argv[1]
+	if not os.path.isdir(root):
+		root = '.'
+	
+	
+_names = resources(root)
 
 print '''<!doctype html>
 <head>
@@ -263,7 +199,7 @@ print '''<!doctype html>
 <tr><td>'''
 # print table_horizontal(largest('.'), 
 #tagg(largest('.'))
-tableh('.', 0)
+tableh(root, 0)
 print '''</td></tr></table>
 </body>
 </html>'''
