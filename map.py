@@ -17,8 +17,12 @@ def is_subdir(namespace, entry):
 	# entry is subdirectory if and only if no separators remain
 	# after removing prepending higher directory path
 	if entry[1] == '':
+		if namespace==':':
+			namespace=''
+			if not entry[0].startswith(':'):
+				entry[0] = ':'+entry[0]
 		if entry[0].startswith(namespace+':'):
-			return len(entry[0].split(namespace+':')[1].split(':')) is 1
+			return len(':'.join(entry[0].split(namespace+':')[1:]).split(':')) is 1
 	return False
 
 
@@ -150,10 +154,9 @@ def compute(dirname):
 	partition(dirname)
 
 
-
 fields = cgi.FieldStorage()
 try:
-	root = fields["id"].value
+	root = 'orga:kredite:newsletter'
 	namespaces = root.split(':')
 	if len(namespaces) > 2:
 		if namespaces[0] == '':
@@ -233,7 +236,7 @@ print '''Content-Type: text/html
 print '<h3>Namespace {0} ({1})</h4>'.format(root, path)
 print '''<table width="800" height="600">
 <tr><td>'''
-tableh('', 0)
+tableh(':'+root, 0)
 print '''</td></tr></table>
 </div>
 </body>
