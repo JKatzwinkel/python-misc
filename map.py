@@ -13,12 +13,12 @@ _documentroot = '/var/lib/dokuwiki/data/pages'
 # http://stackoverflow.com/questions/955941/how-to-identify-whether-a-file-is-normal-file-or-directory-using-python
 # http://stackoverflow.com/questions/1392413/calculating-a-directory-size-using-python
 
-def is_subdir(dirname, entry):
-	# entry is subdirectory if and only if no file seperators remain
+def is_subdir(namespace, entry):
+	# entry is subdirectory if and only if no separators remain
 	# after removing prepending higher directory path
 	if entry[1] == '':
-		if entry[0].startswith(dirname+os.sep):
-			return len(entry[0].split(dirname+os.sep)[1].split(os.sep)) is 1
+		if entry[0].startswith(namespace+':'):
+			return len(entry[0].split(namespace+':')[1].split(':')) is 1
 	return False
 
 
@@ -34,7 +34,10 @@ def disk_usage(path):
 
 
 def relpath(dirname):
-	return os.path.relpath(dirname, _documentroot)
+	res = os.path.relpath(dirname, _documentroot)
+	if res == '.':
+		return ':'
+	return ':'.join(['']+res.split(os.sep))
 
 
 def resources(dirname):
@@ -46,16 +49,16 @@ def resources(dirname):
 		du = 0 
 		# disk usage of sub directories
 		for sd in subdirs:
-			filesize = disk_usage(os.path.join(relpath(dirname), sd))
+			filesize = disk_usage(os.path.join(dirname, sd))
 			du += filesize
 		 #disk usage of contained files
 		for fn in filter(lambda x:x.endswith('.txt'), files):
 			filesize = disk_usage(os.path.join(dirname, fn))
 			du += filesize
-			results.append((relpath(dirname), fn.split('.txt')[0], filesize))
-		results.append((relpath(dirname), '', du+1))
+			results.append( (relpath(dirname), fn.split('.txt')[0], filesize) )
+		results.append( (relpath(dirname), '', du+1) )
 		# save directory disk use in dictionary
-		_diskusage[relpath(dirname)] = du+1
+		_diskusage[dirname] = du+1
 	return sorted(results, key=lambda x:x[2], reverse=True)
 
 
@@ -86,7 +89,7 @@ def label((path, filename, diskuse), level):
 	if filename == '':
 		tableh(path, level+2)
 	else:
-		ns = ':'.join(path.split(os.sep)[1:]+[''])
+		ns = ':'.join(path.split(':')[1:]+[''])
 		link = '<a href="{0}">{1}</a>'
 		href = _baseurl + ns + filename
 		label = filename
@@ -98,13 +101,15 @@ def label((path, filename, diskuse), level):
 # http://stackoverflow.com/questions/9725836/css-keep-table-cell-from-expanding-and-truncate-long-text
 # http://stackoverflow.com/questions/2736021/super-simple-css-tooltip-in-a-table-why-is-it-not-displaying-and-can-i-make-it
 def tableh(dirname, level):
-	
 	items = largest(dirname)
+	if len(items) < 1:
+		return
 	path, filename, size = items.pop(0)
 	print indent(level)+'<table width="100%" height="100%" class="tooltip" dir="{0}">'.format(['RTL', 'LTR'][level%2])
-	namespaces = dirname.split(os.sep)
+	namespaces = dirname.split(':')
 	if len(namespaces) > 1:
-		print indent(level+1)+'<span><a href="{0}">{0}</a></span>'.format(namespaces[-1])
+		print indent(level+1)+'<span><a href="{1}">{0}</a></span>'.format(namespaces[-1],
+			'map.py?id='+':'.join(namespaces[1:]))
 	full = size
 	# loop through items / tr/td
 	# each tr contains two td
@@ -147,11 +152,20 @@ def compute(dirname):
 
 
 fields = cgi.FieldStorage()
-root = fields.get('index', default='')
+try:
+	root = fields["id"].value
+	namespaces = root.split(':')
+	if len(namespaces) > 2:
+		if namespaces[0] == '':
+			namespaces.pop(0)
+except:
+	root = ''
+	namespaces=[]
 
-_names = resources(os.path.join(_documentroot, root))
+path = os.sep.join(namespaces)
+_names = resources(os.path.join(_documentroot, path))
 
-print '''print "Content-Type: text/html
+print '''Content-Type: text/html
 
 <!doctype html>
 <head>
@@ -216,10 +230,10 @@ print '''print "Content-Type: text/html
 </head>
 <body>
 <div width="100%" height="600" align="center">'''
-print '<h3>Namespace {0}</h4>'.format(root)
+print '<h3>Namespace {0} ({1})</h4>'.format(root, path)
 print '''<table width="800" height="600">
 <tr><td>'''
-tableh(root, 0)
+tableh('', 0)
 print '''</td></tr></table>
 </div>
 </body>
