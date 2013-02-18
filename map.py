@@ -156,7 +156,7 @@ def compute(dirname):
 
 fields = cgi.FieldStorage()
 try:
-	root = 'orga:kredite:newsletter'
+	root = fields['id'].value
 	namespaces = root.split(':')
 	if len(namespaces) > 2:
 		if namespaces[0] == '':
