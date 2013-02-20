@@ -111,7 +111,7 @@ def tableh(dirname, level):
 	path, filename, size = items.pop(0)
 	print indent(level)+'<table width="100%" height="100%" class="tooltip" dir="{0}">'.format(['RTL', 'LTR'][level%2])
 	namespaces = dirname.split(':')
-	if len(namespaces) > 1:
+	if len(namespaces) > 1 and level > 0:
 		print indent(level+1)+'<span><a href="{1}">{0}</a></span>'.format(namespaces[-1],
 			'map.py?id='+':'.join(namespaces[1:]))
 	full = size
@@ -211,10 +211,12 @@ print '''Content-Type: text/html
 		table.namespace:hover {
 			background-color: #C0C0FF;
 		}
-		.tooltip > span {
+		.tooltip > span, 
+		.tooltip > span > a {
 			display: none;
 		}
-		.tooltip:hover > span {
+		.tooltip:hover > span,
+		.tooltip:hover > span > a {
 			display: block;
 			position: absolute;
 			font-size: 7pt;
@@ -226,14 +228,11 @@ print '''Content-Type: text/html
 			text-decoration: none;
 			color: #33A;
 		}
-		table:hover[class~=tooltip] > span {
-			background-color: #FDD;
-		}
 	</style>
 </head>
 <body>
 <div width="100%" height="600" align="center">'''
-print '<h3>Namespace {0} ({1})</h4>'.format(root, path)
+#print '<h3>Namespace {0} ({1})</h4>'.format(root, path)
 print '''<table width="800" height="600">
 <tr><td>'''
 tableh(':'+root, 0)
