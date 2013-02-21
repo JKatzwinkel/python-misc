@@ -22,31 +22,32 @@ _maxdepth = None # max depth within which directories and files are display cand
 # Print help message
 def print_help():
 	#TODO: implement options for height/width of computed HTML table
-	print '{0} <directory> [OPTIONS] [<glob>]'.format(sys.argv[0])
+	print 'USAGE:'
+	print '	{0} <directory> [OPTIONS] [<glob>]'.format(sys.argv[0])
 	print '''
-	OPTIONS:
-			-a, --all
-					Display hidden files.
+OPTIONS:
+	-a, --all
+		Display hidden files.
 
-			-o, --output <file>
-					Instead of printing to STDOUT, save output to file.
+	-o, --output <file>
+		Instead of printing to STDOUT, save output to file.
 
-			-d, --delimiter C
-					When using paths in hyperlinks, replace the system's file separator with
-					custom delimiter C.
+	-d, --delimiter C
+		When using paths in hyperlinks, replace the system's file separator with
+		custom delimiter C.
 
-			-m, --max-depth N
-					Limit displayed content to subdirectories within given depth N.
-					Default is 15.
+	-m, --max-depth N
+		Limit displayed content to subdirectories within given depth N.
+		Default is 15.
 
-			-h, --help
-					Show this help message and quit.
+	-h, --help
+		Show this help message and quit.
 
-			-n, --name <glob>
-					Supplies a Unix shell-style wildcard expression (e.g. *.txt)
-					that determines which files will be represented in HTML output.
-					This option is not required for specifying file name patterns.
-					Wildcard expressions may be listed as sole arguments as well.
+	-n, --name <glob>
+		Supplies a Unix shell-style wildcard expression (e.g. *.txt)
+		that determines which files will be represented in HTML output.
+		This option is not required for specifying file name patterns.
+		Wildcard expressions may be listed as sole arguments as well.
 	'''
 
 # Parse command-line arguments
