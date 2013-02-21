@@ -10,7 +10,7 @@ _names=[] # list of contents
 _diskusage={} # computed consumptions of disk space
 _baseurl = '' #'https://192.168.178.1/wiki/doku.php?id=' # prefix URL for links
 _root = '.' # root directory, where visualization recursion begins
-accept = lambda x: False # combined boolean functions for filtering files
+accept = None # combined boolean functions for filtering files
 _globs = [] # list of Unix-shell wildcards, one of which filenames must match
 _delimiter = os.sep # alternative delimiter as replacement for OS filesep
 _out = sys.stdout # output destination
@@ -64,6 +64,7 @@ def read_argv(argv):
 		# remove trailing file separator
 		if _root.endswith(os.sep):
 			_root = _root[:-1]
+		# if path doesn't point to a directory, terminate
 		if not os.path.isdir(_root):
 			print >> sys.stderr, 'Error: not a directory'
 			print >> sys.stderr, 'First argument must specify the directory to work with'
@@ -86,7 +87,7 @@ def read_argv(argv):
 				exit()
 			elif opt in ('-a', '--all'):
 				# accept not only not-hidden files, but all
-				accept = union(accept, all)
+				accept = union(accept, original)
 			elif opt in ('-n', '--name'):
 				# filter filenames, accept only files that match expression
 				# default is '*'
@@ -140,26 +141,26 @@ def filter_fn(entries):
 	return result
 	# return any(map(lambda glob: fnmatch(filename, glob), _globs))
 
-# filter matching visible files, returning function
-only_visibles=lambda p: not p.startswith('.')
+# Boolean function acting as a filter matching visible files
+is_visible=lambda p: not p.startswith('.')
 
-# check on every directory occuring in a path for hidden name
-visible_path=lambda x: not any([p.startswith('.') for p in x.split(os.sep)[1:]])
+# Boolean function, checking on every directory occuring in a path for hidden name
+is_path_visible=lambda x: not any([p.startswith('.') for p in x.split(os.sep)[1:]])
 
 # Filters a [(dir, subdirs[], files[]), ...] list like os.walk() returns
 # Filters hidden files/directories from an os.walk()-style result set.
 def filter_hidden(entries):
 	result = []
 	#dirs_visible = filter(lambda entry: not entry[0].startswith(_root+os.sep+'.'), entries)
-	dirs_visible = filter(lambda e: visible_path(e[0]), entries)
+	dirs_visible = filter(lambda e: is_path_visible(e[0]), entries)
 	for dir, subs, files in dirs_visible:
-		subs_visible = filter(only_visibles, subs)
-		files_visible = filter(only_visibles, files)
+		subs_visible = filter(is_visible, subs)
+		files_visible = filter(is_visible, files)
 		result.append( (dir, subs_visible, files_visible) )
 	return result
 
 # Dummy filter function, returning the same list that is passed as argument
-all = lambda x: [i for i in x]
+original = lambda x: x
 
 # Returns a function that represents the intersection of lists returned by
 # functions f and g. The resulting function will be g(f(x))
@@ -174,7 +175,9 @@ def union(f, g):
 	# return lambda x: f(x) or g(x)
 	# return lambda x: f(x)+g(x)
 	# return lambda x: list(set(f(x)+g(x)))
-	return lambda x: [i for i in set(f(x) + g(x))]
+	return lambda x: list(set(f(x) + g(x)))
+
+
 
 
 
