@@ -68,13 +68,17 @@ def partition(dirname, level=0):
 				print part, dirname
 		else:
 			print " "*(level+1), part[1], 100*size/full
-		full -= size		
+		full -= size
 
 
+# returns a whitespace-only string of a certain length that can be used
+# to indent output
 def indent(level):
 	return '  '*level
 
 
+# format and echo a label for given path, filename, size of disk usage, and
+# indentation level
 def label((path, filename, diskuse), level):
 	if filename == '':
 		tableh(path, level+2)
@@ -209,8 +213,7 @@ print '''<!doctype html>
 </head>
 <body>
 <div width="100%" height="600" align="center">'''
-print '<h3>Namespace {0}</h4>'.format(root)
-print '''<table width="800" height="600">
+print '''<table width="100%" height="600">
 <tr><td>'''
 tableh(root, 0)
 print '''</td></tr></table>
