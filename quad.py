@@ -5,14 +5,14 @@ from math import log10 as log
 from getopt import getopt
 from fnmatch import fnmatch
 
-_names=[]
-_diskusage={}
-_baseurl = 'https://192.168.178.1/wiki/doku.php?id='
-_root = '.'
-accept = filter_hidden
-_glob = '*'
-_delimiter = os.sep
-_out = sys.stdout
+_names=[] # list of contents
+_diskusage={} # computed consumptions of disk space 
+_baseurl = 'https://192.168.178.1/wiki/doku.php?id=' # prefix URL for links
+_root = '.' # root directory, where visualization recursion begins
+accept = filter_hidden # combined boolean functions for filtering files
+_globs = [] # list of Unix-shell wildcards, one of which filenames must match
+_delimiter = os.sep # alternative delimiter as replacement for OS filesep
+_out = sys.stdout # output destination
 
 # http://wiki.python.org/moin/HowTo/Sorting/ 
 # http://stackoverflow.com/questions/955941/how-to-identify-whether-a-file-is-normal-file-or-directory-using-python
@@ -20,28 +20,30 @@ _out = sys.stdout
 
 # Print help message
 def print_help():
-	print '{0} <directory> [OPTIONS] [-n|--name] [<glob>]'.format(sys.argv[0])
+	print '{0} <directory> [OPTIONS] [<glob>]'.format(sys.argv[0])
 	print '''
 	OPTIONS:
 			-a, --all
 					Display hidden files.
 
-			-o, --output
+			-o, --output <file>
 					Instead of printing to STDOUT, save output to file.
 
-			-d, --delimiter
+			-d, --delimiter C
 					When using paths in hyperlinks, replace the system's file separator with
-					custom delimiter.
+					custom delimiter C.
 
-			-m, --max-depth
-					Limit displayed content to subdirectories within given depth.
+			-m, --max-depth N
+					Limit displayed content to subdirectories within given depth N.
 
 			-h, --help
 					Show this help message and quit.
 
-			-n, --name
+			-n, --name <glob>
 					Supplies a Unix shell-style wildcard expression (e.g. *.txt)
-					that determines which files will be represented in HTML output
+					that determines which files will be represented in HTML output.
+					This option is not required for specifying file name patterns.
+					Wildcard expressions may be listed as sole arguments as well.
 	'''
 
 # Parse command-line arguments
@@ -73,7 +75,7 @@ def read_argv():
 				# filter filenames, accept only files that match expression
 				# default is '*'
 				accept = intersect(accept, filter)
-				_glob = arg
+				_globs.append(arg)
 			elif opt in ('-m', '--max-depth'):
 				# assign passed number to _depth (maximum depth to render)
 				_depth = int(arg)
@@ -88,13 +90,18 @@ def read_argv():
 			elif opt in ('-u', '--baseurl'):
 				# pass a URL that hyperlinks in output will be modeled on
 				pass
+		# assume that standalone arguments are meant to be file name wildcards
+		_globs += args
 
 
 
-# Filter those filenames that don't match a given expression
-# Returns True if filename matches expression (which is a glob)
+# Filter those filenames that don't match any of the givens patterns
+# Returns True if filename matches at least one expression
+# These patterns are Unix-shell wildcards, like *.txt.
 def filter(filename):
-	return fnmatch(filename, glob)
+	if len(_globs) < 1:
+		return True
+	return any(map(lmbda glob: fnmatch(filename, glob), _globs))
 
 
 # Method testing file/directory names on starting with a '.'
@@ -127,10 +134,20 @@ def is_child(dirname, entry):
 			return len(entry[0].split(dirname+os.sep)[1].split(os.sep)) is 1
 	return False
 
+
+# For the specified directory, return a list of the contained files ans 
+# immediate subdirectories, sorted by disk space consumption and 
+# beginning with the directory itself, followed by its largest child
 def largest(dirname):
 	return filter(lambda x:x[0] == dirname or is_child(dirname, x), _names)
 
 
+# Return disk space consumption of the resource under the given path.
+# If referencing a directory, the return value is computed by summing up
+# the disk_usage values of the contained resources recursively.
+# (That is, look up in the dictionary that has been populated during
+# the initial bottom-up tree walk in resources())
+# If it is a file, simply return its file size.
 def disk_usage(path):
 	if os.path.isdir(path):
 		return _diskusage.get(path, 0)
@@ -138,6 +155,12 @@ def disk_usage(path):
 		return os.path.getsize(path)
 
 
+# Populates and returns a list of all files and directories found under
+# the given directory, which match the chosen requirements (hidden files
+# yes/no, only files that match Unix wildcards, only files within a 
+# certain depth, ...).
+# The resulting list is sorted by disk space consumption, starting with
+# the largest item.
 def resources(dirname):
 	results=[]
 	if not os.path.isdir(dirname):
@@ -160,6 +183,8 @@ def resources(dirname):
 	return sorted(results, key=lambda x:x[2], reverse=True)
 
 
+# simple recursive function that prints the items collected by resources()
+# as nested list hierarchical tree representation
 def partition(dirname, level=0):
 	partitions = largest(dirname)
 	if len(partitions) < 1:
@@ -224,7 +249,7 @@ def tableh(dirname, level):
 		rowspan = int(round(len(items)/2.))
 		path, filename, size = items.pop(0)
 		print indent(level)+'<tr>'
-		
+
 		# first td
 		covering = size * remainder_h / full
 		remainder_h -= covering
@@ -232,7 +257,7 @@ def tableh(dirname, level):
 		print indent(level+1)+'<td class="tooltip" rowspan="{0}" width="{1}%" height="{2}%">'.format(rowspan, covering, remainder_v)
 		label((path, filename, size), level)
 		print indent(level+1)+'</td>'
-		
+
 		# second td
 		if len(items) > 0:
 			colspan = int(round(len(items)/2.))
@@ -243,7 +268,7 @@ def tableh(dirname, level):
 			print indent(level+1)+'<td class="tooltip" colspan="{0}" width="{2}%" height="{1}%">'.format(colspan, covering, remainder_h)
 			label((path, filename, size), level)
 			print indent(level+1)+'</td>'
-			
+
 		print indent(level)+'</tr>'
 	print indent(level)+'</table>'
 
@@ -252,9 +277,11 @@ def compute(dirname):
 	partition(dirname)
 
 
-#initialize variables, read command-line arguments
+
+# === Begin processing ===
+# initialize variables, read command-line arguments
 read_argv()
-		
+
 # compute list of files and directories, their hierarchy and disk usage amount
 _names = resources(root)
 
