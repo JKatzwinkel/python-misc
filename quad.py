@@ -20,6 +20,9 @@ _maxdepth = 15 # max depth within which directories and files are display candid
 # http://stackoverflow.com/questions/955941/how-to-identify-whether-a-file-is-normal-file-or-directory-using-python
 # http://stackoverflow.com/questions/1392413/calculating-a-directory-size-using-python
 
+
+# ======== USER INPUT SECTION ======== #
+
 # Print help message
 def print_help():
 	#TODO: implement options for height/width of computed HTML table
@@ -55,17 +58,17 @@ OPTIONS:
 def read_argv(argv):
 	# default filename filter allow all but hidden files.
 	accept = filter_hidden
-	# copy reference from global namespace
-	# _globs = globals()['_globs']
 	# Check if there are actually any arguments at all:
 	if len(argv) > 1:
 		_root = argv[1]
+		# remove trailing file separator
+		if _root.endswith(os.sep):
+			_root = _root[:-1]
 		if not os.path.isdir(_root):
 			print >> sys.stderr, 'Error: not a directory'
 			print >> sys.stderr, 'First argument must specify the directory to work with'
 			print_help()
 			exit(2)
-
 		# process through command line arguments
 		# using getopt, because unlike argparse, its in stdlib of Python 2.6.6
 		try:
@@ -113,21 +116,12 @@ def read_argv(argv):
 		globals()['accept'] = accept
 		globals()['_root'] = _root
 
-		#print _globs
-		#print globals()['_globs']
-		#print accept
-		#print globals()['accept']
-		#print _root
-		#print globals()['_root']
 
 
 
 
-# Filters a [(dir, subdirs[], files[]), ...] list like os.walk returns
-# according to the the universal filter options set by user or default
-# (hidden files, filename patterns, ... whatever is combined in accept)
-def accepted(entries):
-	return accept(entries)
+
+# ===== FILE/DIRECTORY FILTERING SECTION ======
 
 # Filter those os.walk()-style triples out off a list
 # that don't match any of the givens patterns
@@ -152,6 +146,7 @@ only_visibles=lambda p: not p.startswith('.')
 # check on every directory occuring in a path for hidden name
 visible_path=lambda x: not any([p.startswith('.') for p in x.split(os.sep)[1:]])
 
+# Filters a [(dir, subdirs[], files[]), ...] list like os.walk() returns
 # Filters hidden files/directories from an os.walk()-style result set.
 def filter_hidden(entries):
 	result = []
@@ -164,7 +159,7 @@ def filter_hidden(entries):
 	return result
 
 # Dummy filter function, returning the same list that is passed as argument
-all = lambda x: filter(True, x)
+all = lambda x: [i for i in x]
 
 # Returns a function that represents the intersection of lists returned by
 # functions f and g. The resulting function will be g(f(x))
@@ -178,10 +173,12 @@ def intersect(f, g):
 def union(f, g):
 	# return lambda x: f(x) or g(x)
 	# return lambda x: f(x)+g(x)
-	return lambda x: list(set(f(x)+g(x)))
+	# return lambda x: list(set(f(x)+g(x)))
+	return lambda x: [i for i in set(f(x) + g(x))]
 
 
 
+# ====== FILE TREE PARSING FUNCTIONS ======
 
 # Returns True if triple entry represents a directory,
 # i.e. looks sth like ('path', '', xL), which is a direct
@@ -194,13 +191,11 @@ def is_child(dirname, entry):
 			return len(entry[0].split(dirname+os.sep)[1].split(os.sep)) is 1
 	return False
 
-
 # For the specified directory, return a list of the contained files ans 
 # immediate subdirectories, sorted by disk space consumption and 
 # beginning with the directory itself, followed by its largest child
 def largest(dirname):
 	return filter(lambda x:x[0] == dirname or is_child(dirname, x), _names)
-
 
 # Return disk space consumption of the resource under the given path.
 # If referencing a directory, the return value is computed by summing up
@@ -214,7 +209,6 @@ def disk_usage(path):
 	else:
 		return os.path.getsize(path)
 
-
 # Populates and returns a list of all files and directories found under
 # the given directory, which match the chosen requirements (hidden files
 # yes/no, only files that match Unix wildcards, only files within a 
@@ -226,11 +220,10 @@ def resources(dirname):
 	# if not a directory, return here
 	if not os.path.isdir(dirname):
 		return results
-
 	# traverse directory tree:
 	# walk bottom-up
 	# http://docs.python.org/2/library/os.html#os.walk
-	for dirname, subdirs, files in accepted(os.walk(dirname, topdown=False)):
+	for dirname, subdirs, files in accept(os.walk(dirname, topdown=False)):
 		# if directory is located deeper in the file hierarchy that allowed by
 		# the command-line argument -m/--max-depth, don't enlist its content,
 		# only sum up disk space used. So, check on nesting depth:
@@ -288,11 +281,15 @@ def partition(dirname, level=0):
 		full -= size
 
 
+
+
+
+# ========== RENDERING SECTION =========== #
+
 # returns a whitespace-only string of a certain length that can be used
 # to indent output
 def indent(level):
 	return '  '*level
-
 
 # format and echo a label for given path, filename, size of disk usage, and
 # indentation level
@@ -378,16 +375,12 @@ def compute(dirname):
 
 # ===== MAIN PART ======
 
-# === Begin processing ===
+# === Begin Processing input data ===
 # Assign Variables, read Command-line Arguments
 read_argv(sys.argv)
 
 # compute list of files and directories, their hierarchy and disk usage amount
 _names = resources(_root)
-
-#for d,f,s in _names:
-	#print d,f,s
-#exit()
 
 # assemble HTML output
 print '''<!doctype html>
@@ -453,6 +446,8 @@ print '''<!doctype html>
 </head>
 <body>
 <div width="100%" height="600" align="center">'''
+print '<h4>Showing contents of: "{0}"</h4>'.format(_root)
+print '<i>{0}</i>'.format(sys.argv)
 print '''<table width="100%" height="600">
 <tr><td>'''
 tableh(_root, 0)
