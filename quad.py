@@ -2,16 +2,103 @@
 import os
 import sys
 from math import log10 as log
+from getopt import getopt
+from fnmatch import fnmatch
 
 _names=[]
 _diskusage={}
 _baseurl = 'https://192.168.178.1/wiki/doku.php?id='
+_root = '.'
+accept = filter_hidden
+glob = '*'
 
 # http://wiki.python.org/moin/HowTo/Sorting/ 
 # http://stackoverflow.com/questions/955941/how-to-identify-whether-a-file-is-normal-file-or-directory-using-python
 # http://stackoverflow.com/questions/1392413/calculating-a-directory-size-using-python
 
-def is_subdir(dirname, entry):
+# Print help message
+def print_help():
+	print '{0} <directory> [OPTIONS] [-n|--name] [<glob>]'.format(sys.argv[0])
+	print '''
+	OPTIONS:
+			-a, --all
+					Display hidden files.
+
+			-o, --output
+					Instead of printing to STDOUT, save output to file.
+
+			-d, --delimiter
+					When using paths in hyperlinks, replace the system's file separator with
+					custom delimiter.
+
+			-m, --max-depth
+					Limit displayed content to subdirectories within given depth.
+
+			-h, --help
+					Show this help message and quit.
+	'''
+
+# Parse command-line arguments
+def read_argv():
+	if len(sys.argv) > 1:
+		_root = sys.argv[1]
+		if not os.path.isdir(_root):
+			print >> sys.stderr, 'Error: not a directory'
+			print >> sys.stderr, 'First argument must specify the directory to work with'
+			exit()
+		# process through command line arguments
+		# using getopt, because unlike argparse, its in stdlib of Python 2.6.6
+		try:
+			opts, args = getopt(sys.argv[2:], "hao:m:d:o:", 
+				["name=", "output=", "delimiter=", "help", "all"])
+		except:
+			print_help()
+			exit(2)
+		# loop through known options and their arguments
+		for opt, arg in opts:
+			if opt in ('-h', '--help'):
+				# help message, terminate
+				print_help()
+				exit()
+			elif opt in ('-a', '--all'):
+				# accept not only not-hidden files, but all
+				accept = union(accept, true)
+			elif opt in ('-n', '--name'):
+				# filter filenames, accept only files that match expression
+				accept = intersect(accept, filter)
+				glob = arg
+
+
+
+# Filter those filenames that don't match a given expression
+# Returns True if filename matches expression (which is a glob)
+def filter(filename):
+	return fnmatch(filename, glob)
+
+
+# Method testing file/directory names on starting with a '.'
+# Can be used to filter hidden files. Returns False if file/dir is hidden.
+def filter_hidden(filename):
+	return not filename.startswith('.')
+
+# Dummy filter function, returning True no matter what
+true = lambda x: True
+
+# Returns a function that represents the intersection of two boolean
+# functions f and g, which means these two are combined by an AND operator.
+def intersect(f, g):
+	return lambda x: f(x) and g(x)
+
+# Returns a function that represents the union of two boolean
+# functions, i.e. the combination of both by OR
+def union(f, g):
+	return lambda x: f(x) or g(x)
+
+
+# Returns True if triple entry represents a directory, 
+# i.e. looks sth like ('path', '', xL), which is a direct
+# subdirectory of directory dirname. False otherwise.
+def is_child(dirname, entry):
 	# entry is subdirectory if and only if no file seperators remain
 	# after removing prepending higher directory path
 	if entry[1] == '':
@@ -20,7 +107,7 @@ def is_subdir(dirname, entry):
 	return False
 
 def largest(dirname):
-	return filter(lambda x:x[0] == dirname or is_subdir(dirname, x), _names)
+	return filter(lambda x:x[0] == dirname or is_child(dirname, x), _names)
 
 
 def disk_usage(path):
@@ -94,6 +181,10 @@ def label((path, filename, diskuse), level):
 
 # http://stackoverflow.com/questions/9725836/css-keep-table-cell-from-expanding-and-truncate-long-text
 # http://stackoverflow.com/questions/2736021/super-simple-css-tooltip-in-a-table-why-is-it-not-displaying-and-can-i-make-it
+# construe a table optimized for horizontal alignment, that is, the table 
+# is expected to be wider than it is high.
+# assuming that it is like this, cells are positioned in one column containing 
+# the lists head next to a second column representing the rest, recursively
 def tableh(dirname, level):
 	items = largest(dirname)
 	path, filename, size = items.pop(0)
@@ -140,16 +231,13 @@ def compute(dirname):
 	partition(dirname)
 
 
-
-scriptname = sys.argv[0]
-if len(sys.argv) < 2:
-	root = '.'
-else:
-	root = sys.argv[1]
-	if not os.path.isdir(root):
-		root = '.'
+#initialize variables, read command-line arguments
+read_argv()
+		
+# compute list of files and directories, their hierarchy and disk usage amount
 _names = resources(root)
 
+# assembe HTML output
 print '''<!doctype html>
 <head>
 	<style type="text/css">
@@ -218,8 +306,7 @@ print '''<table width="100%" height="600">
 tableh(root, 0)
 print '''</td></tr></table>
 </div>
-</body>
-</html>'''
+</body>'''
 	
 
 
