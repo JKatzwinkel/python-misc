@@ -57,7 +57,6 @@ def read_argv():
 	globals()['accept'] = accept = filter_hidden
 	# copy reference from global namespace
 	# _globs = globals()['_globs']
-	_globs = []
 	# Check if there are actually any arguments at all:
 	if len(sys.argv) > 1:
 		globals()['_root'] = sys.argv[1]
@@ -106,10 +105,13 @@ def read_argv():
 				pass
 		# assume that standalone arguments are meant to be file name wildcards
 		if len(args) > 0:
-			_globs += args
+			for arg in args:
+				_globs.append(arg)
 			accept = intersect(accept, filter_fn)
-		for k, v in locals().items():
-			globals()[k] = v
+
+		# for k, v in locals().items():
+		# globals()[k] = v
+		globals()['accept'] = accept
 		print _globs
 		print globals()['_globs']
 		print accept
