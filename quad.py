@@ -52,24 +52,24 @@ OPTIONS:
 	'''
 
 # Parse command-line arguments
-def read_argv():
+def read_argv(argv):
 	# default filename filter allow all but hidden files.
-	globals()['accept'] = accept = filter_hidden
+	accept = filter_hidden
 	# copy reference from global namespace
 	# _globs = globals()['_globs']
 	# Check if there are actually any arguments at all:
-	if len(sys.argv) > 1:
-		globals()['_root'] = sys.argv[1]
+	if len(argv) > 1:
+		_root = argv[1]
 		if not os.path.isdir(_root):
 			print >> sys.stderr, 'Error: not a directory'
 			print >> sys.stderr, 'First argument must specify the directory to work with'
 			print_help()
 			exit(2)
-			exit()
+
 		# process through command line arguments
 		# using getopt, because unlike argparse, its in stdlib of Python 2.6.6
 		try:
-			opts, args = getopt(sys.argv[2:], "ham:d:o:",
+			opts, args = getopt(argv[2:], "ham:d:o:",
 				["name=", "output=", "delimiter=", "help", "all"])
 			# TODO: options for width/height of HTML table rendering
 		except:
@@ -83,7 +83,7 @@ def read_argv():
 				exit()
 			elif opt in ('-a', '--all'):
 				# accept not only not-hidden files, but all
-				accept = union(accept, true)
+				accept = union(accept, all)
 			elif opt in ('-n', '--name'):
 				# filter filenames, accept only files that match expression
 				# default is '*'
@@ -105,17 +105,20 @@ def read_argv():
 				pass
 		# assume that standalone arguments are meant to be file name wildcards
 		if len(args) > 0:
+			if len(_globs) < 1:
+				accept = intersect(accept, filter_fn)
 			for arg in args:
 				_globs.append(arg)
-			accept = intersect(accept, filter_fn)
 
-		# for k, v in locals().items():
-		# globals()[k] = v
 		globals()['accept'] = accept
-		print _globs
-		print globals()['_globs']
-		print accept
-		print globals()['accept']
+		globals()['_root'] = _root
+
+		#print _globs
+		#print globals()['_globs']
+		#print accept
+		#print globals()['accept']
+		#print _root
+		#print globals()['_root']
 
 
 
@@ -124,7 +127,7 @@ def read_argv():
 # according to the the universal filter options set by user or default
 # (hidden files, filename patterns, ... whatever is combined in accept)
 def accepted(entries):
-	return filter(accept, entries)
+	return accept(entries)
 
 # Filter those os.walk()-style triples out off a list
 # that don't match any of the givens patterns
@@ -137,28 +140,31 @@ def filter_fn(entries):
 	# check each entry (directory) in list
 	for dir, subs, files in entries:
 		# keep only files that are matching one ore more of our Unix-wildcards
-		matchingfiles =
+		matchingfiles = \
 			filter(lambda fn:any(map(lambda glob: fnmatch(fn, glob), _globs)), files)
-		result.append(dir, subs, matchingfiles)
+		result.append( (dir, subs, matchingfiles) )
 	return result
 	# return any(map(lambda glob: fnmatch(filename, glob), _globs))
 
-# filter matching visible files
+# filter matching visible files, returning function
 only_visibles=lambda p: not p.startswith('.')
 
-# Filters hidden files/directories from an os.walk()-style result set .
+# check on every directory occuring in a path for hidden name
+visible_path=lambda x: not any([p.startswith('.') for p in x.split(os.sep)[1:]])
+
+# Filters hidden files/directories from an os.walk()-style result set.
 def filter_hidden(entries):
 	result = []
-	dirs_visible = filter(lambda entry:not entry[0].startswith('.'), entries)
+	#dirs_visible = filter(lambda entry: not entry[0].startswith(_root+os.sep+'.'), entries)
+	dirs_visible = filter(lambda e: visible_path(e[0]), entries)
 	for dir, subs, files in dirs_visible:
 		subs_visible = filter(only_visibles, subs)
 		files_visible = filter(only_visibles, files)
-		result.append(dir, subs_visible, files_visible)
-	# return not filename.startswith('.')
+		result.append( (dir, subs_visible, files_visible) )
 	return result
 
-# Dummy filter function, returning True no matter what
-true = lambda x: True
+# Dummy filter function, returning the same list that is passed as argument
+all = lambda x: filter(True, x)
 
 # Returns a function that represents the intersection of lists returned by
 # functions f and g. The resulting function will be g(f(x))
@@ -167,10 +173,12 @@ def intersect(f, g):
 	return lambda x: g(f(x))
 
 # Returns a function that represents the union of two functions that
-# are returning lists. The resulting function will compute f(x)+g(x)
+# are returning lists. The resulting function will build a list containing
+# all elements of f(x) plus all of g(x)
 def union(f, g):
 	# return lambda x: f(x) or g(x)
-	return lambda x: f(x)+g(x)
+	# return lambda x: f(x)+g(x)
+	return lambda x: list(set(f(x)+g(x)))
 
 
 
@@ -229,11 +237,11 @@ def resources(dirname):
 		depth = len(dirname.split(os.sep))
 		du = 0
 		# compute directory size by summing up disk usage of sub directories
-		for sd in filter(accept, subdirs):
+		for sd in subdirs:
 			filesize = disk_usage(os.path.join(dirname, sd))
 			du += filesize
 		# Consider only files satisfying all requirements set
-		for fn in filter(accept, files):
+		for fn in files:
 			# Summing up disk usage of contained files
 			filesize = disk_usage(os.path.join(dirname, fn))
 			du += filesize
@@ -296,6 +304,8 @@ def label((path, filename, diskuse), level):
 		link = '<a href="{0}">{1}</a>'
 		href = _baseurl + ns + filename
 		label = filename
+		if diskuse == 0:
+			diskuse = 10
 		element = '<font size="{0}pt">{1}</font>'.format(log(diskuse)-1, link.format(href, label))
 		print '<span>{0}</span>'.format(filename)
 		print indent(level+2)+element
@@ -309,6 +319,9 @@ def label((path, filename, diskuse), level):
 # the lists head next to a second column representing the rest, recursively
 def tableh(dirname, level):
 	items = largest(dirname)
+	if len(items) < 1:
+		print "None"
+		return
 	path, filename, size = items.pop(0)
 	print indent(level)+'<table width="100%" height="100%" class="tooltip" dir="{0}">'.format(['RTL', 'LTR'][level%2])
 	namespaces = dirname.split(os.sep)
@@ -367,17 +380,14 @@ def compute(dirname):
 
 # === Begin processing ===
 # Assign Variables, read Command-line Arguments
-read_argv()
+read_argv(sys.argv)
 
 # compute list of files and directories, their hierarchy and disk usage amount
 _names = resources(_root)
 
-print filter_hidden
-print accept
-
-for d,f,s in _names:
-	print d,f,s
-exit()
+#for d,f,s in _names:
+	#print d,f,s
+#exit()
 
 # assemble HTML output
 print '''<!doctype html>
