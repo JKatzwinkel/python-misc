@@ -119,41 +119,63 @@ def read_argv():
 
 
 
+
 # Filters a [(dir, subdirs[], files[]), ...] list like os.walk returns
 # according to the the universal filter options set by user or default
 # (hidden files, filename patterns, ... whatever is combined in accept)
 def accepted(entries):
 	return filter(accept, entries)
 
-
-# Filter those filenames that don't match any of the givens patterns
-# Returns True if filename matches at least one expression
+# Filter those os.walk()-style triples out off a list
+# that don't match any of the givens patterns
+# Returns list of triples whose filenames match at least one expression
 # These patterns are Unix-shell wildcards, like *.txt.
-def filter_fn(filename):
+def filter_fn(entries):
 	if len(_globs) < 1:
-		return True
-	return any(map(lambda glob: fnmatch(filename, glob), _globs))
+		return entries
+	result = []
+	# check each entry (directory) in list
+	for dir, subs, files in entries:
+		# keep only files that are matching one ore more of our Unix-wildcards
+		matchingfiles =
+			filter(lambda fn:any(map(lambda glob: fnmatch(fn, glob), _globs)), files)
+		result.append(dir, subs, matchingfiles)
+	return result
+	# return any(map(lambda glob: fnmatch(filename, glob), _globs))
 
-# Method testing file/directory names on starting with a '.'
-# Can be used to filter hidden files. Returns False if file/dir is hidden.
-def filter_hidden(filename):
-	return not filename.startswith('.')
+# filter matching visible files
+only_visibles=lambda p: not p.startswith('.')
+
+# Filters hidden files/directories from an os.walk()-style result set .
+def filter_hidden(entries):
+	result = []
+	dirs_visible = filter(lambda entry:not entry[0].startswith('.'), entries)
+	for dir, subs, files in dirs_visible:
+		subs_visible = filter(only_visibles, subs)
+		files_visible = filter(only_visibles, files)
+		result.append(dir, subs_visible, files_visible)
+	# return not filename.startswith('.')
+	return result
 
 # Dummy filter function, returning True no matter what
 true = lambda x: True
 
-# Returns a function that represents the intersection of two boolean
-# functions f and g, which means these two are combined by an AND operator.
+# Returns a function that represents the intersection of lists returned by
+# functions f and g. The resulting function will be g(f(x))
 def intersect(f, g):
-	return lambda x: f(x) and g(x)
+	# return lambda x: f(x) and g(x)
+	return lambda x: g(f(x))
 
-# Returns a function that represents the union of two boolean
-# functions, i.e. the combination of both by OR
+# Returns a function that represents the union of two functions that
+# are returning lists. The resulting function will compute f(x)+g(x)
 def union(f, g):
-	return lambda x: f(x) or g(x)
+	# return lambda x: f(x) or g(x)
+	return lambda x: f(x)+g(x)
 
 
-# Returns True if triple entry represents a directory, 
+
+
+# Returns True if triple entry represents a directory,
 # i.e. looks sth like ('path', '', xL), which is a direct
 # subdirectory of directory dirname. False otherwise.
 def is_child(dirname, entry):
