@@ -5,15 +5,16 @@ from math import log10 as log
 from getopt import getopt
 from fnmatch import fnmatch
 
+# Global variables holding input data
 _names=[] # list of contents
 _diskusage={} # computed consumptions of disk space
-_baseurl = None #'https://192.168.178.1/wiki/doku.php?id=' # prefix URL for links
-_root = None # root directory, where visualization recursion begins
+_baseurl = '' #'https://192.168.178.1/wiki/doku.php?id=' # prefix URL for links
+_root = '.' # root directory, where visualization recursion begins
 accept = lambda x: False # combined boolean functions for filtering files
 _globs = [] # list of Unix-shell wildcards, one of which filenames must match
-_delimiter = None # alternative delimiter as replacement for OS filesep
-_out = None # output destination
-_maxdepth = None # max depth within which directories and files are display candidates
+_delimiter = os.sep # alternative delimiter as replacement for OS filesep
+_out = sys.stdout # output destination
+_maxdepth = 15 # max depth within which directories and files are display candidates
 
 # http://wiki.python.org/moin/HowTo/Sorting/
 # http://stackoverflow.com/questions/955941/how-to-identify-whether-a-file-is-normal-file-or-directory-using-python
@@ -52,8 +53,14 @@ OPTIONS:
 
 # Parse command-line arguments
 def read_argv():
+	# default filename filter allow all but hidden files.
+	globals()['accept'] = accept = filter_hidden
+	# copy reference from global namespace
+	# _globs = globals()['_globs']
+	_globs = []
+	# Check if there are actually any arguments at all:
 	if len(sys.argv) > 1:
-		_root = sys.argv[1]
+		globals()['_root'] = sys.argv[1]
 		if not os.path.isdir(_root):
 			print >> sys.stderr, 'Error: not a directory'
 			print >> sys.stderr, 'First argument must specify the directory to work with'
@@ -81,7 +88,7 @@ def read_argv():
 			elif opt in ('-n', '--name'):
 				# filter filenames, accept only files that match expression
 				# default is '*'
-				accept = intersect(accept, filter)
+				accept = intersect(accept, filter_fn)
 				_globs.append(arg)
 			elif opt in ('-m', '--max-depth'):
 				# assign passed number to _maxdepth (maximum depth to render)
@@ -98,14 +105,29 @@ def read_argv():
 				# pass a URL that hyperlinks in output will be modeled on
 				pass
 		# assume that standalone arguments are meant to be file name wildcards
-		_globs += args
+		if len(args) > 0:
+			_globs += args
+			accept = intersect(accept, filter_fn)
+		for k, v in locals().items():
+			globals()[k] = v
+		print _globs
+		print globals()['_globs']
+		print accept
+		print globals()['accept']
 
+
+
+# Filters a [(dir, subdirs[], files[]), ...] list like os.walk returns
+# according to the the universal filter options set by user or default
+# (hidden files, filename patterns, ... whatever is combined in accept)
+def accepted(entries):
+	return filter(accept, entries)
 
 
 # Filter those filenames that don't match any of the givens patterns
 # Returns True if filename matches at least one expression
 # These patterns are Unix-shell wildcards, like *.txt.
-def filter(filename):
+def filter_fn(filename):
 	if len(_globs) < 1:
 		return True
 	return any(map(lambda glob: fnmatch(filename, glob), _globs))
@@ -175,14 +197,15 @@ def resources(dirname):
 
 	# traverse directory tree:
 	# walk bottom-up
-	for dirname, subdirs, files in os.walk(dirname, topdown=False):
+	# http://docs.python.org/2/library/os.html#os.walk
+	for dirname, subdirs, files in accepted(os.walk(dirname, topdown=False)):
 		# if directory is located deeper in the file hierarchy that allowed by
 		# the command-line argument -m/--max-depth, don't enlist its content,
 		# only sum up disk space used. So, check on nesting depth:
 		depth = len(dirname.split(os.sep))
 		du = 0
 		# compute directory size by summing up disk usage of sub directories
-		for sd in subdirs:
+		for sd in filter(accept, subdirs):
 			filesize = disk_usage(os.path.join(dirname, sd))
 			du += filesize
 		# Consider only files satisfying all requirements set
@@ -270,7 +293,7 @@ def tableh(dirname, level):
 	full = size
 	# loop through items / tr/td
 	# each tr contains two td
-	level += 1
+	level += 1 #indent
 	remainder_h = 100.
 	remainder_v = 100.
 
@@ -299,29 +322,38 @@ def tableh(dirname, level):
 			print indent(level+1)+'</td>'
 
 		print indent(level)+'</tr>'
+	level -= 1 # unindent
 	print indent(level)+'</table>'
 
+
+# print text-based nested list representation of file tree under dirname
 def compute(dirname):
 	_names = resources(dirname)
 	partition(dirname)
 
 
 
-# === Initialize Variables with default values ===
-_root = '.' # root directory, where visualization recursion begins
-accept = filter_hidden # combined boolean functions for filtering files
-_delimiter = os.sep # alternative delimiter as replacement for OS filesep
-_out = sys.stdout # output destination
-_maxdepth = 15 # max depth within which directories and files are display candidates
-_globs = []
 
+
+
+
+
+
+# ===== MAIN PART ======
 
 # === Begin processing ===
 # Assign Variables, read Command-line Arguments
 read_argv()
 
 # compute list of files and directories, their hierarchy and disk usage amount
-_names = resources(root)
+_names = resources(_root)
+
+print filter_hidden
+print accept
+
+for d,f,s in _names:
+	print d,f,s
+exit()
 
 # assemble HTML output
 print '''<!doctype html>
@@ -389,7 +421,7 @@ print '''<!doctype html>
 <div width="100%" height="600" align="center">'''
 print '''<table width="100%" height="600">
 <tr><td>'''
-tableh(root, 0)
+tableh(_root, 0)
 print '''</td></tr></table>
 </div>
 </body>'''
