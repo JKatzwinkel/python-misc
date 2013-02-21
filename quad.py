@@ -10,7 +10,9 @@ _diskusage={}
 _baseurl = 'https://192.168.178.1/wiki/doku.php?id='
 _root = '.'
 accept = filter_hidden
-glob = '*'
+_glob = '*'
+_delimiter = os.sep
+_out = sys.stdout
 
 # http://wiki.python.org/moin/HowTo/Sorting/ 
 # http://stackoverflow.com/questions/955941/how-to-identify-whether-a-file-is-normal-file-or-directory-using-python
@@ -36,6 +38,10 @@ def print_help():
 
 			-h, --help
 					Show this help message and quit.
+
+			-n, --name
+					Supplies a Unix shell-style wildcard expression (e.g. *.txt)
+					that determines which files will be represented in HTML output
 	'''
 
 # Parse command-line arguments
@@ -49,7 +55,7 @@ def read_argv():
 		# process through command line arguments
 		# using getopt, because unlike argparse, its in stdlib of Python 2.6.6
 		try:
-			opts, args = getopt(sys.argv[2:], "hao:m:d:o:", 
+			opts, args = getopt(sys.argv[2:], "ham:d:o:", 
 				["name=", "output=", "delimiter=", "help", "all"])
 		except:
 			print_help()
@@ -65,8 +71,23 @@ def read_argv():
 				accept = union(accept, true)
 			elif opt in ('-n', '--name'):
 				# filter filenames, accept only files that match expression
+				# default is '*'
 				accept = intersect(accept, filter)
-				glob = arg
+				_glob = arg
+			elif opt in ('-m', '--max-depth'):
+				# assign passed number to _depth (maximum depth to render)
+				_depth = int(arg)
+			elif opt in ('-d', '--delimiter'):
+				# change custom delimiter for full-path labels/links 
+				# from OS file separator to passed character
+				_delimiter = arg[0]
+			elif opt in ('-o', '--output'):
+				# assign output destination (filename or whatever...)
+				# default is sys.stdout
+				_out = arg
+			elif opt in ('-u', '--baseurl'):
+				# pass a URL that hyperlinks in output will be modeled on
+				pass
 
 
 
@@ -170,7 +191,7 @@ def label((path, filename, diskuse), level):
 	if filename == '':
 		tableh(path, level+2)
 	else:
-		ns = ':'.join(path.split(os.sep)[1:]+[''])
+		ns = _delimiter.join(path.split(os.sep)[1:]+[''])
 		link = '<a href="{0}">{1}</a>'
 		href = _baseurl + ns + filename
 		label = filename
