@@ -13,7 +13,7 @@ _documentroot = '/var/lib/dokuwiki/data/pages'
 # http://stackoverflow.com/questions/955941/how-to-identify-whether-a-file-is-normal-file-or-directory-using-python
 # http://stackoverflow.com/questions/1392413/calculating-a-directory-size-using-python
 
-def is_subdir(namespace, entry):
+def is_child_dir(namespace, entry):
 	# entry is subdirectory if and only if no separators remain
 	# after removing prepending higher directory path
 	if entry[1] == '':
@@ -25,11 +25,18 @@ def is_subdir(namespace, entry):
 			return len(':'.join(entry[0].split(namespace+':')[1:]).split(':')) is 1
 	return False
 
-
+# For the specified directory, return a list of the contained files ans 
+# immediate subdirectories, sorted by disk space consumption and 
+# beginning with the directory itself, followed by its largest child
 def largest(dirname):
-	return filter(lambda x:x[0] == dirname or is_subdir(dirname, x), _names)
+	return filter(lambda x:x[0] == dirname or is_child_dir(dirname, x), _names)
 
-
+# Return disk space consumption of the resource under the given path.
+# If referencing a directory, the return value is computed by summing up
+# the disk_usage values of the contained resources recursively.
+# (That is, look up in the dictionary that has been populated during
+# the initial bottom-up tree walk in resources())
+# If it is a file, simply return its file size.
 def disk_usage(path):
 	if os.path.isdir(path):
 		return _diskusage.get(path, 0)
@@ -37,8 +44,9 @@ def disk_usage(path):
 		return os.path.getsize(path)
 
 
-def relpath(dirname):
-	res = os.path.relpath(dirname, _documentroot)
+# makes the given path relative to _documentroot
+def relpath(path):
+	res = os.path.relpath(path, _documentroot)
 	if res == '.':
 		return ':'
 	return ':'.join(['']+res.split(os.sep))
@@ -82,13 +90,15 @@ def partition(dirname, level=0):
 				print part, dirname
 		else:
 			print " "*(level+1), part[1], 100*size/full
-		full -= size		
+		full -= size
 
 
+# ========== RENDERING SECTION =========== #
 def indent(level):
 	return '  '*level
 
-
+# format and echo a label for given path, filename, size of disk usage, and
+# indentation level
 def label((path, filename, diskuse), level):
 	if filename == '':
 		tableh(path, level+2)
@@ -97,6 +107,8 @@ def label((path, filename, diskuse), level):
 		link = '<a href="{0}">{1}</a>'
 		href = _baseurl + ns + filename
 		label = filename
+		if diskuse == 0:
+			diskuse = 10
 		element = '<font size="{0}pt">{1}</font>'.format(log(diskuse)-1, link.format(href, label))
 		print '<span>{0}</span>'.format(filename)
 		print indent(level+2)+element
@@ -104,6 +116,10 @@ def label((path, filename, diskuse), level):
 
 # http://stackoverflow.com/questions/9725836/css-keep-table-cell-from-expanding-and-truncate-long-text
 # http://stackoverflow.com/questions/2736021/super-simple-css-tooltip-in-a-table-why-is-it-not-displaying-and-can-i-make-it
+# Construct a table optimized for horizontal alignment, that is, the table
+# is expected to be wider than it is high.
+# assuming that it is like this, cells are positioned in one column containing
+# the lists head next to a second column representing the rest, recursively
 def tableh(dirname, level):
 	items = largest(dirname)
 	if len(items) < 1:
@@ -120,12 +136,12 @@ def tableh(dirname, level):
 	level += 1
 	remainder_h = 100.
 	remainder_v = 100.
-	
+
 	while len(items)>0:
 		rowspan = int(round(len(items)/2.))
 		path, filename, size = items.pop(0)
 		print indent(level)+'<tr>'
-		
+
 		# first td
 		covering = size * remainder_h / full
 		remainder_h -= covering
@@ -133,7 +149,7 @@ def tableh(dirname, level):
 		print indent(level+1)+'<td class="tooltip" rowspan="{0}" width="{1}%" height="{2}%">'.format(rowspan, covering, remainder_v)
 		label((path, filename, size), level)
 		print indent(level+1)+'</td>'
-		
+
 		# second td
 		if len(items) > 0:
 			colspan = int(round(len(items)/2.))
@@ -144,8 +160,9 @@ def tableh(dirname, level):
 			print indent(level+1)+'<td class="tooltip" colspan="{0}" width="{2}%" height="{1}%">'.format(colspan, covering, remainder_h)
 			label((path, filename, size), level)
 			print indent(level+1)+'</td>'
-			
+
 		print indent(level)+'</tr>'
+	level -= 1 # unindent
 	print indent(level)+'</table>'
 
 
@@ -179,7 +196,7 @@ print '''Content-Type: text/html
 			text-align:center;
 			font-family: 'Arial', 'sans serif';
 			color: #A33;
-			display: table-cell; 
+			display: table-cell;
 			white-space: nowrap;
 			word-wrap: break-word;
 			text-overflow: ellipsis;
@@ -238,8 +255,7 @@ print '''<table width="800" height="600">
 tableh(':'+root, 0)
 print '''</td></tr></table>
 </div>
-</body>
-</html>'''
-	
+</body>'''
+
 
 
