@@ -37,6 +37,9 @@ _maxdepth = 10 # max depth within which directories and files are display candid
 # Print help message
 def print_help():
 	#TODO: implement options for height/width of computed HTML table
+	#TODO: options for including and excluding both files and directories
+	# by passing multiple wildcards respectively
+	#TODO: proper handling of Hyperlink template
 	print 'USAGE:'
 	print '	{0} <directory> [OPTIONS] [<glob>]'.format(sys.argv[0])
 	print '''
@@ -74,10 +77,10 @@ def read_argv(argv):
 	# accept = filter_hidden
 	# Check if there are actually any arguments at all:
 	if len(argv) > 1:
-		_root = argv[1]
+		_root = os.path.abspath(argv[1])
 		# remove trailing file separator
-		if _root.endswith(os.sep):
-			_root = _root[:-1]
+		#if _root.endswith(os.sep):
+			#_root = _root[:-1]
 		# if path doesn't point to a directory, terminate
 		if not os.path.isdir(_root):
 			print >> sys.stderr, 'Error: not a directory'
@@ -116,7 +119,7 @@ def read_argv(argv):
 					_globs[arg] = glob+4
 			elif opt in ('-m', '--max-depth'):
 				# assign passed number to _maxdepth (maximum depth to render)
-				globals()['_maxdepth'] = int(arg)
+				globals()['_maxdepth'] = len(_root.split(os.sep)) + int(arg)
 			elif opt in ('-d', '--delimiter'):
 				# change custom delimiter for full-path labels/links
 				# from OS file separator to passed character
@@ -138,7 +141,6 @@ def read_argv(argv):
 				glob = _globs.get(arg, 0)
 				if glob & 4 != 4:
 					_globs[arg] = glob+4
-		init_wildcards()
 
 		#globals()['accept'] = accept
 		globals()['_root'] = _root
@@ -176,10 +178,10 @@ def init_wildcards():
 	# List of wildcards that will preserve matching files
 	ns['keep_file_globs'] = [glob for glob, mode in _globs.items() if mode & 5 == 4]
 
-	print >> sys.stderr, "discard dirnames: ", discard_dir_globs
-	print  >> sys.stderr, "preserve dirnames: ", keep_dir_globs
-	print  >> sys.stderr, "discard filenames: ", discard_file_globs
-	print  >> sys.stderr, "preserve filenames: ", keep_file_globs
+	#print >> sys.stderr, "discard dirnames: ", discard_dir_globs
+	#print  >> sys.stderr, "preserve dirnames: ", keep_dir_globs
+	#print  >> sys.stderr, "discard filenames: ", discard_file_globs
+	#print  >> sys.stderr, "preserve filenames: ", keep_file_globs
 
 
 # ODO obviously, this cannot stay like this. Populating a new list
@@ -310,8 +312,8 @@ def is_child(dirname, entry):
 			return len(entry[0].split(dirname+os.sep)[1].split(os.sep)) is 1
 	return False
 
-# For the specified directory, return a list of the contained files ans 
-# immediate subdirectories, sorted by disk space consumption and 
+# For the specified directory, return a list of the contained files ans
+# immediate subdirectories, sorted by disk space consumption and
 # beginning with the directory itself, followed by its largest child
 def largest(dirname):
 	return filter(lambda x:x[0] == dirname or is_child(dirname, x), _names)
@@ -429,9 +431,9 @@ def label((path, filename, diskuse), level):
 
 # http://stackoverflow.com/questions/9725836/css-keep-table-cell-from-expanding-and-truncate-long-text
 # http://stackoverflow.com/questions/2736021/super-simple-css-tooltip-in-a-table-why-is-it-not-displaying-and-can-i-make-it
-# construe a table optimized for horizontal alignment, that is, the table 
+# construe a table optimized for horizontal alignment, that is, the table
 # is expected to be wider than it is high.
-# assuming that it is like this, cells are positioned in one column containing 
+# assuming that it is like this, cells are positioned in one column containing
 # the lists head next to a second column representing the rest, recursively
 def tableh(dirname, level):
 	items = largest(dirname)
@@ -441,7 +443,7 @@ def tableh(dirname, level):
 	path, filename, size = items.pop(0)
 	print indent(level)+'<table width="100%" height="100%" class="tooltip" dir="{0}">'.format(['RTL', 'LTR'][level%2])
 	namespaces = dirname.split(os.sep)
-	if len(namespaces) > 1:
+	if len(namespaces) > 1 and level > 0:
 		print indent(level+1)+'<span><a href="{0}">{0}</a></span>'.format(namespaces[-1])
 	full = size
 	# loop through items / tr/td
@@ -497,12 +499,16 @@ def compute(dirname):
 # === Begin Processing input data ===
 # Assign Variables, read Command-line Arguments
 read_argv(sys.argv)
+init_wildcards() # set up environment for resource name matching with wildcards
 
 # compute list of files and directories, their hierarchy and disk usage amount
 _names = resources(_root)
 
-print >> sys.stderr, _out
-print >> sys.stderr, _maxdepth
+#for r in _names:
+	#print >> sys.stderr, r
+
+# print >> sys.stderr, _out
+# print >> sys.stderr, _maxdepth
 
 if _out != sys.stdout:
 	outputfile = open(_out, 'w')
@@ -550,7 +556,7 @@ print '''<!doctype html>
 		table.namespace:hover {
 			background-color: #C0C0FF;
 		}
-		.tooltip > span, 
+		.tooltip > span,
 		.tooltip > span > a {
 			display: none;
 		}
@@ -583,5 +589,7 @@ print '''</td></tr></table>
 </div>
 </body>'''
 
-if outputfile:
+try:
 	outputfile.close()
+except:
+	pass
