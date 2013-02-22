@@ -133,6 +133,7 @@ def read_argv(argv):
 				glob = _globs.get(arg, 0)
 				if glob & 4 != 4:
 					_globs[arg] = glob+4
+		init_wildcards()
 
 		#globals()['accept'] = accept
 		globals()['_root'] = _root
@@ -148,8 +149,34 @@ def read_argv(argv):
 # match file    4         5
 # match both    6         7
 
-# list of all wildcards which will remove matching directories
-# TODO obviously, this cannot stay like this. Populating a new list
+# populates four lists with specific subsets of the known
+# wildcards, thus making it easier to access the relevant
+# wildcard sets for tests like if a filename may be shown
+# or has to be hid or similar.
+# these lists, while locally created, are written to the global
+# namespace directly, to ensure the dependent functions will
+# find them
+def init_wildcards():
+	ns=globals()
+	# list of all wildcards which will remove matching directories
+	ns['discard_dir_globs'] = [glob for glob, mode in _globs.items() if mode & 3 == 3]
+
+	#list of all wildcards which will preserve matching directories
+	ns['keep_dir_globs'] = [glob for glob, mode in _globs.items() if mode & 3 == 2]
+
+	# List of all wildcards which will remove matching files
+	ns['discard_file_globs'] = [glob for glob, mode in _globs.items() if mode & 5 == 5]
+
+	# List of wildcards that will preserve matching files
+	ns['keep_file_globs'] = [glob for glob, mode in _globs.items() if mode & 5 == 4]
+
+	print >> sys.stderr, "discard dirnames: ", discard_dir_globs
+	print  >> sys.stderr, "preserve dirnames: ", keep_dir_globs
+	print  >> sys.stderr, "discard filenames: ", discard_file_globs
+	print  >> sys.stderr, "preserve filenames: ", keep_file_globs
+
+
+# ODO obviously, this cannot stay like this. Populating a new list
 # with each time identical outcome, on every single call, really
 # isn't very efficient. But the problem is that at this position
 # in the module, these assignments are done before the command line
@@ -157,12 +184,6 @@ def read_argv(argv):
 # brought by the command line arguments, at least those on the
 # _globs{} dictionary. We will have to find a way to initiate these
 # lists as static lists,, without provoking global namespace trouble
-discard_dir_globs = lambda: [glob for glob, mode in _globs.items() if mode & 3 == 3]
-#print >> sys.stderr, "discard dirnames: ", discard_dir_globs()
-
-#list of all wildcards which will preserve matching directories
-keep_dir_globs = lambda: [glob for glob, mode in _globs.items() if mode & 3 == 2]
-#print  >> sys.stderr, "preserve dirnames: ", keep_dir_globs()
 
 # Determinde whether a directory will be discarded or not.
 # First, check if its name matches any preserving wildcards, if it does,
@@ -170,23 +191,15 @@ keep_dir_globs = lambda: [glob for glob, mode in _globs.items() if mode & 3 == 2
 # check if dir name matches any discarding wildcards. If it does, it
 # will be discarded.
 def discard_dir(dirname):
-	return len(keep_dir_globs())>0 and \
-		all(map(lambda glob: not fnmatch(dirname, glob), keep_dir_globs())) or \
-		any(map(lambda glob: fnmatch(dirname, glob), discard_dir_globs()))
+	return len(keep_dir_globs)>0 and \
+		all(map(lambda glob: not fnmatch(dirname, glob), keep_dir_globs)) or \
+		any(map(lambda glob: fnmatch(dirname, glob), discard_dir_globs))
 
 # Determine whether an entire path has to be omitted.
 # tests every dir name in a path against discarding conditions.
 # If any of those apply, the path will be discarded.
 discard_path = lambda x: any(map(lambda d: discard_dir(d), x.split(os.sep)[1:]))
 
-
-# List of all wildcards which will remove matching files
-discard_file_globs = lambda: [glob for glob, mode in _globs.items() if mode & 5 == 5]
-#print  >> sys.stderr, "discard filenames: ", discard_file_globs()
-
-# List of wildcards that will preserve matching files
-keep_file_globs = lambda: [glob for glob, mode in _globs.items() if mode & 5 == 4]
-#print  >> sys.stderr, "preserve filenames: ", keep_file_globs()
 
 # Check if filename has to be discarded
 # If preserving wildcards are set and we still don't match a single one of them,
@@ -195,9 +208,9 @@ keep_file_globs = lambda: [glob for glob, mode in _globs.items() if mode & 5 == 
 # TODO: don't forget to delete the () when changing those glob functions
 # back to lists
 def discard_file(filename):
-	return len(keep_file_globs()) > 0 and \
-		all(map(lambda glob: not fnmatch(filename, glob), keep_file_globs())) or \
-		any(map(lambda glob: fnmatch(filename, glob), discard_file_globs()))
+	return len(keep_file_globs) > 0 and \
+		all(map(lambda glob: not fnmatch(filename, glob), keep_file_globs)) or \
+		any(map(lambda glob: fnmatch(filename, glob), discard_file_globs))
 
 
 # Filters a [(path, subdirs[], files[]), ...] list like os.walk() returns.
