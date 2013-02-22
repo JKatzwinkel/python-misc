@@ -550,10 +550,12 @@ print '''<!doctype html>
 		table.namespace:hover {
 			background-color: #C0C0FF;
 		}
-		.tooltip > span {
+		.tooltip > span, 
+		.tooltip > span > a {
 			display: none;
 		}
-		.tooltip:hover > span {
+		.tooltip:hover > span,
+		.tooltip:hover > span > a {
 			display: block;
 			position: absolute;
 			font-size: 7pt;
