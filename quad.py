@@ -2,7 +2,7 @@
 import os
 import sys
 from math import log10 as log
-from getopt import getopt
+from getopt import gnu_getopt
 from fnmatch import fnmatch
 
 # Global variables holding input data
@@ -25,7 +25,7 @@ _root = '.' # root directory, where visualization recursion begins
 _globs = {'.*': 7} # default: filter out hidden files and directories
 _delimiter = os.sep # alternative delimiter as replacement for OS filesep
 _out = sys.stdout # output destination
-_maxdepth = 15 # max depth within which directories and files are display candidates
+_maxdepth = 10 # max depth within which directories and files are display candidates
 
 # http://wiki.python.org/moin/HowTo/Sorting/
 # http://stackoverflow.com/questions/955941/how-to-identify-whether-a-file-is-normal-file-or-directory-using-python
@@ -53,7 +53,7 @@ OPTIONS:
 
 	-m, --max-depth N
 		Limit displayed content to subdirectories within given depth N.
-		Default is 15.
+		Default is 10.
 
 	-h, --help
 		Show this help message and quit.
@@ -63,6 +63,9 @@ OPTIONS:
 		that determines which files will be represented in HTML output.
 		This option is not required for specifying file name patterns.
 		Wildcard expressions may be listed as sole arguments as well.
+
+	-o, --output <file>
+		Write output to <file> instead of STDOUT
 	'''
 
 # Parse command-line arguments
@@ -83,8 +86,10 @@ def read_argv(argv):
 			exit(2)
 		# process through command line arguments
 		# using getopt, because unlike argparse, its in stdlib of Python 2.6.6
+		# getopt function gnu_getopt allows to mix options and non-option arguments
+		# (getopt.getopt aborts parsing when non-option arguments occur)
 		try:
-			opts, args = getopt(argv[2:], "ham:d:o:",
+			opts, args = gnu_getopt(argv[2:], "ham:d:o:",
 				["name=", "output=", "delimiter=", "help", "all"])
 			# TODO: options for width/height of HTML table rendering
 		except:
@@ -198,7 +203,13 @@ def discard_dir(dirname):
 # Determine whether an entire path has to be omitted.
 # tests every dir name in a path against discarding conditions.
 # If any of those apply, the path will be discarded.
-discard_path = lambda x: any(map(lambda d: discard_dir(d), x.split(os.sep)[1:]))
+# One of said conditions is exceeding the maximal depth.
+# TODO formerly, monitoring the path depth was done during the file tree
+# traversal for a reason; like this, the disk space consumption
+# of deeper directories is not taken into account...
+def discard_path(path):
+	dirs = x.split(os.sep)[1:]
+	return len(dirs) > _maxdepth or any(map(lambda d: discard_dir(d), dirs))
 
 
 # Check if filename has to be discarded
@@ -318,7 +329,7 @@ def disk_usage(path):
 
 # Populates and returns a list of all files and directories found under
 # the given directory, which match the chosen requirements (hidden files
-# yes/no, only files that match Unix wildcards, only files within a 
+# yes/no, only files that match Unix wildcards, only files within a
 # certain depth, ...).
 # The resulting list is sorted by disk space consumption, starting with
 # the largest item.
@@ -334,7 +345,7 @@ def resources(dirname):
 		# if directory is located deeper in the file hierarchy that allowed by
 		# the command-line argument -m/--max-depth, don't enlist its content,
 		# only sum up disk space used. So, check on nesting depth:
-		depth = len(dirname.split(os.sep))
+		# depth = len(dirname.split(os.sep))
 		du = 0
 		# compute directory size by summing up disk usage of sub directories
 		for sd in subdirs:
@@ -350,11 +361,11 @@ def resources(dirname):
 			# like %F filename, %f without extension, %s size, %p path etc.
 			#
 			# only list files if the depth of this directory in the tree is OK
-			if depth < _maxdepth:
-				results.append((dirname, fn, filesize))
+			#if depth < _maxdepth:
+			results.append((dirname, fn, filesize))
 		# only list directory if the depth of its location is small enough
-		if depth <= _maxdepth:
-			results.append((dirname, '', du+1))
+		#if depth <= _maxdepth:
+		results.append((dirname, '', du+1))
 		# save directory disk use in dictionary
 		# Because of the recursive disk space computation, even directories that
 		# are nested too deep to be displayed have tp register their size
