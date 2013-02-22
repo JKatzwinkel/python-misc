@@ -116,7 +116,7 @@ def read_argv(argv):
 					_globs[arg] = glob+4
 			elif opt in ('-m', '--max-depth'):
 				# assign passed number to _maxdepth (maximum depth to render)
-				_maxdepth = int(arg)
+				globals()['_maxdepth'] = int(arg)
 			elif opt in ('-d', '--delimiter'):
 				# change custom delimiter for full-path labels/links
 				# from OS file separator to passed character
@@ -124,7 +124,7 @@ def read_argv(argv):
 			elif opt in ('-o', '--output'):
 				# assign output destination (filename or whatever...)
 				# default is sys.stdout
-				_out = arg
+				globals()['_out'] = arg
 			elif opt in ('-u', '--baseurl'):
 				# pass a URL that hyperlinks in output will be modeled on
 				pass
@@ -142,6 +142,7 @@ def read_argv(argv):
 
 		#globals()['accept'] = accept
 		globals()['_root'] = _root
+		#globals()['_out'] = _out
 
 
 
@@ -208,8 +209,8 @@ def discard_dir(dirname):
 # traversal for a reason; like this, the disk space consumption
 # of deeper directories is not taken into account...
 def discard_path(path):
-	dirs = x.split(os.sep)[1:]
-	return len(dirs) > _maxdepth or any(map(lambda d: discard_dir(d), dirs))
+	dirs = path.split(os.sep)[1:]
+	return len(dirs) >= _maxdepth or any(map(lambda d: discard_dir(d), dirs))
 
 
 # Check if filename has to be discarded
@@ -500,6 +501,13 @@ read_argv(sys.argv)
 # compute list of files and directories, their hierarchy and disk usage amount
 _names = resources(_root)
 
+print >> sys.stderr, _out
+print >> sys.stderr, _maxdepth
+
+if _out != sys.stdout:
+	outputfile = open(_out, 'w')
+	sys.stdout = outputfile
+
 # assemble HTML output
 print '''<!doctype html>
 <head>
@@ -572,3 +580,6 @@ tableh(_root, 0)
 print '''</td></tr></table>
 </div>
 </body>'''
+
+if outputfile:
+	outputfile.close()
