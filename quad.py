@@ -10,8 +10,19 @@ _names=[] # list of contents
 _diskusage={} # computed consumptions of disk space
 _baseurl = '' #'https://192.168.178.1/wiki/doku.php?id=' # prefix URL for links
 _root = '.' # root directory, where visualization recursion begins
-accept = None # combined boolean functions for filtering files
-_globs = [] # list of Unix-shell wildcards, one of which filenames must match
+# accept = None # combined boolean functions for filtering files
+# dictionary of Unix-shell wildcards, one of which filenames must match
+# Unix wildcards (globs) passed as command line arguments are used as keys,
+# storing their respective function as values. Those would be:
+#             include   exclude
+# match dir     2         3
+# match file    4         5
+# match both    6         7
+# so if the lowest bit is set, it means filter out, second and third bit
+# indicate that it is about directories or files respectively.
+# TODO this means we need an additional option to specify wildcards
+# for files/firectories to exclude with
+_globs = {'.*': 7} # default: filter out hidden files and directories
 _delimiter = os.sep # alternative delimiter as replacement for OS filesep
 _out = sys.stdout # output destination
 _maxdepth = 15 # max depth within which directories and files are display candidates
@@ -57,7 +68,7 @@ OPTIONS:
 # Parse command-line arguments
 def read_argv(argv):
 	# default filename filter allow all but hidden files.
-	accept = filter_hidden
+	# accept = filter_hidden
 	# Check if there are actually any arguments at all:
 	if len(argv) > 1:
 		_root = argv[1]
@@ -86,13 +97,18 @@ def read_argv(argv):
 				print_help()
 				exit()
 			elif opt in ('-a', '--all'):
-				# accept not only not-hidden files, but all
-				accept = union(accept, original)
+				# accept hidden files
+				#accept = union(accept, original)
+				# deactivate hidden-file wildcard
+				_globs['.*'] = 0
 			elif opt in ('-n', '--name'):
 				# filter filenames, accept only files that match expression
 				# default is '*'
-				accept = intersect(accept, filter_fn)
-				_globs.append(arg)
+				#accept = intersect(accept, filter_fn)
+				# set 'file bit' for retrieved wildcard
+				glob = _globs.get(arg, 0)
+				if glob & 4 != 4:
+					_globs[arg] = glob+4
 			elif opt in ('-m', '--max-depth'):
 				# assign passed number to _maxdepth (maximum depth to render)
 				_maxdepth = int(arg)
@@ -109,12 +125,16 @@ def read_argv(argv):
 				pass
 		# assume that standalone arguments are meant to be file name wildcards
 		if len(args) > 0:
-			if len(_globs) < 1:
-				accept = intersect(accept, filter_fn)
+			#if len(_globs) < 1:
+				# TODO
+				#accept = intersect(accept, filter_fn)
+			# consider remaining arguments wildcards passed to include files
 			for arg in args:
-				_globs.append(arg)
+				glob = _globs.get(arg, 0)
+				if glob & 4 != 4:
+					_globs[arg] = glob+4
 
-		globals()['accept'] = accept
+		#globals()['accept'] = accept
 		globals()['_root'] = _root
 
 
@@ -123,6 +143,54 @@ def read_argv(argv):
 
 
 # ===== FILE/DIRECTORY FILTERING SECTION ======
+#            preserve  discard
+# match dir     2         3
+# match file    4         5
+# match both    6         7
+
+# list of all wildcards which will remove matching directories
+discard_dir_globs = [glob for glob, mode in _globs.items() if mode & 3 == 3]
+
+#list of all wildcards which will preserve matching directories
+keep_dir_globs = [glob for glob, mode in _globs.items() if mode & 3 == 2]
+
+# Determinde whether a directory will be discarded or not.
+# First, check if its name matches any preserving wildcards, if it does,
+# or if there are no preserving wildcards,
+# check if dir name matches any discarding wildcards. If it does, it
+# will be discarded.
+def discard_dir(dirname):
+	return len(keep_dir_globs)>0 and \
+		all(map(lambda glob: not fnmatch(dir, glob), keep_dir_globs)) or \
+		any(map(lambda glob: fnmatch(dir, glob), discard_dir_globs))
+
+# Determine whether an entire path has to be omitted.
+# tests every dir name in a path against discarding conditions.
+# If any of those apply, the path will be discarded.
+discard_path = lambda x: any(map(lambda d: discard_dir(d), x.split(os.sep)[1:]))
+
+
+# List of all wildcards which will remove matching files
+discard_file_globs = [glob for glob, mode in _globs.items() if mode & 5 == 5]
+
+# List of wildcards that will preserve matching files
+keep_file_globs = [glob for glob, mode in _globs.items() if mode & 5 == 4]
+
+
+# Filters a [(path, subdirs[], files[]), ...] list like os.walk() returns.
+# Entries on paths that contain forbidden dir names are removed.
+# The remaining will have their subdirs and files lists checked and
+# cleared out accordingly.
+def filtered(entries):
+	results = []
+	remaining = filter(lambda entry: not discard_path(entry[0]), entries)
+	for path, subdirs, files in remaining:
+		subdirs = filter(lambda dir: not discard_dir(dir), subdirs)
+		files = filter(lambda fn: not discard_file(fn), files)
+		results.append( (path, subdirs, files)
+	return results
+
+
 
 # Filter those os.walk()-style triples out off a list
 # that don't match any of the givens patterns
@@ -226,7 +294,7 @@ def resources(dirname):
 	# traverse directory tree:
 	# walk bottom-up
 	# http://docs.python.org/2/library/os.html#os.walk
-	for dirname, subdirs, files in accept(os.walk(dirname, topdown=False)):
+	for dirname, subdirs, files in filtered(os.walk(dirname, topdown=False)):
 		# if directory is located deeper in the file hierarchy that allowed by
 		# the command-line argument -m/--max-depth, don't enlist its content,
 		# only sum up disk space used. So, check on nesting depth:
