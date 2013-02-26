@@ -10,7 +10,6 @@ _names=[] # list of contents
 _diskusage={} # computed consumptions of disk space
 _baseurl = '' #'https://192.168.178.1/wiki/doku.php?id=' # prefix URL for links
 _root = '.' # root directory, where visualization recursion begins
-# accept = None # combined boolean functions for filtering files
 # dictionary of Unix-shell wildcards, one of which filenames must match
 # Unix wildcards (globs) passed as command line arguments are used as keys,
 # storing their respective function as values. Those would be:
@@ -26,10 +25,6 @@ _globs = {'.*': 7} # default: filter out hidden files and directories
 _delimiter = os.sep # alternative delimiter as replacement for OS filesep
 _out = sys.stdout # output destination
 _maxdepth = 10 # max depth within which directories and files are display candidates
-
-# http://wiki.python.org/moin/HowTo/Sorting/
-# http://stackoverflow.com/questions/955941/how-to-identify-whether-a-file-is-normal-file-or-directory-using-python
-# http://stackoverflow.com/questions/1392413/calculating-a-directory-size-using-python
 
 
 # ======== USER INPUT SECTION ======== #
@@ -74,13 +69,10 @@ OPTIONS:
 # Parse command-line arguments
 def read_argv(argv):
 	# default filename filter allow all but hidden files.
-	# accept = filter_hidden
 	# Check if there are actually any arguments at all:
 	if len(argv) > 1:
 		_root = os.path.abspath(argv[1])
 		# remove trailing file separator
-		#if _root.endswith(os.sep):
-			#_root = _root[:-1]
 		# if path doesn't point to a directory, terminate
 		if not os.path.isdir(_root):
 			print >> sys.stderr, 'Error: not a directory'
@@ -106,13 +98,11 @@ def read_argv(argv):
 				exit()
 			elif opt in ('-a', '--all'):
 				# accept hidden files
-				#accept = union(accept, original)
 				# deactivate hidden-file wildcard
 				_globs['.*'] = 0
 			elif opt in ('-n', '--name'):
 				# filter filenames, accept only files that match expression
 				# default is '*'
-				#accept = intersect(accept, filter_fn)
 				# set 'file bit' for retrieved wildcard
 				glob = _globs.get(arg, 0)
 				if glob & 4 != 4:
@@ -133,18 +123,13 @@ def read_argv(argv):
 				pass
 		# assume that standalone arguments are meant to be file name wildcards
 		if len(args) > 0:
-			#if len(_globs) < 1:
-				# TODO
-				#accept = intersect(accept, filter_fn)
 			# consider remaining arguments wildcards passed to include files
 			for arg in args:
 				glob = _globs.get(arg, 0)
 				if glob & 4 != 4:
 					_globs[arg] = glob+4
 
-		#globals()['accept'] = accept
 		globals()['_root'] = _root
-		#globals()['_out'] = _out
 
 
 
@@ -183,15 +168,6 @@ def init_wildcards():
 	#print  >> sys.stderr, "discard filenames: ", discard_file_globs
 	#print  >> sys.stderr, "preserve filenames: ", keep_file_globs
 
-
-# ODO obviously, this cannot stay like this. Populating a new list
-# with each time identical outcome, on every single call, really
-# isn't very efficient. But the problem is that at this position
-# in the module, these assignments are done before the command line
-# arguments are read in. We, however, need to adapt the changes
-# brought by the command line arguments, at least those on the
-# _globs{} dictionary. We will have to find a way to initiate these
-# lists as static lists,, without provoking global namespace trouble
 
 # Determinde whether a directory will be discarded or not.
 # First, check if its name matches any preserving wildcards, if it does,
@@ -239,63 +215,6 @@ def filtered(entries):
 		files = filter(lambda fn: not discard_file(fn), files)
 		results.append( (path, subdirs, files) )
 	return results
-
-
-
-# Filter those os.walk()-style triples out off a list
-# that don't match any of the givens patterns
-# Returns list of triples whose filenames match at least one expression
-# These patterns are Unix-shell wildcards, like *.txt.
-def filter_fn(entries):
-	if len(_globs) < 1:
-		return entries
-	result = []
-	# check each entry (directory) in list
-	for dir, subs, files in entries:
-		# keep only files that are matching one ore more of our Unix-wildcards
-		matchingfiles = \
-			filter(lambda fn:any(map(lambda glob: fnmatch(fn, glob), _globs)), files)
-		result.append( (dir, subs, matchingfiles) )
-	return result
-	# return any(map(lambda glob: fnmatch(filename, glob), _globs))
-
-# Boolean function acting as a filter matching visible files
-is_visible=lambda p: not p.startswith('.')
-
-# Boolean function, checking on every directory occuring in a path for hidden name
-is_path_visible=lambda x: not any([p.startswith('.') for p in x.split(os.sep)[1:]])
-
-# Filters a [(dir, subdirs[], files[]), ...] list like os.walk() returns
-# Filters hidden files/directories from an os.walk()-style result set.
-def filter_hidden(entries):
-	result = []
-	#dirs_visible = filter(lambda entry: not entry[0].startswith(_root+os.sep+'.'), entries)
-	dirs_visible = filter(lambda e: is_path_visible(e[0]), entries)
-	for dir, subs, files in dirs_visible:
-		subs_visible = filter(is_visible, subs)
-		files_visible = filter(is_visible, files)
-		result.append( (dir, subs_visible, files_visible) )
-	return result
-
-# Dummy filter function, returning the same list that is passed as argument
-original = lambda x: x
-
-# Returns a function that represents the intersection of lists returned by
-# functions f and g. The resulting function will be g(f(x))
-def intersect(f, g):
-	# return lambda x: f(x) and g(x)
-	return lambda x: g(f(x))
-
-# Returns a function that represents the union of two functions that
-# are returning lists. The resulting function will build a list containing
-# all elements of f(x) plus all of g(x)
-def union(f, g):
-	# return lambda x: f(x) or g(x)
-	# return lambda x: f(x)+g(x)
-	# return lambda x: list(set(f(x)+g(x)))
-	return lambda x: list(set(f(x) + g(x)))
-
-
 
 
 
