@@ -331,22 +331,44 @@ def partition(dirname, level=0):
 def indent(level):
 	return '  '*level
 
+
 # format and echo a label for given path, filename, size of disk usage, and
 # indentation level
 def label((path, filename, diskuse), level):
-	if filename == '':
+	ns = _delimiter.join(path.split(os.sep)[1:]+[''])
+	link = '<a href="{0}">{1}</a>'
+	href = _baseurl + ns + filename
+	label = filename
+	if diskuse == 0:
+		diskuse = 10
+	element = '<font size="{0}pt">{1}</font>'.format(log(diskuse)-1, link.format(href, label))
+	print '<span>{0}</span>'.format(filename)
+	print indent(level+2)+element
+
+
+# recurse:
+# If recursion did not arrive a leaf node (file) yet, decide which layout
+# the nested table is supposed to be aligned in (horizontal or vertical).
+# If further recursion is not possible, create label indicating which leaf
+# recursion terminates.
+def recurse(entry, level, space_h, space_v):
+	if entry[1] == '':
+		#TODO: choose appropriate layout given the remaining amounts of space
+		# space_h and space_v
 		tableh(path, level+2)
 	else:
-		ns = _delimiter.join(path.split(os.sep)[1:]+[''])
-		link = '<a href="{0}">{1}</a>'
-		href = _baseurl + ns + filename
-		label = filename
-		if diskuse == 0:
-			diskuse = 10
-		element = '<font size="{0}pt">{1}</font>'.format(log(diskuse)-1, link.format(href, label))
-		print '<span>{0}</span>'.format(filename)
-		print indent(level+2)+element
+		label(entry, level)
 
+
+# TODO: write complement tablev, which covers the scenario of having less remaining
+# space horizontally than vertically. I that case, rather than rendering the file
+# lists head in a column next to its rest, the head should be given an entire row,
+# with the second row containing the list's rest.
+def tablev(dirname, level):
+	items = largest(dirname)
+	if len(items) < 1:
+		print "None"
+		return
 
 # http://stackoverflow.com/questions/9725836/css-keep-table-cell-from-expanding-and-truncate-long-text
 # http://stackoverflow.com/questions/2736021/super-simple-css-tooltip-in-a-table-why-is-it-not-displaying-and-can-i-make-it
@@ -354,6 +376,10 @@ def label((path, filename, diskuse), level):
 # is expected to be wider than it is high.
 # assuming that it is like this, cells are positioned in one column containing
 # the lists head next to a second column representing the rest, recursively
+# TODO: think of a way to make the table layout generated in items iteration
+# smart enough to leave the pattern "one column left, two rows right" (in favour of more rows)
+# whenever the space left on the horizontal axis will force future columns
+# to be too narrow to display its contents
 def tableh(dirname, level):
 	items = largest(dirname)
 	if len(items) < 1:
@@ -368,6 +394,7 @@ def tableh(dirname, level):
 	# loop through items / tr/td
 	# each tr contains two td
 	level += 1 #indent
+	# TODO: come up with better names for these
 	remainder_h = 100.
 	remainder_v = 100.
 
@@ -376,12 +403,15 @@ def tableh(dirname, level):
 		path, filename, size = items.pop(0)
 		print indent(level)+'<tr>'
 
+		# TODO: install a switch to alternatively arrange more than two columns/rows
+		# next to each/one below the other. The challenge of it is the row/col span
+		# not being directly derivable from the number of remaining cells
 		# first td
 		covering = size * remainder_h / full
 		remainder_h -= covering
 		full -= size
 		print indent(level+1)+'<td class="tooltip" rowspan="{0}" width="{1}%" height="{2}%">'.format(rowspan, covering, remainder_v)
-		label((path, filename, size), level)
+		recurse((path, filename, size), level, remainder_h, remainder_v)
 		print indent(level+1)+'</td>'
 
 		# second td
@@ -392,7 +422,7 @@ def tableh(dirname, level):
 			remainder_v -= covering
 			full -= size
 			print indent(level+1)+'<td class="tooltip" colspan="{0}" width="{2}%" height="{1}%">'.format(colspan, covering, remainder_h)
-			label((path, filename, size), level)
+			recurse((path, filename, size), level, remainder_h, remainder_v)
 			print indent(level+1)+'</td>'
 
 		print indent(level)+'</tr>'
