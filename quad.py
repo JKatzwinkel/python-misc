@@ -409,16 +409,8 @@ def tableh(dirname, level):
 		# TODO: We probably have to pre-compute the tr-td sequence that we then
 		# compute the rowspan/colspan with that we build the table from. 
 		# It seems like an easy pattern applies:
-		# TODO: If a layout starts with a column that covers one of its sides from
-		# top to bottom, the rowspan of that column seems to be the number of tr's 
-		# computed to come up, but the colspans of any row that occurs will be the
-		# number of td's following plus 1.
-		# If a layout starts the other way (vertical align), it should be the same,
-		# except the other way around. Maybe we can let the colspan of any row be
-		# the number of the following columns, but for each of those the rowspan
-		# be the number of remaining td's + 1...?
-		# tr-elements 
-		# first td
+		# TODO: A column's rowspan computes as the number of succeeding rows, while
+		# each row's colspan euqals the number of columns coming up, plus 1.
 		covering = size * remainder_h / full
 		remainder_h -= covering
 		full -= size
