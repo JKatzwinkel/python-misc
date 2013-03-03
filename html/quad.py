@@ -347,6 +347,7 @@ def indent(level):
 
 # format and echo a label for given path, filename, size of disk usage, and
 # indentation level
+# TODO: implement template system for custom label formatting via command line
 def label((path, filename, diskuse), level):
 	ns = _delimiter.join(path.split(os.sep)[1:]+[''])
 	link = '<a href="{0}">{1}</a>'
@@ -354,8 +355,15 @@ def label((path, filename, diskuse), level):
 	label = filename
 	if diskuse == 0:
 		diskuse = 10
-	element = '<font size="{0}pt" dir="LTR">{1}</font>'.format(log(diskuse)-1, link.format(href, label))
-	print indent(level)+'<span>{0}</span>'.format(filename)
+	cell_content=link.format(href, label)
+	if diskuse>1024:
+		if diskuse>1024*1024:
+			cell_content += ' ({0} MB)'.format(str(diskuse/1024/1024))
+		else:
+			cell_content += ' ({0} kB)'.format(str(diskuse/1024))
+	element = '<font size="{0}pt" dir="LTR">{1}</font>'.format(
+								log(diskuse)/2, cell_content)
+	print indent(level)+'<span dir="LTR">{0}</span>'.format(filename)
 	print indent(level)+element
 
 
@@ -373,6 +381,11 @@ def recurse(entry, level, space_h, space_v):
 
 
 # optimized layout
+# TODO: think about placing file items reverly, thus
+# beginning with the smallest files and granting the largest one
+# whatever is left in the layout space. That way, unplanned
+# table extension by overflowing text output wouldn't lead to
+# the smallest file item ending up with the most space sometimes.
 def table(dirname, level=0, width='100%', height='100%'):
 	items = largest(dirname)
 	if len(items) < 1:
@@ -383,6 +396,8 @@ def table(dirname, level=0, width='100%', height='100%'):
 	# handling default dimensions
 	# TODO: move size handling stuff somewhere else?
 	numeral = lambda s: float(re.findall('[0-9.]*', s)[0])
+	# TODO: also, prevent incompatible units: mixing percentage and pixel values
+	# should be dismissed
 	if type(width) == str:
 		width = numeral(width)
 	if type(height) == str:
@@ -424,7 +439,7 @@ def compute_layout(items, level, width, height):
 	# precompute cell layout and size
 	for path, filename, size in items:
 		ratio = float(size) / full_size
-		if space_h*width > space_v*height*h_favor:
+		if space_h*width > space_v*height*h_favor and space_h*width*ratio>len(filename)*6:
 			cover = space_h * ratio
 			space_h -= cover
 			stack.append( ('td', cover) )
