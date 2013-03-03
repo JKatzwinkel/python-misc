@@ -33,3 +33,12 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
+
+# html
+*.html
+
+# nano backup
+*~
+
+# merge conflicts
+*.orig
