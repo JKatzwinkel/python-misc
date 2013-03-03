@@ -390,6 +390,7 @@ def tableh(dirname, level):
 	namespaces = dirname.split(os.sep)
 	if len(namespaces) > 1 and level > 0:
 		print indent(level+1)+'<span><a href="{0}">{0}</a></span>'.format(namespaces[-1])
+	# TODO: this would be where the optimized layout function would be called
 	full = size
 	# loop through items / tr/td
 	# each tr contains two td
@@ -432,6 +433,58 @@ def tableh(dirname, level):
 		print indent(level)+'</tr>'
 	level -= 1 # unindent
 	print indent(level)+'</table>'
+
+
+# precompute cells layout optimized for space use, 
+# then actually write html output with according span attributes
+# pass [(path, filename, size), ] list as items
+def compute_layout(items, level, width, height):
+	stack = []
+	space_h = 100.
+	space_v = 100.
+	
+	tag_column='<td class="tooltip" rowspan="{0}" width="{1}">'
+	tag_row = '<td class="tooltip" colspan="{0}" height="{1}">'
+	tr_tag_open=False
+	
+	directory, _, full_size = items.pop(0)
+
+	# precompute cell layout and size
+	for path, filename, size in items:
+		if space_h > space_v:
+			cover = space_h * size / full_size
+			stack.append( ('td', cover) )
+		else:
+			cover = space_v * size / full_size
+			stack.append( ('tr', cover) )
+		full_size -= size
+		space_h -= cover
+
+	# write cell layout HTML output
+	for path, filename, size:
+		tag, dim = stack.pop(0)
+		if tag == 'td':
+			if not tr_tag_open:
+				tr_tag_open=True
+				print indent(level)+'<tr>'
+			# TODO: optimize for speed?
+			rspan = len(filter(lambda cell:cell[0]=='tr', stack))
+			print indent(level+1)+tag_column.format(rspan, dim)
+			# TODO: recurse
+			print indent(level+1)+'</td>'
+		else:
+			if tr_tag_open:
+				tr_tag_open=False
+				print indent(level)+'</tr>'
+				print indent(level)+'<tr>'
+				cspan = len(filter(lambda cell:cell[0]=='td', stack))+1
+				print indent(level+1)+tag_row.format(cspan, dim)
+				# TODO: recurse
+				print indent(level+1)+'</td>'
+				print indent(level)+'</tr>'
+
+	if tr_tag_open:
+		print indent(level)+'</tr>'
 
 
 # print text-based nested list representation of file tree under dirname
