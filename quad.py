@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import os
 import sys
+import re
 from math import log10 as log
 from getopt import gnu_getopt
 from fnmatch import fnmatch
@@ -355,7 +356,7 @@ def recurse(entry, level, space_h, space_v):
 	if entry[1] == '':
 		#TODO: choose appropriate layout given the remaining amounts of space
 		# space_h and space_v
-		table(entry[0], level+2)
+		table(entry[0], level+2, space_h, space_v)
 	else:
 		label(entry, level+1)
 
@@ -437,17 +438,29 @@ def tableh(dirname, level):
 
 # TODO: actual dimensions: width, height
 # optimized layout
-def table(dirname, level=0, width=100, height=100):
+def table(dirname, level=0, width='100%', height='100%'):
 	items = largest(dirname)
 	if len(items) < 1:
 		print "None"
 		return
-	print indent(level)+'<table width="100%" height="100%" class="tooltip" dir="{0}">'.format(['RTL', 'LTR'][level%2])
+	table_tag = '<table width="100%" height="100%" class="tooltip" dir="{0}">'
+	print indent(level)+table_tag.format(['RTL', 'LTR'][level%2])
+	# handling default dimensions
+	numeral = lambda s: float(re.findall('[0-9.]*', s)[0])
+	if type(width) == str:
+		width = numeral(width)
+	if type(height) == str:
+		height = numeral(height)
+	# register root table width:
+	if globals().get('table_width',0) == 0:
+		globals()['table_width'] = float(width)
+	# label table:
 	namespaces = dirname.split(os.sep)
 	if len(namespaces) > 1 and level > 0:
 		print indent(level+1)+'<span><a href="{0}">{0}</a></span>'.format(namespaces[-1])
-	# TODO: implement width, height consideration
-	compute_layout(items, level+1, 100, 100)
+	# Generate table layout
+	if len(items)>1:
+		compute_layout(items, level+1, width, height)
 	print indent(level)+'</table>'
 
 
@@ -457,8 +470,12 @@ def table(dirname, level=0, width=100, height=100):
 def compute_layout(items, level, width, height):
 	# process variables
 	stack = []
-	space_h = 100.
-	space_v = 100.
+	space_h = 1.
+	space_v = 1.
+	# horizontal layout in favor at small tables
+	# TODO: adjust
+	h_favor = 4.-3.*(width / globals()['table_width'])
+	print indent(level), '<!--', h_favor, width, globals()['table_width'], '-->'
 	# output templates
 	tag_column='<td class="tooltip" {0}width="{1}%">'
 	tag_row = '<td class="tooltip" {0}height="{1}%">'
@@ -469,7 +486,7 @@ def compute_layout(items, level, width, height):
 	# precompute cell layout and size
 	for path, filename, size in items:
 		ratio = float(size) / full_size
-		if space_h > space_v:
+		if space_h*width > space_v*height*h_favor:
 			cover = space_h * ratio
 			space_h -= cover
 			stack.append( ('td', cover) )
@@ -491,18 +508,16 @@ def compute_layout(items, level, width, height):
 			# TODO: optimize for speed?
 			rspan = len(filter(lambda cell:cell[0]=='tr', stack))
 			span = ('', 'rowspan="{0}" '.format(rspan))[int(rspan>1)]
-			print indent(level+1)+tag_column.format(span, dim)
-			# TODO: recurse
-			recurse(item, level+1, space_h, space_v)
+			print indent(level+1)+tag_column.format(span, dim*100)
+			recurse(item, level+1, dim*width, dim*height)
 			print indent(level+1)+'</td>'
 		else:
 			if not tr_tag_open:
 				print indent(level)+'<tr>'
 			cspan = len(filter(lambda cell:cell[0]=='td', stack)) + 1
 			span = ('', 'colspan="{0} "'.format(cspan))[int(cspan>1)]
-			print indent(level+1)+tag_row.format(span, dim)
-			# TODO: recurse
-			recurse(item, level+1, space_h, space_v)
+			print indent(level+1)+tag_row.format(span, dim*100)
+			recurse(item, level+1, dim*width, dim*height)
 			print indent(level+1)+'</td>'
 			tr_tag_open=False
 			print indent(level)+'</tr>'
@@ -533,6 +548,9 @@ init_wildcards() # set up environment for resource name matching with wildcards
 
 # compute list of files and directories, their hierarchy and disk usage amount
 _names = resources(_root)
+# TODO: get from argv
+table_width=1000
+table_height=600
 
 #for r in _names:
 	#print >> sys.stderr, r
@@ -609,14 +627,14 @@ print '''<!doctype html>
 	</style>
 </head>
 <body>
-<div width="100%" height="600" align="center">'''
+<div width="100%" height="800" align="center">'''
 print '<h4>Showing contents of: "{0}"</h4>'.format(_root)
 print '<i>{0}</i>'.format(sys.argv)
-print '''<table width="100%" height="600">
-<tr><td>'''
-table(_root, 0)
-print '''</td></tr></table>
-</div>
+# TODO: table dimensions from argv
+print '<table width="{0}" height="{1}"><tr><td>'.format(table_width, table_height)
+table(_root, 0, table_width, table_height)
+print '</td></tr></table>'
+print '''</div>
 </body>'''
 
 try:
