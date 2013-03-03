@@ -355,9 +355,9 @@ def recurse(entry, level, space_h, space_v):
 	if entry[1] == '':
 		#TODO: choose appropriate layout given the remaining amounts of space
 		# space_h and space_v
-		tableh(path, level+2)
+		table(entry[0], level+2)
 	else:
-		label(entry, level)
+		label(entry, level+1)
 
 
 # TODO: write complement tablev, which covers the scenario of having less remaining
@@ -435,54 +435,78 @@ def tableh(dirname, level):
 	print indent(level)+'</table>'
 
 
+# TODO: actual dimensions: width, height
+# optimized layout
+def table(dirname, level=0, width=100, height=100):
+	items = largest(dirname)
+	if len(items) < 1:
+		print "None"
+		return
+	print indent(level)+'<table width="100%" height="100%" class="tooltip" dir="{0}">'.format(['RTL', 'LTR'][level%2])
+	namespaces = dirname.split(os.sep)
+	if len(namespaces) > 1 and level > 0:
+		print indent(level+1)+'<span><a href="{0}">{0}</a></span>'.format(namespaces[-1])
+	# TODO: implement width, height consideration
+	compute_layout(items, level+1, 100, 100)
+	print indent(level)+'</table>'
+
+
 # precompute cells layout optimized for space use, 
 # then actually write html output with according span attributes
 # pass [(path, filename, size), ] list as items
 def compute_layout(items, level, width, height):
+	# process variables
 	stack = []
 	space_h = 100.
 	space_v = 100.
-	
-	tag_column='<td class="tooltip" rowspan="{0}" width="{1}">'
-	tag_row = '<td class="tooltip" colspan="{0}" height="{1}">'
+	# output templates
+	tag_column='<td class="tooltip" {0}width="{1}%">'
+	tag_row = '<td class="tooltip" {0}height="{1}%">'
 	tr_tag_open=False
-	
+	# determining total namespace sapce
 	directory, _, full_size = items.pop(0)
 
 	# precompute cell layout and size
 	for path, filename, size in items:
+		ratio = float(size) / full_size
 		if space_h > space_v:
-			cover = space_h * size / full_size
+			cover = space_h * ratio
+			space_h -= cover
 			stack.append( ('td', cover) )
 		else:
-			cover = space_v * size / full_size
+			cover = space_v * ratio
+			space_v -= cover
 			stack.append( ('tr', cover) )
 		full_size -= size
-		space_h -= cover
+	stack[-1]=('tr', stack[-1][1])
 
 	# write cell layout HTML output
-	for path, filename, size:
+	for item in items:
 		tag, dim = stack.pop(0)
+		print indent(level), '<!--', item, tag, dim, '-->'
 		if tag == 'td':
 			if not tr_tag_open:
 				tr_tag_open=True
 				print indent(level)+'<tr>'
 			# TODO: optimize for speed?
 			rspan = len(filter(lambda cell:cell[0]=='tr', stack))
-			print indent(level+1)+tag_column.format(rspan, dim)
+			span = ('', 'rowspan="{0}" '.format(rspan))[int(rspan>1)]
+			print indent(level+1)+tag_column.format(span, dim)
 			# TODO: recurse
+			recurse(item, level+1, space_h, space_v)
 			print indent(level+1)+'</td>'
 		else:
-			if tr_tag_open:
-				tr_tag_open=False
-				print indent(level)+'</tr>'
+			if not tr_tag_open:
 				print indent(level)+'<tr>'
-				cspan = len(filter(lambda cell:cell[0]=='td', stack))+1
-				print indent(level+1)+tag_row.format(cspan, dim)
-				# TODO: recurse
-				print indent(level+1)+'</td>'
-				print indent(level)+'</tr>'
-
+			cspan = len(filter(lambda cell:cell[0]=='td', stack)) + 1
+			span = ('', 'colspan="{0} "'.format(cspan))[int(cspan>1)]
+			print indent(level+1)+tag_row.format(span, dim)
+			# TODO: recurse
+			recurse(item, level+1, space_h, space_v)
+			print indent(level+1)+'</td>'
+			tr_tag_open=False
+			print indent(level)+'</tr>'
+	# done:
 	if tr_tag_open:
 		print indent(level)+'</tr>'
 
@@ -590,7 +614,7 @@ print '<h4>Showing contents of: "{0}"</h4>'.format(_root)
 print '<i>{0}</i>'.format(sys.argv)
 print '''<table width="100%" height="600">
 <tr><td>'''
-tableh(_root, 0)
+table(_root, 0)
 print '''</td></tr></table>
 </div>
 </body>'''
