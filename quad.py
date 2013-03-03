@@ -341,9 +341,9 @@ def label((path, filename, diskuse), level):
 	label = filename
 	if diskuse == 0:
 		diskuse = 10
-	element = '<font size="{0}pt">{1}</font>'.format(log(diskuse)-1, link.format(href, label))
-	print '<span>{0}</span>'.format(filename)
-	print indent(level+2)+element
+	element = '<font size="{0}pt" dir="LTR">{1}</font>'.format(log(diskuse)-1, link.format(href, label))
+	print indent(level)+'<span>{0}</span>'.format(filename)
+	print indent(level)+element
 
 
 # recurse:
