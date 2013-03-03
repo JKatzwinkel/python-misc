@@ -360,57 +360,6 @@ def recurse(entry, level, space_h, space_v):
 		label(entry, level+1)
 
 
-# http://stackoverflow.com/questions/9725836/css-keep-table-cell-from-expanding-and-truncate-long-text
-# http://stackoverflow.com/questions/2736021/super-simple-css-tooltip-in-a-table-why-is-it-not-displaying-and-can-i-make-it
-# construe a table optimized for horizontal alignment, that is, the table
-# is expected to be wider than it is high.
-# assuming that it is like this, cells are positioned in one column containing
-# the lists head next to a second column representing the rest, recursively
-def tableh(dirname, level):
-	items = largest(dirname)
-	if len(items) < 1:
-		print "None"
-		return
-	path, filename, size = items.pop(0)
-	print indent(level)+'<table width="100%" height="100%" class="tooltip" dir="{0}">'.format(['RTL', 'LTR'][level%2])
-	namespaces = dirname.split(os.sep)
-	if len(namespaces) > 1 and level > 0:
-		print indent(level+1)+'<span><a href="{0}">{0}</a></span>'.format(namespaces[-1])
-	full = size
-	# loop through items / tr/td
-	# each tr contains two td
-	level += 1 #indent
-	# TODO: come up with better names for these
-	remainder_h = 100.
-	remainder_v = 100.
-
-	while len(items)>0:
-		rowspan = int(round(len(items)/2.))
-		path, filename, size = items.pop(0)
-		print indent(level)+'<tr>'
-
-		covering = size * remainder_h / full
-		remainder_h -= covering
-		full -= size
-		print indent(level+1)+'<td class="tooltip" rowspan="{0}" width="{1}%" height="{2}%">'.format(rowspan, covering, remainder_v)
-		recurse((path, filename, size), level, remainder_h, remainder_v)
-		print indent(level+1)+'</td>'
-
-		# second td
-		if len(items) > 0:
-			colspan = int(round(len(items)/2.))
-			path, filename, size = items.pop(0)
-			covering = size * remainder_v / full
-			remainder_v -= covering
-			full -= size
-			print indent(level+1)+'<td class="tooltip" colspan="{0}" width="{2}%" height="{1}%">'.format(colspan, covering, remainder_h)
-			recurse((path, filename, size), level, remainder_h, remainder_v)
-			print indent(level+1)+'</td>'
-
-		print indent(level)+'</tr>'
-	level -= 1 # unindent
-	print indent(level)+'</table>'
-
 
 # optimized layout
 def table(dirname, level=0, width='100%', height='100%'):
@@ -500,11 +449,6 @@ def compute_layout(items, level, width, height):
 	if tr_tag_open:
 		print indent(level)+'</tr>'
 
-
-# print text-based nested list representation of file tree under dirname
-def compute(dirname):
-	_names = resources(dirname)
-	partition(dirname)
 
 
 
