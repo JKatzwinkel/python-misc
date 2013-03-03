@@ -552,6 +552,7 @@ print '''<!doctype html>
 <div width="100%" height="600" align="center">'''
 print '<h4>Showing contents of: "{0}"</h4>'.format(_root)
 print '<i>{0}</i>'.format(sys.argv)
+# TODO: handle default height value, since table does not inherit height
 print '<table width="{0}" height="{1}"><tr><td>'.format(table_width, table_height)
 table(_root, 0, table_width, table_height)
 print '</td></tr></table>'
