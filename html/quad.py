@@ -71,8 +71,10 @@ OPTIONS:
 	--width <pixel|percent%>
 		Sets width of generated table to passed argument.
 
-	--height <puxel|percent%>
+	--height <pixel>
 		Sets height of generated table to passed argument.
+		Because table doesn't inherit its height attribute, percentage 
+		values are not appliable here.
 	'''
 
 # Parse command-line arguments
@@ -207,7 +209,6 @@ def discard_path(path):
 # If preserving wildcards are set and we still don't match a single one of them,
 # discard.
 # Otherwise, and if only one of the discarding wildcards matches, discard.
-# TODO: don't forget to delete the () when changing those glob functions
 # back to lists
 def discard_file(filename):
 	return len(keep_file_globs) > 0 and \
