@@ -354,22 +354,11 @@ def label((path, filename, diskuse), level):
 # recursion terminates.
 def recurse(entry, level, space_h, space_v):
 	if entry[1] == '':
-		#TODO: choose appropriate layout given the remaining amounts of space
 		# space_h and space_v
 		table(entry[0], level+2, space_h, space_v)
 	else:
 		label(entry, level+1)
 
-
-# TODO: write complement tablev, which covers the scenario of having less remaining
-# space horizontally than vertically. I that case, rather than rendering the file
-# lists head in a column next to its rest, the head should be given an entire row,
-# with the second row containing the list's rest.
-def tablev(dirname, level):
-	items = largest(dirname)
-	if len(items) < 1:
-		print "None"
-		return
 
 # http://stackoverflow.com/questions/9725836/css-keep-table-cell-from-expanding-and-truncate-long-text
 # http://stackoverflow.com/questions/2736021/super-simple-css-tooltip-in-a-table-why-is-it-not-displaying-and-can-i-make-it
@@ -377,10 +366,6 @@ def tablev(dirname, level):
 # is expected to be wider than it is high.
 # assuming that it is like this, cells are positioned in one column containing
 # the lists head next to a second column representing the rest, recursively
-# TODO: think of a way to make the table layout generated in items iteration
-# smart enough to leave the pattern "one column left, two rows right" (in favour of more rows)
-# whenever the space left on the horizontal axis will force future columns
-# to be too narrow to display its contents
 def tableh(dirname, level):
 	items = largest(dirname)
 	if len(items) < 1:
@@ -391,7 +376,6 @@ def tableh(dirname, level):
 	namespaces = dirname.split(os.sep)
 	if len(namespaces) > 1 and level > 0:
 		print indent(level+1)+'<span><a href="{0}">{0}</a></span>'.format(namespaces[-1])
-	# TODO: this would be where the optimized layout function would be called
 	full = size
 	# loop through items / tr/td
 	# each tr contains two td
@@ -405,14 +389,6 @@ def tableh(dirname, level):
 		path, filename, size = items.pop(0)
 		print indent(level)+'<tr>'
 
-		# TODO: install a switch to alternatively arrange more than two columns/rows
-		# next to each/one below the other. The challenge of it is the row/col span
-		# not being directly derivable from the number of remaining cells.
-		# TODO: We probably have to pre-compute the tr-td sequence that we then
-		# compute the rowspan/colspan with that we build the table from. 
-		# It seems like an easy pattern applies:
-		# TODO: A column's rowspan computes as the number of succeeding rows, while
-		# each row's colspan euqals the number of columns coming up, plus 1.
 		covering = size * remainder_h / full
 		remainder_h -= covering
 		full -= size
@@ -436,7 +412,6 @@ def tableh(dirname, level):
 	print indent(level)+'</table>'
 
 
-# TODO: actual dimensions: width, height
 # optimized layout
 def table(dirname, level=0, width='100%', height='100%'):
 	items = largest(dirname)
