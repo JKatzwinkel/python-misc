@@ -130,9 +130,9 @@ def read_argv(argv):
 				# pass a URL that hyperlinks in output will be modeled on
 				pass
 			elif opt == '--width':
-				globals()['table_width'] = float(arg)
+				globals()['table_width'] = arg
 			elif opt == '--height':
-				globals()['table_height'] = float(arg)
+				globals()['table_height'] = arg
 		# assume that standalone arguments are meant to be file name wildcards
 		if len(args) > 0:
 			# consider remaining arguments wildcards passed to include files
@@ -371,7 +371,6 @@ def recurse(entry, level, space_h, space_v):
 		label(entry, level+1)
 
 
-
 # optimized layout
 def table(dirname, level=0, width='100%', height='100%'):
 	items = largest(dirname)
@@ -381,14 +380,17 @@ def table(dirname, level=0, width='100%', height='100%'):
 	table_tag = '<table width="100%" height="100%" class="tooltip" dir="{0}">'
 	print indent(level)+table_tag.format(['RTL', 'LTR'][level%2])
 	# handling default dimensions
+	# TODO: move size handling stuff somewhere else?
 	numeral = lambda s: float(re.findall('[0-9.]*', s)[0])
 	if type(width) == str:
 		width = numeral(width)
 	if type(height) == str:
 		height = numeral(height)
 	# register root table width:
-	if globals().get('table_width',0) == 0:
+	if globals().get('table_width',0) == 0 or type(globals()['table_width']) == str:
 		globals()['table_width'] = float(width)
+	if globals().get('table_height',0) == 0 or type(globals()['table_height']) == str:
+		globals()['table_height'] = float(width)
 	# label table:
 	namespaces = dirname.split(os.sep)
 	if len(namespaces) > 1 and level > 0:
