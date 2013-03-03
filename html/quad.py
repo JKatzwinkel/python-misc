@@ -26,13 +26,15 @@ _globs = {'.*': 7} # default: filter out hidden files and directories
 _delimiter = os.sep # alternative delimiter as replacement for OS filesep
 _out = sys.stdout # output destination
 _maxdepth = 10 # max depth within which directories and files are display candidates
+# table dimensions
+table_width=1000
+table_height=600
 
 
 # ======== USER INPUT SECTION ======== #
 
 # Print help message
 def print_help():
-	#TODO: implement options for height/width of computed HTML table
 	#TODO: options for including and excluding both files and directories
 	# by passing multiple wildcards respectively
 	#TODO: proper handling of Hyperlink template
@@ -65,6 +67,12 @@ OPTIONS:
 
 	-o, --output <file>
 		Write output to <file> instead of STDOUT
+
+	--width <pixel|percent%>
+		Sets width of generated table to passed argument.
+
+	--height <puxel|percent%>
+		Sets height of generated table to passed argument.
 	'''
 
 # Parse command-line arguments
@@ -86,8 +94,7 @@ def read_argv(argv):
 		# (getopt.getopt aborts parsing when non-option arguments occur)
 		try:
 			opts, args = gnu_getopt(argv[2:], "ham:d:o:",
-				["name=", "output=", "delimiter=", "help", "all"])
-			# TODO: options for width/height of HTML table rendering
+				["name=", "output=", "delimiter=", "help", "all", "width=", "height="])
 		except:
 			print_help()
 			exit(2)
@@ -122,6 +129,10 @@ def read_argv(argv):
 			elif opt in ('-u', '--baseurl'):
 				# pass a URL that hyperlinks in output will be modeled on
 				pass
+			elif opt == '--width':
+				globals()['table_width'] = float(arg)
+			elif opt == '--height':
+				globals()['table_height'] = float(arg)
 		# assume that standalone arguments are meant to be file name wildcards
 		if len(args) > 0:
 			# consider remaining arguments wildcards passed to include files
@@ -467,9 +478,6 @@ init_wildcards() # set up environment for resource name matching with wildcards
 
 # compute list of files and directories, their hierarchy and disk usage amount
 _names = resources(_root)
-# TODO: get from argv
-table_width=1000
-table_height=600
 
 #for r in _names:
 	#print >> sys.stderr, r
@@ -549,7 +557,6 @@ print '''<!doctype html>
 <div width="100%" height="800" align="center">'''
 print '<h4>Showing contents of: "{0}"</h4>'.format(_root)
 print '<i>{0}</i>'.format(sys.argv)
-# TODO: table dimensions from argv
 print '<table width="{0}" height="{1}"><tr><td>'.format(table_width, table_height)
 table(_root, 0, table_width, table_height)
 print '</td></tr></table>'
