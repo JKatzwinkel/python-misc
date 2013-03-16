@@ -43,12 +43,15 @@ def disk_usage(path):
 	else:
 		return os.path.getsize(path)
 
-# Populates and returns a list of all files and directories found under
-# the given directory, which match the chosen requirements (hidden files
-# yes/no, only files that match Unix wildcards, only files within a 
-# certain depth, ...).
-# The resulting list is sorted by disk space consumption, starting with
-# the largest item.
+
+# makes the given path relative to _documentroot
+def relpath(path):
+	res = os.path.relpath(path, _documentroot)
+	if res == '.':
+		return ':'
+	return ':'.join(['']+res.split(os.sep))
+
+
 def resources(dirname):
 	results=[]
 	if not os.path.isdir(dirname):
