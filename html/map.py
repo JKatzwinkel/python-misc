@@ -43,15 +43,12 @@ def disk_usage(path):
 	else:
 		return os.path.getsize(path)
 
-
-# makes the given path relative to _documentroot
-def relpath(path):
-	res = os.path.relpath(path, _documentroot)
-	if res == '.':
-		return ':'
-	return ':'.join(['']+res.split(os.sep))
-
-
+# Populates and returns a list of all files and directories found under
+# the given directory, which match the chosen requirements (hidden files
+# yes/no, only files that match Unix wildcards, only files within a 
+# certain depth, ...).
+# The resulting list is sorted by disk space consumption, starting with
+# the largest item.
 def resources(dirname):
 	results=[]
 	if not os.path.isdir(dirname):
@@ -94,81 +91,135 @@ def partition(dirname, level=0):
 
 
 # ========== RENDERING SECTION =========== #
+# returns a whitespace-only string of a certain length that can be used
+# to indent output
 def indent(level):
 	return '  '*level
 
 # format and echo a label for given path, filename, size of disk usage, and
 # indentation level
 def label((path, filename, diskuse), level):
-	if filename == '':
-		tableh(path, level+2)
+	ns = ':'.join(path.split(os.sep)[1:]+[''])
+	link = '<a href="{0}">{1}</a>'
+	href = _baseurl + ns + filename
+	label = filename
+	if diskuse == 0:
+		diskuse = 10
+	cell_content=link.format(href, label)
+	if diskuse>1024:
+		if diskuse>1024*1024:
+			cell_content += ' ({0} MB)'.format(str(diskuse/1024/1024))
+		else:
+			cell_content += ' ({0} kB)'.format(str(diskuse/1024))
+	element = '<font size="{0}pt" dir="LTR">{1}</font>'.format(
+								log(diskuse)/2, cell_content)
+	print indent(level)+'<span dir="LTR">{0}</span>'.format(filename)
+	print indent(level)+element
+
+
+# recurse:
+# If recursion did not arrive a leaf node (file) yet, decide which layout
+# the nested table is supposed to be aligned in (horizontal or vertical).
+# If further recursion is not possible, create label indicating which leaf
+# recursion terminates.
+def recurse(entry, level, space_h, space_v):
+	if entry[1] == '':
+		# space_h and space_v
+		table(entry[0], level+2, space_h, space_v)
 	else:
-		ns = ':'.join(path.split(':')[1:]+[''])
-		link = '<a href="{0}">{1}</a>'
-		href = _baseurl + ns + filename
-		label = filename
-		if diskuse == 0:
-			diskuse = 10
-		element = '<font size="{0}pt">{1}</font>'.format(log(diskuse)-1, link.format(href, label))
-		print '<span>{0}</span>'.format(filename)
-		print indent(level+2)+element
-
-
-# http://stackoverflow.com/questions/9725836/css-keep-table-cell-from-expanding-and-truncate-long-text
-# http://stackoverflow.com/questions/2736021/super-simple-css-tooltip-in-a-table-why-is-it-not-displaying-and-can-i-make-it
-# Construct a table optimized for horizontal alignment, that is, the table
-# is expected to be wider than it is high.
-# assuming that it is like this, cells are positioned in one column containing
-# the lists head next to a second column representing the rest, recursively
-def tableh(dirname, level):
+		label(entry, level+1)
+# optimized layout
+def table(dirname, level=0, width='100%', height='100%'):
 	items = largest(dirname)
 	if len(items) < 1:
+		print "None"
 		return
-	path, filename, size = items.pop(0)
-	print indent(level)+'<table width="100%" height="100%" class="tooltip" dir="{0}">'.format(['RTL', 'LTR'][level%2])
-	namespaces = dirname.split(':')
+	table_tag = '<table width="100%" height="100%" class="tooltip" dir="{0}">'
+	print indent(level)+table_tag.format(['RTL', 'LTR'][level%2])
+	# handling default dimensions
+	# TODO: move size handling stuff somewhere else?
+	numeral = lambda s: float(re.findall('[0-9.]*', s)[0])
+	# TODO: also, prevent incompatible units: mixing percentage and pixel values
+	# should be dismissed
+	if type(width) == str:
+		width = numeral(width)
+	if type(height) == str:
+		height = numeral(height)
+	# register root table width:
+	if globals().get('table_width',0) == 0 or type(globals()['table_width']) == str:
+		globals()['table_width'] = float(width)
+	if globals().get('table_height',0) == 0 or type(globals()['table_height']) == str:
+		globals()['table_height'] = float(width)
+	# label table:
+	namespaces = dirname.split(os.sep)
 	if len(namespaces) > 1 and level > 0:
-		print indent(level+1)+'<span><a href="{1}">{0}</a></span>'.format(namespaces[-1],
-			'map.py?id='+':'.join(namespaces[1:]))
-	full = size
-	# loop through items / tr/td
-	# each tr contains two td
-	level += 1
-	remainder_h = 100.
-	remainder_v = 100.
-
-	while len(items)>0:
-		rowspan = int(round(len(items)/2.))
-		path, filename, size = items.pop(0)
-		print indent(level)+'<tr>'
-
-		# first td
-		covering = size * remainder_h / full
-		remainder_h -= covering
-		full -= size
-		print indent(level+1)+'<td class="tooltip" rowspan="{0}" width="{1}%" height="{2}%">'.format(rowspan, covering, remainder_v)
-		label((path, filename, size), level)
-		print indent(level+1)+'</td>'
-
-		# second td
-		if len(items) > 0:
-			colspan = int(round(len(items)/2.))
-			path, filename, size = items.pop(0)
-			covering = size * remainder_v / full
-			remainder_v -= covering
-			full -= size
-			print indent(level+1)+'<td class="tooltip" colspan="{0}" width="{2}%" height="{1}%">'.format(colspan, covering, remainder_h)
-			label((path, filename, size), level)
-			print indent(level+1)+'</td>'
-
-		print indent(level)+'</tr>'
-	level -= 1 # unindent
+		print indent(level+1)+'<span><a href="{0}">{0}</a></span>'.format(namespaces[-1])
+	# Generate table layout
+	if len(items)>1:
+		compute_layout(items, level+1, width, height)
 	print indent(level)+'</table>'
 
 
-def compute(dirname):
-	_names = resources(dirname)
-	partition(dirname)
+# precompute cells layout optimized for space use, 
+# then actually write html output with according span attributes
+# pass [(path, filename, size), ] list as items
+def compute_layout(items, level, width, height):
+	# process variables
+	stack = []
+	space_h = 1.
+	space_v = 1.
+	# horizontal layout in favor at small tables
+	# TODO: adjust
+	h_favor = 4.-3.*(width / globals()['table_width'])
+	print indent(level), '<!--', h_favor, width, globals()['table_width'], '-->'
+	# output templates
+	tag_column='<td class="tooltip" {0}width="{1}%">'
+	tag_row = '<td class="tooltip" {0}height="{1}%">'
+	tr_tag_open=False
+	# determining total namespace sapce
+	directory, _, full_size = items.pop(0)
+
+	# precompute cell layout and size
+	for path, filename, size in items:
+		ratio = float(size) / full_size
+		if space_h*width > space_v*height*h_favor and space_h*width*ratio>len(filename)*6:
+			cover = space_h * ratio
+			space_h -= cover
+			stack.append( ('td', cover) )
+		else:
+			cover = space_v * ratio
+			space_v -= cover
+			stack.append( ('tr', cover) )
+		full_size -= size
+	stack[-1]=('tr', stack[-1][1])
+
+	# write cell layout HTML output
+	for item in items:
+		tag, dim = stack.pop(0)
+		print indent(level), '<!--', item, tag, dim, '-->'
+		if tag == 'td':
+			if not tr_tag_open:
+				tr_tag_open=True
+				print indent(level)+'<tr>'
+			# TODO: optimize for speed?
+			rspan = len(filter(lambda cell:cell[0]=='tr', stack))
+			span = ('', 'rowspan="{0}" '.format(rspan))[int(rspan>1)]
+			print indent(level+1)+tag_column.format(span, dim*100)
+			recurse(item, level+1, dim*width, dim*height)
+			print indent(level+1)+'</td>'
+		else:
+			if not tr_tag_open:
+				print indent(level)+'<tr>'
+			cspan = len(filter(lambda cell:cell[0]=='td', stack)) + 1
+			span = ('', 'colspan="{0} "'.format(cspan))[int(cspan>1)]
+			print indent(level+1)+tag_row.format(span, dim*100)
+			recurse(item, level+1, dim*width, dim*height)
+			print indent(level+1)+'</td>'
+			tr_tag_open=False
+			print indent(level)+'</tr>'
+	# done:
+	if tr_tag_open:
+		print indent(level)+'</tr>'
 
 
 fields = cgi.FieldStorage()
@@ -252,7 +303,7 @@ print '''Content-Type: text/html
 #print '<h3>Namespace {0} ({1})</h4>'.format(root, path)
 print '''<table width="800" height="600">
 <tr><td>'''
-tableh(':'+root, 0)
+table(':'+root, 0, 800, 600)
 print '''</td></tr></table>
 </div>
 </body>'''
