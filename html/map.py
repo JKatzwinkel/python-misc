@@ -158,8 +158,8 @@ def table(dirname, level=0, width='100%', height='100%'):
 	# label table:
 	namespaces = dirname.split(':')
 	if len(namespaces) > 1 and level > 0:
-		print indent(level+1)+'<span><a href="{0}">{0}</a></span>'.format(
-			_baseurl+':'.join(namespaces[1:]+['']), namespaces[-1])
+		print indent(level+1)+'<span><a href="{0}">{1}</a></span>'.format(
+			_baseurl+':'.join(namespaces[1:]), namespaces[-1])
 	# Generate table layout
 	if len(items)>1:
 		compute_layout(items, level+1, width, height)
