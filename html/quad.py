@@ -9,7 +9,7 @@ from fnmatch import fnmatch
 # Global variables holding input data
 _names=[] # list of contents
 _diskusage={} # computed consumptions of disk space
-_baseurl = '' #'https://192.168.178.1/wiki/doku.php?id=' # prefix URL for links
+_baseurl = 'file://' #'https://192.168.178.1/wiki/doku.php?id=' # prefix URL for links
 _root = '.' # root directory, where visualization recursion begins
 # dictionary of Unix-shell wildcards, one of which filenames must match
 # Unix wildcards (globs) passed as command line arguments are used as keys,
@@ -38,6 +38,7 @@ def print_help():
 	#TODO: options for including and excluding both files and directories
 	# by passing multiple wildcards respectively
 	#TODO: proper handling of Hyperlink template
+	#TODO: baseurl default: file://
 	print 'USAGE:'
 	print '	{0} <directory> [OPTIONS] [<glob>]'.format(sys.argv[0])
 	print '''
@@ -123,7 +124,7 @@ def read_argv(argv):
 			elif opt in ('-d', '--delimiter'):
 				# change custom delimiter for full-path labels/links
 				# from OS file separator to passed character
-				_delimiter = arg[0]
+				globals()['delimiter'] = arg[0]
 			elif opt in ('-o', '--output'):
 				# assign output destination (filename or whatever...)
 				# default is sys.stdout
@@ -349,13 +350,14 @@ def indent(level):
 # indentation level
 # TODO: implement template system for custom label formatting via command line
 def label((path, filename, diskuse), level):
-	ns = _delimiter.join(path.split(os.sep)[1:]+[''])
+	ns = _delimiter.join(path.split(os.sep)+[''])
 	link = '<a href="{0}">{1}</a>'
 	href = _baseurl + ns + filename
 	label = filename
 	if diskuse == 0:
 		diskuse = 10
 	cell_content=link.format(href, label)
+	#TODO: round!
 	if diskuse>1024:
 		if diskuse>1024*1024:
 			cell_content += ' ({0} MB)'.format(str(diskuse/1024/1024))
@@ -410,7 +412,8 @@ def table(dirname, level=0, width='100%', height='100%'):
 	# label table:
 	namespaces = dirname.split(os.sep)
 	if len(namespaces) > 1 and level > 0:
-		print indent(level+1)+'<span><a href="{0}">{0}</a></span>'.format(namespaces[-1])
+		print indent(level+1)+'<span><a href="{0}">{1}</a></span>'.format(
+			'/'.join(namespaces), namespaces[-1])
 	# Generate table layout
 	if len(items)>1:
 		compute_layout(items, level+1, width, height)
