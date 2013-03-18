@@ -102,7 +102,7 @@ def indent(level):
 # format and echo a label for given path, filename, size of disk usage, and
 # indentation level
 def label((path, filename, diskuse), level):
-	ns = ':'.join(path.split(os.sep)[1:]+[''])
+	ns = ':'.join(path.split(':')[1:]+[''])
 	link = '<a href="{0}">{1}</a>'
 	href = _baseurl + ns + filename
 	label = filename
