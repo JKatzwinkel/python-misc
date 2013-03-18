@@ -9,7 +9,7 @@ _diskusage={}
 _baseurl = 'https://192.168.178.1/wiki/doku.php?id='
 _documentroot = '/var/lib/dokuwiki/data/pages'
 
-# http://wiki.python.org/moin/HowTo/Sorting/ 
+# http://wiki.python.org/moin/HowTo/Sorting/
 # http://stackoverflow.com/questions/955941/how-to-identify-whether-a-file-is-normal-file-or-directory-using-python
 # http://stackoverflow.com/questions/1392413/calculating-a-directory-size-using-python
 
@@ -25,8 +25,8 @@ def is_child_dir(namespace, entry):
 			return len(':'.join(entry[0].split(namespace+':')[1:]).split(':')) is 1
 	return False
 
-# For the specified directory, return a list of the contained files ans 
-# immediate subdirectories, sorted by disk space consumption and 
+# For the specified directory, return a list of the contained files ans
+# immediate subdirectories, sorted by disk space consumption and
 # beginning with the directory itself, followed by its largest child
 def largest(dirname):
 	return filter(lambda x:x[0] == dirname or is_child_dir(dirname, x), _names)
@@ -58,7 +58,7 @@ def resources(dirname):
 		return results
 	# walk bottom-up
 	for dirname, subdirs, files in os.walk(dirname, topdown=False):
-		du = 0 
+		du = 0
 		# disk usage of sub directories
 		for sd in subdirs:
 			filesize = disk_usage(os.path.join(dirname, sd))
@@ -131,6 +131,8 @@ def recurse(entry, level, space_h, space_v):
 		table(entry[0], level+2, space_h, space_v)
 	else:
 		label(entry, level+1)
+
+
 # optimized layout
 def table(dirname, level=0, width='100%', height='100%'):
 	items = largest(dirname)
@@ -154,7 +156,7 @@ def table(dirname, level=0, width='100%', height='100%'):
 	if globals().get('table_height',0) == 0 or type(globals()['table_height']) == str:
 		globals()['table_height'] = float(width)
 	# label table:
-	namespaces = dirname.split(os.sep)
+	namespaces = dirname.split(':')
 	if len(namespaces) > 1 and level > 0:
 		print indent(level+1)+'<span><a href="{0}">{0}</a></span>'.format(namespaces[-1])
 	# Generate table layout
@@ -163,7 +165,7 @@ def table(dirname, level=0, width='100%', height='100%'):
 	print indent(level)+'</table>'
 
 
-# precompute cells layout optimized for space use, 
+# precompute cells layout optimized for space use,
 # then actually write html output with according span attributes
 # pass [(path, filename, size), ] list as items
 def compute_layout(items, level, width, height):
@@ -225,6 +227,9 @@ def compute_layout(items, level, width, height):
 		print indent(level)+'</tr>'
 
 
+
+# === BEGIN PROCESSING ===
+
 fields = cgi.FieldStorage()
 try:
 	root = fields['id'].value
@@ -270,7 +275,7 @@ print '''Content-Type: text/html
 			background-color: white;
 			padding: 0px;
 			margin:0px;
-			table-layout: fixed;
+			table-layout: auto;
 			cellspacing: 5px;
 		}
 		table:hover {
@@ -282,7 +287,7 @@ print '''Content-Type: text/html
 		table.namespace:hover {
 			background-color: #C0C0FF;
 		}
-		.tooltip > span, 
+		.tooltip > span,
 		.tooltip > span > a {
 			display: none;
 		}

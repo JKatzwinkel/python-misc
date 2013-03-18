@@ -73,7 +73,7 @@ OPTIONS:
 
 	--height <pixel>
 		Sets height of generated table to passed argument.
-		Because table doesn't inherit its height attribute, percentage 
+		Because table doesn't inherit its height attribute, percentage
 		values are not appliable here.
 	'''
 
@@ -244,8 +244,8 @@ def is_child(dirname, entry):
 			return len(entry[0].split(dirname+os.sep)[1].split(os.sep)) is 1
 	return False
 
-# For the specified directory, return a list of the contained files ans 
-# immediate subdirectories, sorted by disk space consumption and 
+# For the specified directory, return a list of the contained files ans
+# immediate subdirectories, sorted by disk space consumption and
 # beginning with the directory itself, followed by its largest child
 def largest(dirname):
 	return filter(lambda x:x[0] == dirname or is_child(dirname, x), _names)
@@ -264,7 +264,7 @@ def disk_usage(path):
 
 # Populates and returns a list of all files and directories found under
 # the given directory, which match the chosen requirements (hidden files
-# yes/no, only files that match Unix wildcards, only files within a 
+# yes/no, only files that match Unix wildcards, only files within a
 # certain depth, ...).
 # The resulting list is sorted by disk space consumption, starting with
 # the largest item.
@@ -417,7 +417,7 @@ def table(dirname, level=0, width='100%', height='100%'):
 	print indent(level)+'</table>'
 
 
-# precompute cells layout optimized for space use, 
+# precompute cells layout optimized for space use,
 # then actually write html output with according span attributes
 # pass [(path, filename, size), ] list as items
 def compute_layout(items, level, width, height):
@@ -530,7 +530,7 @@ print '''<!doctype html>
 			background-color: white;
 			padding: 0px;
 			margin:0px;
-			table-layout: fixed;
+			table-layout: auto;
 			cellspacing: 5px;
 		}
 		table:hover {
