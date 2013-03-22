@@ -349,6 +349,8 @@ def indent(level):
 # format and echo a label for given path, filename, size of disk usage, and
 # indentation level
 # TODO: implement template system for custom label formatting via command line
+# TODO: implement wrapper method decorate(...space_v...) to print empty cells
+# without labels inside
 def label((path, filename, diskuse), level):
 	ns = _delimiter.join(path.split(os.sep)+[''])
 	link = '<a href="{0}">{1}</a>'
@@ -357,6 +359,7 @@ def label((path, filename, diskuse), level):
 	if diskuse == 0:
 		diskuse = 10
 	cell_content=link.format(href, label)
+	#TODO: move calculation of font size to extra function
 	#TODO: round!
 	if diskuse>1024:
 		if diskuse>1024*1024:
@@ -379,6 +382,8 @@ def recurse(entry, level, space_h, space_v):
 		# space_h and space_v
 		table(entry[0], level+2, space_h, space_v)
 	else:
+		#TODO: should decision made here, if cell gets a label or
+		# if it's too small?
 		label(entry, level+1)
 
 
@@ -423,6 +428,8 @@ def table(dirname, level=0, width='100%', height='100%'):
 # precompute cells layout optimized for space use,
 # then actually write html output with according span attributes
 # pass [(path, filename, size), ] list as items
+#TODO: find out why final items are shown in wrong size
+#TODO: think about grid layout for items of similar size
 def compute_layout(items, level, width, height):
 	# process variables
 	stack = []
@@ -442,7 +449,7 @@ def compute_layout(items, level, width, height):
 	# precompute cell layout and size
 	for path, filename, size in items:
 		ratio = float(size) / full_size
-		if space_h*width > space_v*height*h_favor and space_h*width*ratio>len(filename)*6:
+		if space_h*width > space_v*height*h_favor	and space_h*width*ratio>len(filename)*6:
 			cover = space_h * ratio
 			space_h -= cover
 			stack.append( ('td', cover) )
@@ -456,6 +463,10 @@ def compute_layout(items, level, width, height):
 	# write cell layout HTML output
 	for item in items:
 		tag, dim = stack.pop(0)
+		# do not assign dimension value to last item
+		# TODO: cell dimensions don't fit relative files sizes
+		if len(stack) < 1:
+			dim=0
 		print indent(level), '<!--', item, tag, dim, '-->'
 		if tag == 'td':
 			if not tr_tag_open:
