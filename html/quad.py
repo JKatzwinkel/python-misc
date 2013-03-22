@@ -301,7 +301,7 @@ def resources(dirname):
 			results.append((dirname, fn, filesize))
 		# only list directory if the depth of its location is small enough
 		#if depth <= _maxdepth:
-		results.append((dirname, '', du+1))
+		results.append((dirname, '', du+1)) #TODO: is this save?
 		# save directory disk use in dictionary
 		# Because of the recursive disk space computation, even directories that
 		# are nested too deep to be displayed have tp register their size
@@ -449,14 +449,17 @@ def compute_layout(items, level, width, height):
 	# precompute cell layout and size
 	for path, filename, size in items:
 		ratio = float(size) / full_size
-		if space_h*width > space_v*height*h_favor	and space_h*width*ratio>len(filename)*6:
+		print "<!-- ", path, filename, size, full_size, ratio, "-->"
+		if space_h*width > space_v*height*h_favor and space_h*width*ratio>len(filename)*6:
 			cover = space_h * ratio
 			space_h -= cover
 			stack.append( ('td', cover) )
+			print "<!--", space_h, cover, "-->"
 		else:
 			cover = space_v * ratio
 			space_v -= cover
 			stack.append( ('tr', cover) )
+			print "<!--", space_v, cover, "-->"
 		full_size -= size
 	stack[-1]=('tr', stack[-1][1])
 
