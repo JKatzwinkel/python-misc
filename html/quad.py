@@ -362,6 +362,7 @@ def init_log_scale():
 	globals()['_log_scale']=10./(log(_max_size)-log(_min_size))
 	globals()['_min_size']=log(_min_size)
 	globals()['_max_size']=log(_max_size)
+	globals()['_font_sizes']=[i+9 for i in range(0,11)]
 
 # returns a whitespace-only string of a certain length that can be used
 # to indent output
@@ -382,7 +383,7 @@ def font_class(diskuse):
 # TODO: implement template system for custom label formatting via command line
 # TODO: implement wrapper method decorate(...space_v...) to print empty cells
 # without labels inside
-def label((path, filename, diskuse), level):
+def label((path, filename, diskuse), level, visible=True):
 	ns = _delimiter.join(path.split(os.sep)+[''])
 	link = '<a href="{0}">{1}</a>'
 	href = _baseurl + ns + filename
@@ -398,11 +399,15 @@ def label((path, filename, diskuse), level):
 			cell_diskuse = '{:.1f} MB'.format(diskuse/1024./1024)
 		else:
 			cell_diskuse = '{:.1f} kB'.format(diskuse/1024.)
-	cell_content = "{0} ({1})".format(cell_content, cell_diskuse)
+	if visible:
+		cell_content = "{0} ({1})".format(cell_content, cell_diskuse)
+		element = '<span dir="LTR" class="{1}">{0}</span>'.format(cell_content, font_class(diskuse))
+	else:
+		cell_content = '{0}..{1}'.format(label[:3], label[-3:])
+		element = '<span dir="LTR" class="size0">{0}</span>'.format(cell_content)
 	#element = '<font size="{0}pt" dir="LTR">{1}</font>'.format(
 	#							font_size(diskuse), cell_content)
 	# <font> has been deprecated since HTML 4.0! We will use css style as of now
-	element = '<span dir="LTR" class="{1}">{0}</span>'.format(cell_content, font_class(diskuse))
 	print indent(level)+'<span dir="LTR" class="hidden size3">{0}</span>'.format(filename)
 	print indent(level)+element
 	print indent(level)+'<span dir="LTR" class="hidden size2">{0}</span>'.format(cell_diskuse)
@@ -420,7 +425,13 @@ def recurse(entry, level, space_h, space_v):
 	else:
 		#TODO: should decision made here, if cell gets a label or
 		# if it's too small?
-		label(entry, level+1)
+		fs=_font_sizes[font_size(entry[2])-1]
+		#TODO: calculate actual text size with PIL
+		if len(entry[1])*fs/3>space_h or fs>space_v:
+			show=False
+		else:
+			show=True
+		label(entry, level+1, visible=show)
 
 
 # optimized layout
@@ -562,9 +573,9 @@ print '''<!doctype html>
 <head>
 	<style type="text/css">'''
 #TODO: read number of font size classes from argv?
-for i in range(0,10):
+for i,px in enumerate(_font_sizes):
 	print '		.size{0} {{'.format(i)
-	print '			font-size: {0}px;'.format(i+9)
+	print '			font-size: {0}px;'.format(px)
 	print '		}'
 print '''
 		td {
