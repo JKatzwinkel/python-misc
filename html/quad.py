@@ -2,7 +2,7 @@
 import os
 import sys
 import re
-from math import log10 as log
+from math import log as log_nat
 from getopt import gnu_getopt
 from fnmatch import fnmatch
 
@@ -29,6 +29,10 @@ _maxdepth = 10 # max depth within which directories and files are display candid
 # table dimensions
 table_width=1000
 table_height=600
+# pre-calculate file size to font class mapping on log scale 
+# (font size ranges from 1 to 7 inclusive)
+# not necessary! drink less!
+# fontsize_classes=[0]+[2**i for i in range(8,20,2)]
 
 
 # ======== USER INPUT SECTION ======== #
@@ -168,13 +172,10 @@ def init_wildcards():
 	ns=globals()
 	# list of all wildcards which will remove matching directories
 	ns['discard_dir_globs'] = [glob for glob, mode in _globs.items() if mode & 3 == 3]
-
 	#list of all wildcards which will preserve matching directories
 	ns['keep_dir_globs'] = [glob for glob, mode in _globs.items() if mode & 3 == 2]
-
 	# List of all wildcards which will remove matching files
 	ns['discard_file_globs'] = [glob for glob, mode in _globs.items() if mode & 5 == 5]
-
 	# List of wildcards that will preserve matching files
 	ns['keep_file_globs'] = [glob for glob, mode in _globs.items() if mode & 5 == 4]
 
@@ -269,6 +270,7 @@ def disk_usage(path):
 # certain depth, ...).
 # The resulting list is sorted by disk space consumption, starting with
 # the largest item.
+#TODO: unicode stuff
 def resources(dirname):
 	results=[]
 	# if not a directory, return here
@@ -311,6 +313,10 @@ def resources(dirname):
 		# save disk space consumption value in dictionary for lookup by parent
 		# +1 : ensure subdirectories are not listed before any of their parents
 		_diskusage[dirname] = du+1
+	# register disk use of smallest and largest file
+	limite=sorted([x[2] for x in results if not x[1]==''])
+	globals()['_min_size'] = limite[0]
+	globals()['_max_size'] = limite[-1]
 	return sorted(results, key=lambda x:x[2], reverse=True)
 
 
@@ -338,13 +344,45 @@ def partition(dirname, level=0):
 
 
 
+
+
+
+
+
 # ========== RENDERING SECTION =========== #
+
+# return logarithm on base 2
+def log(x):
+	return log_nat(x)/log_nat(2)
+
+# prepare global constraints for file size <-> font size mapping
+# scale
+# map 10 steps in font size to file sizes
+def init_log_scale():
+	globals()['_log_scale']=10./(log(_max_size)-log(_min_size))
+	globals()['_min_size']=log(_min_size)
+	globals()['_max_size']=log(_max_size)
 
 # returns a whitespace-only string of a certain length that can be used
 # to indent output
 def indent(level):
 	return '  '*level
 
+# return font size in which a file of given size will be labeled in html
+def font_size(diskuse):
+	#return int(min(8,max(0,log(diskuse)/2-3)+1))
+	return 1+int((log(diskuse)-_min_size)*_log_scale)
+
+# return the css font class in which a label for a file of given size should be printed
+# NOTE: html font sizes ranges from 8pt (size=1) and 36pt (size=8).
+# so to translate font size level into pt size, would be like pt=lambda x:8+(x-1)*4
+# NOTE also: <font> has been deprecated since HTML 4.0. use css instead!
+# ok! this means we map file sizes greater than or equal
+# [0, 256, 1024, 4096, 16384, 65536, 262144]
+# to the font classes 'size{x}'
+# [0, 1, 2, 3, 4, 5, 6] respectively, defining font sizes [1,2,3,...]
+def font_class(diskuse):
+	return 'size{0}'.format(font_size(diskuse)-1)
 
 # format and echo a label for given path, filename, size of disk usage, and
 # indentation level
@@ -368,11 +406,13 @@ def label((path, filename, diskuse), level):
 		else:
 			cell_diskuse = '{:.1f} kB'.format(diskuse/1024.)
 	cell_content = "{0} ({1})".format(cell_content, cell_diskuse)
-	element = '<font size="{0}pt" dir="LTR">{1}</font>'.format(
-								log(diskuse)/2, cell_content)
-	print indent(level)+'<span dir="LTR">{0}</span>'.format(filename)
+	#element = '<font size="{0}pt" dir="LTR">{1}</font>'.format(
+	#							font_size(diskuse), cell_content)
+	# <font> has been deprecated since HTML 4.0! We will use css style as of now
+	element = '<span dir="LTR" class="{1}">{0}</span>'.format(cell_content, font_class(diskuse))
+	print indent(level)+'<span dir="LTR" class="hidden size3">{0}</span>'.format(filename)
 	print indent(level)+element
-	print indent(level)+'<span dir="LTR">{0}</span>'.format(cell_diskuse)
+	print indent(level)+'<span dir="LTR" class="hidden size2">{0}</span>'.format(cell_diskuse)
 
 
 # recurse:
@@ -420,7 +460,7 @@ def table(dirname, level=0, width='100%', height='100%'):
 	# label table:
 	namespaces = dirname.split(os.sep)
 	if len(namespaces) > 1 and level > 0:
-		print indent(level+1)+'<span><a href="{0}">{1}</a></span>'.format(
+		print indent(level+1)+'<span class="hidden"><a href="{0}">{1}</a></span>'.format(
 			'/'.join(namespaces), namespaces[-1])
 	# Generate table layout
 	if len(items)>1:
@@ -517,14 +557,23 @@ init_wildcards() # set up environment for resource name matching with wildcards
 
 # compute list of files and directories, their hierarchy and disk usage amount
 _names = resources(_root)
-if _out != sys.stdout:
+init_log_scale() # set up log scale for label font sizes
+
+if _out != sys.stdout: # set output destination
 	outputfile = open(_out, 'w')
 	sys.stdout = outputfile
+
 
 # assemble HTML output
 print '''<!doctype html>
 <head>
-	<style type="text/css">
+	<style type="text/css">'''
+#TODO: read number of font size classes from argv?
+for i in range(0,10):
+	print '		.size{0} {{'.format(i)
+	print '			font-size: {0}px;'.format(i+9)
+	print '		}'
+print '''
 		td {
 			border: 1px solid;
 			background-color: white;
@@ -563,12 +612,12 @@ print '''<!doctype html>
 		table.namespace:hover {
 			background-color: #C0C0FF;
 		}
-		.tooltip > span,
-		.tooltip > span > a {
+		.tooltip > span.hidden,
+		.tooltip > span.hidden > a {
 			display: none;
 		}
-		.tooltip:hover > span,
-		.tooltip:hover > span > a {
+		.tooltip:hover > span.hidden,
+		.tooltip:hover > span.hidden > a {
 			display: block;
 			position: absolute;
 			font-size: 8pt;
@@ -576,11 +625,11 @@ print '''<!doctype html>
 			border: 1px solid #CCC;
 			margin: 20px 10px;
 		}
-		.tooltip:hover > span a {
+		.tooltip:hover > span.hidden a {
 			text-decoration: none;
 			color: #33A;
 		}
-		table:hover[class~=tooltip] > span {
+		table:hover[class~=tooltip] > span.hidden {
 			background-color: #FDD;
 		}
 	</style>
@@ -589,6 +638,7 @@ print '''<!doctype html>
 <div width="100%" height="600" align="center">'''
 print '<h4>Showing contents of: "{0}"</h4>'.format(_root)
 print '<i>{0}</i>'.format(sys.argv)
+# print 'smallest: {0}, largest: {1}, scale: {2}'.format(_min_size, _max_size, _log_scale)
 # TODO: handle default height value, since table does not inherit height
 print '<table width="{0}" height="{1}"><tr><td>'.format(table_width, table_height)
 table(_root, 0, table_width, table_height)
