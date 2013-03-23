@@ -360,16 +360,19 @@ def label((path, filename, diskuse), level):
 		diskuse = 10
 	cell_content=link.format(href, label)
 	#TODO: move calculation of font size to extra function
-	#TODO: round!
+	# http://stackoverflow.com/questions/2922295/calculating-the-pixel-size-of-a-string-with-python
+	# if cell too narrow, shorten label!
 	if diskuse>1024:
 		if diskuse>1024*1024:
-			cell_content += ' ({0} MB)'.format(str(diskuse/1024/1024))
+			cell_diskuse = '{:.1f} MB'.format(diskuse/1024./1024)
 		else:
-			cell_content += ' ({0} kB)'.format(str(diskuse/1024))
+			cell_diskuse = '{:.1f} kB'.format(diskuse/1024.)
+	cell_content = "{0} ({1})".format(cell_content, cell_diskuse)
 	element = '<font size="{0}pt" dir="LTR">{1}</font>'.format(
 								log(diskuse)/2, cell_content)
 	print indent(level)+'<span dir="LTR">{0}</span>'.format(filename)
 	print indent(level)+element
+	print indent(level)+'<span dir="LTR">{0}</span>'.format(cell_diskuse)
 
 
 # recurse:
@@ -447,6 +450,7 @@ def compute_layout(items, level, width, height):
 	directory, _, full_size = items.pop(0)
 
 	# precompute cell layout and size
+	#TODO: also precompute cell labels to know if cell will be wide enough
 	for path, filename, size in items:
 		ratio = float(size) / full_size
 		print "<!-- ", path, filename, size, full_size, ratio, "-->"
@@ -567,7 +571,7 @@ print '''<!doctype html>
 		.tooltip:hover > span > a {
 			display: block;
 			position: absolute;
-			font-size: 7pt;
+			font-size: 8pt;
 			background-color: #FFF;
 			border: 1px solid #CCC;
 			margin: 20px 10px;

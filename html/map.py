@@ -111,9 +111,9 @@ def label((path, filename, diskuse), level):
 	cell_content=link.format(href, label)
 	if diskuse>1024:
 		if diskuse>1024*1024:
-			cell_content += ' ({0} MB)'.format(str(diskuse/1024/1024))
+			cell_content += ' ({:.1f} MB)'.format(diskuse/1024./1024)
 		else:
-			cell_content += ' ({0} kB)'.format(str(diskuse/1024))
+			cell_content += ' ({:.1f} kB)'.format(diskuse/1024.)
 	element = '<font size="{0}pt" dir="LTR">{1}</font>'.format(
 								log(diskuse)/2, cell_content)
 	print indent(level)+'<span dir="LTR">{0}</span>'.format(filename)
