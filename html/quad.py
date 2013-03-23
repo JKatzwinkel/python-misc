@@ -374,13 +374,6 @@ def font_size(diskuse):
 	return 1+int((log(diskuse)-_min_size)*_log_scale)
 
 # return the css font class in which a label for a file of given size should be printed
-# NOTE: html font sizes ranges from 8pt (size=1) and 36pt (size=8).
-# so to translate font size level into pt size, would be like pt=lambda x:8+(x-1)*4
-# NOTE also: <font> has been deprecated since HTML 4.0. use css instead!
-# ok! this means we map file sizes greater than or equal
-# [0, 256, 1024, 4096, 16384, 65536, 262144]
-# to the font classes 'size{x}'
-# [0, 1, 2, 3, 4, 5, 6] respectively, defining font sizes [1,2,3,...]
 def font_class(diskuse):
 	return 'size{0}'.format(font_size(diskuse)-1)
 
@@ -397,7 +390,7 @@ def label((path, filename, diskuse), level):
 	if diskuse == 0:
 		diskuse = 10
 	cell_content=link.format(href, label)
-	#TODO: move calculation of font size to extra function
+	#TODO: 
 	# http://stackoverflow.com/questions/2922295/calculating-the-pixel-size-of-a-string-with-python
 	# if cell too narrow, shorten label!
 	if diskuse>1024:
