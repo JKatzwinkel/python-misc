@@ -250,7 +250,8 @@ def is_child(dirname, entry):
 # immediate subdirectories, sorted by disk space consumption and
 # beginning with the directory itself, followed by its largest child
 def largest(dirname):
-	return filter(lambda x:x[0] == dirname or is_child(dirname, x), _names)
+	res=filter(lambda x:x[0] == dirname or is_child(dirname, x), _names)
+	return sorted(res, key=lambda x:x[1]!='')
 
 # Return disk space consumption of the resource under the given path.
 # If referencing a directory, the return value is computed by summing up
@@ -303,7 +304,7 @@ def resources(dirname):
 			results.append((dirname, fn, filesize))
 		# only list directory if the depth of its location is small enough
 		#if depth <= _maxdepth:
-		results.append((dirname, '', du+1)) #TODO: is this save?
+		results.append((dirname, '', du))
 		# save directory disk use in dictionary
 		# Because of the recursive disk space computation, even directories that
 		# are nested too deep to be displayed have tp register their size
@@ -312,7 +313,7 @@ def resources(dirname):
 		#
 		# save disk space consumption value in dictionary for lookup by parent
 		# +1 : ensure subdirectories are not listed before any of their parents
-		_diskusage[dirname] = du+1
+		_diskusage[dirname] = du
 	# register disk use of smallest and largest file
 	limite=sorted([x[2] for x in results if not x[1]==''])
 	globals()['_min_size'] = limite[0]
@@ -355,11 +356,12 @@ def partition(dirname, level=0):
 def log(x):
 	return log_nat(x)/log_nat(2)
 
+_font_classes=5.
 # prepare global constraints for file size <-> font size mapping
 # scale
 # map 10 steps in font size to file sizes
 def init_log_scale():
-	globals()['_log_scale']=10./(log(_max_size)-log(_min_size))
+	globals()['_log_scale']=_font_classes/(log(_max_size)-log(_min_size)+1)
 	globals()['_min_size']=log(_min_size)
 	globals()['_max_size']=log(_max_size)
 	globals()['_font_sizes']=[i+9 for i in range(0,11)]
@@ -392,7 +394,7 @@ def label((path, filename, diskuse), level, visible=2):
 		label = filename
 	else:
 		if visible>0:
-			label = '' #'{0}..{1}'.format(filename[:3], filename[-3:])
+			label = '{0}..{1}'.format(filename[:3], filename[-2:])
 		else:
 			label=''
 
@@ -410,7 +412,7 @@ def label((path, filename, diskuse), level, visible=2):
 	else:
 		cell_diskuse = '{0} B'.format(str(diskuse))
 
-	if diskuse > 1024: 
+	if diskuse > 1024*500: 
 		cell_content = "{0} ({1})".format(cell_content, cell_diskuse)
 	else:
 		cell_content = "{0}".format(cell_content)
@@ -527,7 +529,9 @@ def compute_layout(items, level, width, height):
 			stack.append( ('tr', cover) )
 			print "<!--", space_v, cover, "-->"
 		full_size -= size
-#	stack[-1]=('tr', space_h) #stack[-1][1])
+	print indent(level), '<!-- ', full_size, '-->'
+	#if len(stack)>1 and stack[-2][0] == 'td':
+	#	stack[-1]=('tr', space_h) #stack[-1][1])
 
 	# write cell layout HTML output
 	for item in items:
@@ -542,7 +546,7 @@ def compute_layout(items, level, width, height):
 				tr_tag_open=True
 				print indent(level)+'<tr>'
 			# TODO: optimize for speed?
-			rspan = len(filter(lambda cell:cell[0]=='tr', stack))
+			rspan = len(filter(lambda cell:cell[0]=='tr', stack))+1
 			span = ('', 'rowspan="{0}" '.format(rspan))[int(rspan>1)]
 			print indent(level+1)+tag_column.format(span, dim*100)
 			recurse(item, level+1, dim*width, height)
@@ -550,14 +554,14 @@ def compute_layout(items, level, width, height):
 		else:
 			if not tr_tag_open:
 				print indent(level)+'<tr>'
-			cspan = len(filter(lambda cell:cell[0]=='td', stack))+1
+			cspan = len(filter(lambda cell:cell[0]=='td', stack))
 			span = ('', 'colspan="{0} "'.format(cspan))[int(cspan>1)]
-			if len(stack)<0:
-				print indent(level+1)+'<td class="tooltip">'
+			#if len(stack)<0:
+			#	print indent(level+1)+'<td class="tooltip">'
 				#TODO: do we actually have to count down width and height in here?
-				recurse(item, level+1, width*dim, height)
-			else:
-				pass
+			#	recurse(item, level+1, width*dim, height)
+			#else:
+			#	pass
 			print indent(level+1)+tag_row.format(span, dim*100)
 			recurse(item, level+1, width, dim*height)
 			print indent(level+1)+'</td>'
@@ -668,6 +672,7 @@ print '''
 </head>
 <body>
 <div width="100%" height="600" align="center">'''
+print '<!--', _names, '-->'
 print '<h4>Showing contents of: "{0}"</h4>'.format(_root)
 print '<i>{0}</i>'.format(sys.argv)
 # print 'smallest: {0}, largest: {1}, scale: {2}'.format(_min_size, _max_size, _log_scale)
