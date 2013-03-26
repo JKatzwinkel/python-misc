@@ -27,7 +27,7 @@ _delimiter = os.sep # alternative delimiter as replacement for OS filesep
 _out = sys.stdout # output destination
 _maxdepth = 10 # max depth within which directories and files are display candidates
 # table dimensions
-table_width=1000
+table_width=800
 table_height=600
 # pre-calculate file size to font class mapping on log scale 
 # (font size ranges from 1 to 7 inclusive)
@@ -383,11 +383,19 @@ def font_class(diskuse):
 # TODO: implement template system for custom label formatting via command line
 # TODO: implement wrapper method decorate(...space_v...) to print empty cells
 # without labels inside
-def label((path, filename, diskuse), level, visible=True):
+def label((path, filename, diskuse), level, visible=2):
 	ns = _delimiter.join(path.split(os.sep)+[''])
 	link = '<a href="{0}">{1}</a>'
 	href = _baseurl + ns + filename
-	label = filename
+
+	if visible>1:
+		label = filename
+	else:
+		if visible>0:
+			label = '{0}..{1}'.format(filename[:3], filename[-3:])
+		else:
+			label=''
+
 	if diskuse == 0:
 		diskuse = 10
 	cell_content=link.format(href, label)
@@ -396,21 +404,30 @@ def label((path, filename, diskuse), level, visible=True):
 	# if cell too narrow, shorten label!
 	if diskuse>1024:
 		if diskuse>1024*1024:
-			cell_diskuse = '{:.1f} MB'.format(diskuse/1024./1024)
+			cell_diskuse = '{0:.1f} MB'.format(diskuse/1024./1024)
 		else:
-			cell_diskuse = '{:.1f} kB'.format(diskuse/1024.)
-	if visible:
+			cell_diskuse = '{0:.1f} KB'.format(diskuse/1024.)
+	else:
+		cell_diskuse = '{0} B'.format(str(diskuse))
+
+	if diskuse > 1024: 
 		cell_content = "{0} ({1})".format(cell_content, cell_diskuse)
+	else:
+		cell_content = "{0}".format(cell_content)
+
+	if visible>1:
 		element = '<span dir="LTR" class="{1}">{0}</span>'.format(cell_content, font_class(diskuse))
 	else:
-		cell_content = '{0}..{1}'.format(label[:3], label[-3:])
-		element = '<span dir="LTR" class="size0">{0}</span>'.format(cell_content)
+		if visible>0:
+			element = '<span dir="LTR" class="size0">{0}</span>'.format(cell_content)
+		else:
+			element=''
 	#element = '<font size="{0}pt" dir="LTR">{1}</font>'.format(
 	#							font_size(diskuse), cell_content)
 	# <font> has been deprecated since HTML 4.0! We will use css style as of now
-	print indent(level)+'<span dir="LTR" class="hidden size3">{0}</span>'.format(filename)
+	print indent(level)+'<ul class="hidden"><li><span dir="LTR" class="size3">{0}</span></li>'.format(filename)
+	print indent(level)+'<li><span dir="LTR" class="size2">{0}</span></li></ul>'.format(cell_diskuse)
 	print indent(level)+element
-	print indent(level)+'<span dir="LTR" class="hidden size2">{0}</span>'.format(cell_diskuse)
 
 
 # recurse:
@@ -427,10 +444,11 @@ def recurse(entry, level, space_h, space_v):
 		# if it's too small?
 		fs=_font_sizes[font_size(entry[2])-1]
 		#TODO: calculate actual text size with PIL
-		if len(entry[1])*fs/3>space_h or fs>space_v:
-			show=False
-		else:
-			show=True
+		show=2
+		if len(entry[1])*fs/2 > space_h:
+			show=1
+		if fs>space_v:
+			show=0
 		label(entry, level+1, visible=show)
 
 
@@ -498,7 +516,7 @@ def compute_layout(items, level, width, height):
 	for path, filename, size in items:
 		ratio = float(size) / full_size
 		print "<!-- ", path, filename, size, full_size, ratio, "-->"
-		if space_h*width > space_v*height*h_favor and space_h*width*ratio>len(filename)*6:
+		if space_h*width > space_v*height*h_favor and space_h*width*ratio>len(filename)*font_size(size):
 			cover = space_h * ratio
 			space_h -= cover
 			stack.append( ('td', cover) )
@@ -509,15 +527,15 @@ def compute_layout(items, level, width, height):
 			stack.append( ('tr', cover) )
 			print "<!--", space_v, cover, "-->"
 		full_size -= size
-	stack[-1]=('tr', stack[-1][1])
+#	stack[-1]=('tr', space_h) #stack[-1][1])
 
 	# write cell layout HTML output
 	for item in items:
 		tag, dim = stack.pop(0)
 		# do not assign dimension value to last item
 		# TODO: cell dimensions don't fit relative files sizes
-		if len(stack) < 1:
-			dim=0
+#		if len(stack) < 1:
+#			tag='td'
 		print indent(level), '<!--', item, tag, dim, '-->'
 		if tag == 'td':
 			if not tr_tag_open:
@@ -527,15 +545,21 @@ def compute_layout(items, level, width, height):
 			rspan = len(filter(lambda cell:cell[0]=='tr', stack))
 			span = ('', 'rowspan="{0}" '.format(rspan))[int(rspan>1)]
 			print indent(level+1)+tag_column.format(span, dim*100)
-			recurse(item, level+1, dim*width, dim*height)
+			recurse(item, level+1, dim*width, height)
 			print indent(level+1)+'</td>'
 		else:
 			if not tr_tag_open:
 				print indent(level)+'<tr>'
-			cspan = len(filter(lambda cell:cell[0]=='td', stack)) + 1
+			cspan = len(filter(lambda cell:cell[0]=='td', stack))+1
 			span = ('', 'colspan="{0} "'.format(cspan))[int(cspan>1)]
+			if len(stack)<0:
+				print indent(level+1)+'<td class="tooltip">'
+				#TODO: do we actually have to count down width and height in here?
+				recurse(item, level+1, width*dim, height)
+			else:
+				pass
 			print indent(level+1)+tag_row.format(span, dim*100)
-			recurse(item, level+1, dim*width, dim*height)
+			recurse(item, level+1, width, dim*height)
 			print indent(level+1)+'</td>'
 			tr_tag_open=False
 			print indent(level)+'</tr>'
@@ -616,12 +640,16 @@ print '''
 		table.namespace:hover {
 			background-color: #C0C0FF;
 		}
-		.tooltip > span.hidden,
-		.tooltip > span.hidden > a {
+		ul.hidden {
+			list-style-type:none;
+			align: left;
+		}
+		.tooltip > .hidden,
+		.tooltip > .hidden > a {
 			display: none;
 		}
-		.tooltip:hover > span.hidden,
-		.tooltip:hover > span.hidden > a {
+		.tooltip:hover > .hidden,
+		.tooltip:hover > .hidden > a	{
 			display: block;
 			position: absolute;
 			font-size: 8pt;
