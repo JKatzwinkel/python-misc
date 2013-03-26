@@ -392,7 +392,7 @@ def label((path, filename, diskuse), level, visible=2):
 		label = filename
 	else:
 		if visible>0:
-			label = '{0}..{1}'.format(filename[:3], filename[-3:])
+			label = '' #'{0}..{1}'.format(filename[:3], filename[-3:])
 		else:
 			label=''
 
@@ -435,19 +435,19 @@ def label((path, filename, diskuse), level, visible=2):
 # the nested table is supposed to be aligned in (horizontal or vertical).
 # If further recursion is not possible, create label indicating which leaf
 # recursion terminates.
-def recurse(entry, level, space_h, space_v):
+def recurse(entry, level, width, height):
 	if entry[1] == '':
 		# space_h and space_v
-		table(entry[0], level+2, space_h, space_v)
+		table(entry[0], level+2, width, height)
 	else:
 		#TODO: should decision made here, if cell gets a label or
 		# if it's too small?
 		fs=_font_sizes[font_size(entry[2])-1]
 		#TODO: calculate actual text size with PIL
 		show=2
-		if len(entry[1])*fs/2 > space_h:
+		if len(entry[1])*fs/2 > width:
 			show=1
-		if fs>space_v:
+		if fs*2 > height:
 			show=0
 		label(entry, level+1, visible=show)
 
