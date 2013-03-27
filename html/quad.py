@@ -447,7 +447,7 @@ def recurse(entry, level, width, height):
 		fs=_font_sizes[font_size(entry[2])-1]
 		#TODO: calculate actual text size with PIL
 		show=2
-		if len(entry[1])*fs/2 > width:
+		if len(entry[1])*fs*.7 > width:
 			show=1
 		if fs*2 > height:
 			show=0
@@ -465,6 +465,7 @@ def table(dirname, level=0, width='100%', height='100%'):
 	if len(items) < 1:
 		print "None"
 		return
+	print indent(level), '<!--', width, height, '-->'
 	table_tag = '<table width="100%" height="100%" class="tooltip" dir="{0}">'
 	print indent(level)+table_tag.format(['RTL', 'LTR'][level%2])
 	# handling default dimensions
@@ -504,11 +505,11 @@ def compute_layout(items, level, width, height):
 	space_v = 1.
 	# horizontal layout in favor at small tables
 	# TODO: adjust
-	h_favor = 4.-3.*(width / globals()['table_width'])
-	print indent(level), '<!--', h_favor, width, globals()['table_width'], '-->'
+	h_favor = 7.-6.*(width / globals()['table_width'])
+	print indent(level), '<!--', h_favor, width, globals()['table_width'], height, '-->'
 	# output templates
-	tag_column='<td class="tooltip" {0}width="{1}%">'
-	tag_row = '<td class="tooltip" {0}height="{1}%">'
+	tag_column='<td class="tooltip" {0}width="{1:.0f}%">'
+	tag_row = '<td class="tooltip" {0}height="{1:.0f}%">'
 	tr_tag_open=False
 	# determining total namespace sapce
 	directory, _, full_size = items.pop(0)
@@ -517,22 +518,29 @@ def compute_layout(items, level, width, height):
 	#TODO: also precompute cell labels to know if cell will be wide enough
 	for path, filename, size in items:
 		ratio = float(size) / full_size
-		print "<!-- ", path, filename, size, full_size, ratio, "-->"
-		if space_h*width > space_v*height*h_favor and space_h*width*ratio>len(filename)*font_size(size):
+		print "<!-- ", path, filename, size, full_size, 'ratio:', ratio, "-->"
+
+		if space_h*width > space_v*height*h_favor and space_h*width*ratio > len(filename)*font_size(size):
 			cover = space_h * ratio
+			print indent(level), "<!-- horizontal space available: {0}; being covered: {1} -->".format(space_h, cover)
 			space_h -= cover
 			stack.append( ('td', cover) )
-			print "<!--", space_h, cover, "-->"
 		else:
 			cover = space_v * ratio
+			print indent(level), "<!-- vertical space available: {0}; being covered: {1} -->".format(space_v, cover)
 			space_v -= cover
 			stack.append( ('tr', cover) )
-			print "<!--", space_v, cover, "-->"
 		full_size -= size
-	print indent(level), '<!-- ', full_size, '-->'
-	#if len(stack)>1 and stack[-2][0] == 'td':
-	#	stack[-1]=('tr', space_h) #stack[-1][1])
+	#print indent(level), '<!-- ', full_size, '-->'
+	if len(stack)>1:# and 
+		if stack[-2][0] == 'td' and stack[-1][0] != 'td':
+			stack[-1]=('td', 1.-sum([x[1] for x in stack if x[0]=='td'])) #stack[-1][1])
+		else:
+			if stack[-1][0] != 'tr':
+				stack[-1]=('tr', 1.-sum([x[1] for x in stack if x[0]=='tr']))
 
+	space_h=1.
+	space_v=1.
 	# write cell layout HTML output
 	for item in items:
 		tag, dim = stack.pop(0)
@@ -540,30 +548,32 @@ def compute_layout(items, level, width, height):
 		# TODO: cell dimensions don't fit relative files sizes
 #		if len(stack) < 1:
 #			tag='td'
+		print indent(level), '<!--', space_h, space_v, '-->'
 		print indent(level), '<!--', item, tag, dim, '-->'
 		if tag == 'td':
 			if not tr_tag_open:
 				tr_tag_open=True
-				print indent(level)+'<tr>'
+				upcoming_rows=filter(lambda x:x[0]=='tr',stack)
+				if len(upcoming_rows)>0:
+					row_dim=upcoming_rows[0][1]
+				else:
+					row_dim=space_v
+				print indent(level)+'<tr height="{0:.0f}%">'.format(row_dim*100)
 			# TODO: optimize for speed?
 			rspan = len(filter(lambda cell:cell[0]=='tr', stack))+1
 			span = ('', 'rowspan="{0}" '.format(rspan))[int(rspan>1)]
 			print indent(level+1)+tag_column.format(span, dim*100)
-			recurse(item, level+1, dim*width, height)
+			recurse(item, level+1, dim*width, space_v*height)
+			space_h-=dim
 			print indent(level+1)+'</td>'
 		else:
 			if not tr_tag_open:
-				print indent(level)+'<tr>'
-			cspan = len(filter(lambda cell:cell[0]=='td', stack))
-			span = ('', 'colspan="{0} "'.format(cspan))[int(cspan>1)]
-			#if len(stack)<0:
-			#	print indent(level+1)+'<td class="tooltip">'
-				#TODO: do we actually have to count down width and height in here?
-			#	recurse(item, level+1, width*dim, height)
-			#else:
-			#	pass
+				print indent(level)+'<tr>'# height={0:.0f}>'.format(dim*height)
+			cspan = len(filter(lambda cell:cell[0]=='td', stack))+1
+			span = ('', 'colspan="{0}" '.format(cspan))[int(cspan>1)]
 			print indent(level+1)+tag_row.format(span, dim*100)
-			recurse(item, level+1, width, dim*height)
+			recurse(item, level+1, space_h*width, dim*height)
+			space_v-=dim
 			print indent(level+1)+'</td>'
 			tr_tag_open=False
 			print indent(level)+'</tr>'
@@ -671,8 +681,8 @@ print '''
 	</style>
 </head>
 <body>
-<div width="100%" height="600" align="center">'''
-print '<!--', _names, '-->'
+<div width="100%" height="600" align="center" style="padding:30px">'''
+#print '<!--', _names, '-->'
 print '<h4>Showing contents of: "{0}"</h4>'.format(_root)
 print '<i>{0}</i>'.format(sys.argv)
 # print 'smallest: {0}, largest: {1}, scale: {2}'.format(_min_size, _max_size, _log_scale)
