@@ -505,7 +505,7 @@ def compute_layout(items, level, width, height):
 	space_v = 1.
 	# horizontal layout in favor at small tables
 	# TODO: adjust
-	h_favor = 7.-6.*(width / globals()['table_width'])
+	h_favor = 4.-2.7*(width / globals()['table_width'])
 	print indent(level), '<!--', h_favor, width, globals()['table_width'], height, '-->'
 	# output templates
 	tag_column='<td class="tooltip" {0}width="{1:.0f}%">'
@@ -520,7 +520,7 @@ def compute_layout(items, level, width, height):
 		ratio = float(size) / full_size
 		print "<!-- ", path, filename, size, full_size, 'ratio:', ratio, "-->"
 
-		if space_h*width > space_v*height*h_favor and space_h*width*ratio > len(filename)*font_size(size):
+		if space_h*width > space_v*height*h_favor and space_h*width*ratio > len(filename)*font_size(size)*.7:
 			cover = space_h * ratio
 			print indent(level), "<!-- horizontal space available: {0}; being covered: {1} -->".format(space_h, cover)
 			space_h -= cover
