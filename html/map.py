@@ -8,10 +8,25 @@ _names=[]
 _diskusage={}
 _baseurl = 'https://192.168.178.1/wiki/doku.php?id='
 _documentroot = '/var/lib/dokuwiki/data/pages'
+_filetypes=['txt', 'xml']
 
 # http://wiki.python.org/moin/HowTo/Sorting/
 # http://stackoverflow.com/questions/955941/how-to-identify-whether-a-file-is-normal-file-or-directory-using-python
 # http://stackoverflow.com/questions/1392413/calculating-a-directory-size-using-python
+
+# is extension of given file of interest?
+def valid_filetype(filename):
+	return any(map(lambda ext:filename.endswith('.'+ext), _filetypes))
+
+# checks if any of the path nodes is a hidden dir
+def valid_dir(path):
+	return not any(map(lambda x:x.startswith('.'), path.split(os.sep)))
+
+# return filename without extension
+def basename(filename):
+	if filename.count('.')>0:
+		return '.'.join(filename.split('.')[:-1])
+	return filename
 
 def is_child_dir(namespace, entry):
 	# entry is subdirectory if and only if no separators remain
@@ -58,19 +73,20 @@ def resources(dirname):
 		return results
 	# walk bottom-up
 	for dirname, subdirs, files in os.walk(dirname, topdown=False):
-		du = 0
-		# disk usage of sub directories
-		for sd in subdirs:
-			filesize = disk_usage(os.path.join(dirname, sd))
-			du += filesize
-		 #disk usage of contained files
-		for fn in filter(lambda x:x.endswith('.txt'), files):
-			filesize = disk_usage(os.path.join(dirname, fn))
-			du += filesize
-			results.append( (relpath(dirname), fn.split('.txt')[0], filesize) )
-		results.append( (relpath(dirname), '', du+1) )
-		# save directory disk use in dictionary
-		_diskusage[dirname] = du+1
+		if valid_dir(dirname):
+			du = 0
+			# disk usage of sub directories
+			for sd in filter(valid_dir, subdirs):
+				filesize = disk_usage(os.path.join(dirname, sd))
+				du += filesize
+			 #disk usage of contained files
+			for fn in filter(valid_filetype, files):
+				filesize = disk_usage(os.path.join(dirname, fn))
+				du += filesize
+				results.append( (relpath(dirname), basename(fn), filesize) )
+			results.append( (relpath(dirname), '', du+1) )
+			# save directory disk use in dictionary
+			_diskusage[dirname] = du+1
 	return sorted(results, key=lambda x:x[2], reverse=True)
 
 
@@ -111,9 +127,9 @@ def label((path, filename, diskuse), level):
 	cell_content=link.format(href, label)
 	if diskuse>1024:
 		if diskuse>1024*1024:
-			cell_content += ' ({:.1f} MB)'.format(diskuse/1024./1024)
+			cell_content += ' ({0:.1f} MB)'.format(diskuse/1024./1024)
 		else:
-			cell_content += ' ({:.1f} kB)'.format(diskuse/1024.)
+			cell_content += ' ({0:.1f} kB)'.format(diskuse/1024.)
 	element = '<font size="{0}pt" dir="LTR">{1}</font>'.format(
 								log(diskuse)/2, cell_content)
 	print indent(level)+'<span dir="LTR">{0}</span>'.format(filename)
