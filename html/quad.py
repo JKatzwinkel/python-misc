@@ -234,6 +234,7 @@ def filtered(entries):
 
 
 # ====== FILE TREE PARSING FUNCTIONS ======
+#TODO: clean up!
 
 # Returns True if triple entry represents a directory,
 # i.e. looks sth like ('path', '', xL), which is a direct
@@ -351,6 +352,13 @@ def partition(dirname, level=0):
 
 
 # ========== RENDERING SECTION =========== #
+#TODO: find solution for fucked-up table height rendering in Opera
+# could easily be done by setting absolute table height attribute values
+#TODO: find solution for unused spaces after last put elements in Chrome
+# but how?
+#TODO: remaining blank spaces actually occur in Epiphany, too. Only firefox
+#fills available space? but anyways, cell dimensions still don't fit!
+#TODO: WHY????
 
 # return logarithm on base 2
 def log(x):
