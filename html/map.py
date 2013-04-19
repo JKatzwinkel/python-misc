@@ -28,7 +28,7 @@ def basename(filename):
 		return '.'.join(filename.split('.')[:-1])
 	return filename
 
-def is_child_dir(namespace, entry):
+def is_child(namespace, entry):
 	# entry is subdirectory if and only if no separators remain
 	# after removing prepending higher directory path
 	if entry[1] == '':
@@ -44,7 +44,7 @@ def is_child_dir(namespace, entry):
 # immediate subdirectories, sorted by disk space consumption and
 # beginning with the directory itself, followed by its largest child
 def largest(dirname):
-	return filter(lambda x:x[0] == dirname or is_child_dir(dirname, x), _names)
+	res=filter(lambda x:x[0] == dirname or is_child(dirname, x), _names)
 	return sorted(res, key=lambda x:x[1]!='')
 
 # Return disk space consumption of the resource under the given path.
@@ -85,9 +85,9 @@ def resources(dirname):
 				filesize = disk_usage(os.path.join(dirname, fn))
 				du += filesize
 				results.append( (relpath(dirname), basename(fn), filesize) )
-			results.append( (relpath(dirname), '', du+1) )
+			results.append( (relpath(dirname), '', du) )
 			# save directory disk use in dictionary
-			_diskusage[dirname] = du+1
+			_diskusage[dirname] = du
 	limite=sorted([x[2] for x in results if not x[1]==''])
 	globals()['_min_size'] = limite[0]
 	globals()['_max_size'] = limite[-1]
@@ -100,6 +100,7 @@ def resources(dirname):
 def log(x):
 	return log_nat(x)/log_nat(2)
 
+
 _font_classes=5.
 # prepare global constraints for file size <-> font size mapping
 # scale
@@ -110,19 +111,23 @@ def init_log_scale():
 	globals()['_max_size']=log(_max_size)
 	globals()['_font_sizes']=[i+9 for i in range(0,11)]
 
+
 # returns a whitespace-only string of a certain length that can be used
 # to indent output
 def indent(level):
 	return '  '*level
+
 
 # return font size in which a file of given size will be labeled in html
 def font_size(diskuse):
 	#return int(min(8,max(0,log(diskuse)/2-3)+1))
 	return 1+int((log(diskuse)-_min_size)*_log_scale)
 
+
 # return the css font class in which a label for a file of given size should be printed
 def font_class(diskuse):
 	return 'size{0}'.format(font_size(diskuse)-1)
+
 
 # format and echo a label for given path, filename, size of disk usage, and
 # indentation level
@@ -158,8 +163,10 @@ def label((path, filename, diskuse), level, visible=2):
 		cell_content = "{0}".format(cell_content)
 	if visible>1:
 		element = '<span dir="LTR" class="{1}">{0}</span>'.format(cell_content, font_class(diskuse))
-	else:
+	elif visible>0:
 		element = '<span dir="LTR" class="size0">{0}</span>'.format(cell_content)
+	else:
+		element = '<span dir="LTR" class="dots">{0}</span>'.format(cell_content)
 	print indent(level)+'<ul class="hidden"><li><span dir="LTR" class="size3">{0}</span></li>'.format(filename)
 	print indent(level)+'<li><span dir="LTR" class="size2">{0}</span></li></ul>'.format(cell_diskuse)
 	print indent(level)+element
@@ -179,7 +186,9 @@ def recurse(entry, level, width, height):
 		show=2
 		if len(entry[1])*fs*.7 > width:
 			show=1
-		if fs*2 > height or width<fs*min(len(entry[1]),6)*.3:
+		if width<fs*min(len(entry[1]),6)*.3:
+			show=0
+		if fs*2 > height:
 			show=0
 		label(entry, level+1, visible=show)
 
@@ -310,6 +319,7 @@ except:
 path = os.sep.join(namespaces)
 _names = resources(os.path.join(_documentroot, path))
 init_log_scale() # set up log scale for label font sizes
+
 print '''Content-Type: text/html
 
 <!doctype html>
@@ -320,6 +330,11 @@ for i,px in enumerate(_font_sizes):
 	print '			font-size: {0}px;'.format(px)
 	print '		}'
 print '''
+		span.dots {
+			line-height: 1px;
+			height: 3px;
+			display: block;
+		}
 		td {
 			border: 1px solid;
 			background-color: white;
