@@ -7,8 +7,8 @@ from math import log10 as log
 _names=[]
 _diskusage={}
 _baseurl = 'https://192.168.178.1/wiki/doku.php?id='
-_documentroot = '/var/lib/dokuwiki/data/pages'
-_filetypes=['txt', 'xml']
+_documentroot = '/media/Data/Codes/Python/python-misc/'
+_filetypes=['txt', 'xml', 'py', 'html']
 
 # http://wiki.python.org/moin/HowTo/Sorting/
 # http://stackoverflow.com/questions/955941/how-to-identify-whether-a-file-is-normal-file-or-directory-using-python
@@ -45,6 +45,7 @@ def is_child_dir(namespace, entry):
 # beginning with the directory itself, followed by its largest child
 def largest(dirname):
 	return filter(lambda x:x[0] == dirname or is_child_dir(dirname, x), _names)
+	return sorted(res, key=lambda x:x[1]!='')
 
 # Return disk space consumption of the resource under the given path.
 # If referencing a directory, the return value is computed by summing up
@@ -110,29 +111,71 @@ def partition(dirname, level=0):
 
 
 # ========== RENDERING SECTION =========== #
+# return logarithm on base 2
+def log(x):
+	return log_nat(x)/log_nat(2)
+_font_classes=5.
+# prepare global constraints for file size <-> font size mapping
+# scale
+# map 10 steps in font size to file sizes
+def init_log_scale():
+	globals()['_log_scale']=_font_classes/(log(_max_size)-log(_min_size)+1)
+	globals()['_min_size']=log(_min_size)
+	globals()['_max_size']=log(_max_size)
+	globals()['_font_sizes']=[i+9 for i in range(0,11)]
 # returns a whitespace-only string of a certain length that can be used
 # to indent output
 def indent(level):
 	return '  '*level
 
+# return font size in which a file of given size will be labeled in html
+def font_size(diskuse):
+	#return int(min(8,max(0,log(diskuse)/2-3)+1))
+	return 1+int((log(diskuse)-_min_size)*_log_scale)
+# return the css font class in which a label for a file of given size should be printed
+def font_class(diskuse):
+	return 'size{0}'.format(font_size(diskuse)-1)
 # format and echo a label for given path, filename, size of disk usage, and
 # indentation level
 def label((path, filename, diskuse), level):
 	ns = ':'.join(path.split(':')[1:]+[''])
 	link = '<a href="{0}">{1}</a>'
 	href = _baseurl + ns + filename
-	label = filename
+	if visible>1:
+		label = filename
+	else:
+		if visible>0:
+			label = '{0}..{1}'.format(filename[:3], filename[-2:])
+		else:
+			label=''
 	if diskuse == 0:
 		diskuse = 10
 	cell_content=link.format(href, label)
 	if diskuse>1024:
 		if diskuse>1024*1024:
-			cell_content += ' ({0:.1f} MB)'.format(diskuse/1024./1024)
+			cell_diskuse = '{0:.1f} MB'.format(diskuse/1024./1024)
 		else:
-			cell_content += ' ({0:.1f} kB)'.format(diskuse/1024.)
-	element = '<font size="{0}pt" dir="LTR">{1}</font>'.format(
-								log(diskuse)/2, cell_content)
-	print indent(level)+'<span dir="LTR">{0}</span>'.format(filename)
+			cell_diskuse = '{0:.1f} KB'.format(diskuse/1024.)
+	else:
+		cell_diskuse = '{0} B'.format(str(diskuse))
+
+	if diskuse > 1024*500: 
+		cell_content = "{0} ({1})".format(cell_content, cell_diskuse)
+	else:
+		cell_content = "{0}".format(cell_content)
+
+	if visible>1:
+		element = '<span dir="LTR" class="{1}">{0}</span>'.format(cell_content, font_class(diskuse))
+	else:
+		if visible>0:
+			element = '<span dir="LTR" class="size0">{0}</span>'.format(cell_content)
+		else:
+			element=''
+	#element = '<font size="{0}pt" dir="LTR">{1}</font>'.format(
+	#							font_size(diskuse), cell_content)
+	# <font> has been deprecated since HTML 4.0! We will use css style as of now
+	print indent(level)+'<ul class="hidden"><li><span dir="LTR" class="size3">{0}</span></li>'.format(filename)
+	print indent(level)+'<li><span dir="LTR" class="size2">{0}</span></li></ul>'.format(cell_diskuse)
 	print indent(level)+element
 
 
@@ -141,12 +184,18 @@ def label((path, filename, diskuse), level):
 # the nested table is supposed to be aligned in (horizontal or vertical).
 # If further recursion is not possible, create label indicating which leaf
 # recursion terminates.
-def recurse(entry, level, space_h, space_v):
+def recurse(entry, level, width, height):
 	if entry[1] == '':
 		# space_h and space_v
-		table(entry[0], level+2, space_h, space_v)
+		table(entry[0], level+2, width, height)
 	else:
-		label(entry, level+1)
+		fs=_font_sizes[font_size(entry[2])-1]
+		show=2
+		if len(entry[1])*fs*.7 > width:
+			show=1
+		if fs*2 > height:
+			show=0
+		label(entry, level+1, visible=show)
 
 
 # optimized layout
@@ -195,8 +244,8 @@ def compute_layout(items, level, width, height):
 	h_favor = 4.-3.*(width / globals()['table_width'])
 	print indent(level), '<!--', h_favor, width, globals()['table_width'], '-->'
 	# output templates
-	tag_column='<td class="tooltip" {0}width="{1}%">'
-	tag_row = '<td class="tooltip" {0}height="{1}%">'
+	tag_column='<td class="tooltip" {0}width="{1:.0f}%">'
+	tag_row = '<td class="tooltip" {0}height="{1:.0f}%">'
 	tr_tag_open=False
 	# determining total namespace sapce
 	directory, _, full_size = items.pop(0)
@@ -204,7 +253,7 @@ def compute_layout(items, level, width, height):
 	# precompute cell layout and size
 	for path, filename, size in items:
 		ratio = float(size) / full_size
-		if space_h*width > space_v*height*h_favor and space_h*width*ratio>len(filename)*6:
+		if space_h*width > space_v*height*h_favor and space_h*width*ratio > len(filename)*font_size(size)*.7:
 			cover = space_h * ratio
 			space_h -= cover
 			stack.append( ('td', cover) )
@@ -215,6 +264,8 @@ def compute_layout(items, level, width, height):
 		full_size -= size
 	stack[-1]=('tr', stack[-1][1])
 
+	space_h=1.
+	space_v=1.
 	# write cell layout HTML output
 	for item in items:
 		tag, dim = stack.pop(0)
@@ -222,20 +273,27 @@ def compute_layout(items, level, width, height):
 		if tag == 'td':
 			if not tr_tag_open:
 				tr_tag_open=True
-				print indent(level)+'<tr>'
+				upcoming_rows=filter(lambda x:x[0]=='tr',stack)
+				if len(upcoming_rows)>0:
+					row_dim=upcoming_rows[0][1]
+				else:
+					row_dim=space_v
+				print indent(level)+'<tr height="{0:.0f}%">'.format(row_dim*100)
 			# TODO: optimize for speed?
-			rspan = len(filter(lambda cell:cell[0]=='tr', stack))
+			rspan = len(filter(lambda cell:cell[0]=='tr', stack))+1
 			span = ('', 'rowspan="{0}" '.format(rspan))[int(rspan>1)]
 			print indent(level+1)+tag_column.format(span, dim*100)
-			recurse(item, level+1, dim*width, dim*height)
+			recurse(item, level+1, dim*width, space_v*height)
+			space_h-=dim
 			print indent(level+1)+'</td>'
 		else:
 			if not tr_tag_open:
 				print indent(level)+'<tr>'
-			cspan = len(filter(lambda cell:cell[0]=='td', stack)) + 1
-			span = ('', 'colspan="{0} "'.format(cspan))[int(cspan>1)]
+			cspan = len(filter(lambda cell:cell[0]=='td', stack))+1
+			span = ('', 'colspan="{0}" '.format(cspan))[int(cspan>1)]
 			print indent(level+1)+tag_row.format(span, dim*100)
-			recurse(item, level+1, dim*width, dim*height)
+			recurse(item, level+1, space_h*width, dim*height)
+			space_v-=dim
 			print indent(level+1)+'</td>'
 			tr_tag_open=False
 			print indent(level)+'</tr>'
@@ -260,12 +318,17 @@ except:
 
 path = os.sep.join(namespaces)
 _names = resources(os.path.join(_documentroot, path))
-
+init_log_scale() # set up log scale for label font sizes
 print '''Content-Type: text/html
 
 <!doctype html>
 <head>
 	<style type="text/css">
+for i,px in enumerate(_font_sizes):
+	print '		.size{0} {{'.format(i)
+	print '			font-size: {0}px;'.format(px)
+	print '		}'
+print '''
 		td {
 			border: 1px solid;
 			background-color: white;
@@ -296,16 +359,20 @@ print '''Content-Type: text/html
 			cellspacing: 5px;
 		}
 		table:hover {
-			background-color: #F0E0FF;
+			background-color: #C0E0FF;
 		}
 		table.namespace {
 			background-color: #99D;
 		}
 		table.namespace:hover {
-			background-color: #C0C0FF;
+			background-color: #B0A0FF;
 		}
-		.tooltip > span,
-		.tooltip > span > a {
+		ul.hidden {
+			list-style-type:none;
+			align: left;
+		}
+		.tooltip > .hidden,
+		.tooltip > .hidden > a {
 			display: none;
 		}
 		.tooltip:hover > span,
@@ -320,6 +387,9 @@ print '''Content-Type: text/html
 		.tooltip:hover > span a {
 			text-decoration: none;
 			color: #33A;
+		}
+		table:hover[class~=tooltip] > span.hidden {
+			background-color: #FDD;
 		}
 	</style>
 </head>

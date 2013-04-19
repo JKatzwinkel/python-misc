@@ -654,13 +654,13 @@ print '''
 			cellspacing: 5px;
 		}
 		table:hover {
-			background-color: #F0E0FF;
+			background-color: #C0E0FF;
 		}
 		table.namespace {
 			background-color: #99D;
 		}
 		table.namespace:hover {
-			background-color: #C0C0FF;
+			background-color: #B0A0FF;
 		}
 		ul.hidden {
 			list-style-type:none;
