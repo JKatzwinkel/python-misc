@@ -2,7 +2,7 @@
 import os
 import sys
 import cgi
-from math import log10 as log
+from math import log as log_nat
 
 _names=[]
 _diskusage={}
@@ -88,32 +88,18 @@ def resources(dirname):
 			results.append( (relpath(dirname), '', du+1) )
 			# save directory disk use in dictionary
 			_diskusage[dirname] = du+1
+	limite=sorted([x[2] for x in results if not x[1]==''])
+	globals()['_min_size'] = limite[0]
+	globals()['_max_size'] = limite[-1]
 	return sorted(results, key=lambda x:x[2], reverse=True)
 
-
-def partition(dirname, level=0):
-	partitions = largest(dirname)
-	if len(partitions) < 1:
-		print dirname
-		return
-	full = partitions[0][2]
-	#print " "*level, dirname, full
-	for part in partitions[1:]:
-		size = part[2]
-		if part[1] == '':
-			try:
-				partition(part[0], level+1)
-			except Exception:
-				print part, dirname
-		else:
-			print " "*(level+1), part[1], 100*size/full
-		full -= size
 
 
 # ========== RENDERING SECTION =========== #
 # return logarithm on base 2
 def log(x):
 	return log_nat(x)/log_nat(2)
+
 _font_classes=5.
 # prepare global constraints for file size <-> font size mapping
 # scale
@@ -123,6 +109,7 @@ def init_log_scale():
 	globals()['_min_size']=log(_min_size)
 	globals()['_max_size']=log(_max_size)
 	globals()['_font_sizes']=[i+9 for i in range(0,11)]
+
 # returns a whitespace-only string of a certain length that can be used
 # to indent output
 def indent(level):
@@ -132,12 +119,14 @@ def indent(level):
 def font_size(diskuse):
 	#return int(min(8,max(0,log(diskuse)/2-3)+1))
 	return 1+int((log(diskuse)-_min_size)*_log_scale)
+
 # return the css font class in which a label for a file of given size should be printed
 def font_class(diskuse):
 	return 'size{0}'.format(font_size(diskuse)-1)
+
 # format and echo a label for given path, filename, size of disk usage, and
 # indentation level
-def label((path, filename, diskuse), level):
+def label((path, filename, diskuse), level, visible=2):
 	ns = ':'.join(path.split(':')[1:]+[''])
 	link = '<a href="{0}">{1}</a>'
 	href = _baseurl + ns + filename
@@ -145,9 +134,14 @@ def label((path, filename, diskuse), level):
 		label = filename
 	else:
 		if visible>0:
-			label = '{0}..{1}'.format(filename[:3], filename[-2:])
+			if len(filename)>6:
+				label = '{0}..{1}'.format(filename[:3], filename[-2:])
+			elif len(filename)>4:
+				label = filename[:2]+'..'
+			else:
+				label = filename
 		else:
-			label=''
+			label='.'
 	if diskuse == 0:
 		diskuse = 10
 	cell_content=link.format(href, label)
@@ -158,22 +152,14 @@ def label((path, filename, diskuse), level):
 			cell_diskuse = '{0:.1f} KB'.format(diskuse/1024.)
 	else:
 		cell_diskuse = '{0} B'.format(str(diskuse))
-
 	if diskuse > 1024*500: 
 		cell_content = "{0} ({1})".format(cell_content, cell_diskuse)
 	else:
 		cell_content = "{0}".format(cell_content)
-
 	if visible>1:
 		element = '<span dir="LTR" class="{1}">{0}</span>'.format(cell_content, font_class(diskuse))
 	else:
-		if visible>0:
-			element = '<span dir="LTR" class="size0">{0}</span>'.format(cell_content)
-		else:
-			element=''
-	#element = '<font size="{0}pt" dir="LTR">{1}</font>'.format(
-	#							font_size(diskuse), cell_content)
-	# <font> has been deprecated since HTML 4.0! We will use css style as of now
+		element = '<span dir="LTR" class="size0">{0}</span>'.format(cell_content)
 	print indent(level)+'<ul class="hidden"><li><span dir="LTR" class="size3">{0}</span></li>'.format(filename)
 	print indent(level)+'<li><span dir="LTR" class="size2">{0}</span></li></ul>'.format(cell_diskuse)
 	print indent(level)+element
@@ -193,7 +179,7 @@ def recurse(entry, level, width, height):
 		show=2
 		if len(entry[1])*fs*.7 > width:
 			show=1
-		if fs*2 > height:
+		if fs*2 > height or width<fs*min(len(entry[1]),6)*.3:
 			show=0
 		label(entry, level+1, visible=show)
 
@@ -219,11 +205,11 @@ def table(dirname, level=0, width='100%', height='100%'):
 	if globals().get('table_width',0) == 0 or type(globals()['table_width']) == str:
 		globals()['table_width'] = float(width)
 	if globals().get('table_height',0) == 0 or type(globals()['table_height']) == str:
-		globals()['table_height'] = float(width)
+		globals()['table_height'] = float(height)
 	# label table:
 	namespaces = dirname.split(':')
 	if len(namespaces) > 1 and level > 0:
-		print indent(level+1)+'<span><a href="{0}">{1}</a></span>'.format(
+		print indent(level+1)+'<span class="hidden"><a href="{0}">{1}</a></span>'.format(
 			_baseurl+':'.join(namespaces[1:]), namespaces[-1])
 	# Generate table layout
 	if len(items)>1:
@@ -262,7 +248,12 @@ def compute_layout(items, level, width, height):
 			space_v -= cover
 			stack.append( ('tr', cover) )
 		full_size -= size
-	stack[-1]=('tr', stack[-1][1])
+	if len(stack)>1:# and 
+		if stack[-2][0] == 'td' and stack[-1][0] != 'td':
+			stack[-1]=('td', 1.-sum([x[1] for x in stack if x[0]=='td'])) #stack[-1][1])
+		else:
+			if stack[-1][0] != 'tr':
+				stack[-1]=('tr', 1.-sum([x[1] for x in stack if x[0]=='tr']))
 
 	space_h=1.
 	space_v=1.
@@ -323,7 +314,7 @@ print '''Content-Type: text/html
 
 <!doctype html>
 <head>
-	<style type="text/css">
+	<style type="text/css">'''
 for i,px in enumerate(_font_sizes):
 	print '		.size{0} {{'.format(i)
 	print '			font-size: {0}px;'.format(px)
@@ -375,16 +366,16 @@ print '''
 		.tooltip > .hidden > a {
 			display: none;
 		}
-		.tooltip:hover > span,
-		.tooltip:hover > span > a {
+		.tooltip:hover > .hidden,
+		.tooltip:hover > .hidden > a	{
 			display: block;
 			position: absolute;
-			font-size: 7pt;
+			font-size: 8pt;
 			background-color: #FFF;
 			border: 1px solid #CCC;
 			margin: 20px 10px;
 		}
-		.tooltip:hover > span a {
+		.tooltip:hover > span.hidden a {
 			text-decoration: none;
 			color: #33A;
 		}

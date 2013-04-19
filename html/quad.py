@@ -402,9 +402,14 @@ def label((path, filename, diskuse), level, visible=2):
 		label = filename
 	else:
 		if visible>0:
-			label = '{0}..{1}'.format(filename[:3], filename[-2:])
+			if len(filename)>6:
+				label = '{0}..{1}'.format(filename[:3], filename[-2:])
+			elif len(filename)>4:
+				label = filename[:2]+'..'
+			else:
+				label = filename
 		else:
-			label=''
+			label='.'
 
 	if diskuse == 0:
 		diskuse = 10
@@ -428,10 +433,7 @@ def label((path, filename, diskuse), level, visible=2):
 	if visible>1:
 		element = '<span dir="LTR" class="{1}">{0}</span>'.format(cell_content, font_class(diskuse))
 	else:
-		if visible>0:
-			element = '<span dir="LTR" class="size0">{0}</span>'.format(cell_content)
-		else:
-			element=''
+		element = '<span dir="LTR" class="size0">{0}</span>'.format(cell_content)
 	#element = '<font size="{0}pt" dir="LTR">{1}</font>'.format(
 	#							font_size(diskuse), cell_content)
 	# <font> has been deprecated since HTML 4.0! We will use css style as of now
@@ -450,14 +452,12 @@ def recurse(entry, level, width, height):
 		# space_h and space_v
 		table(entry[0], level+2, width, height)
 	else:
-		#TODO: should decision made here, if cell gets a label or
-		# if it's too small?
 		fs=_font_sizes[font_size(entry[2])-1]
 		#TODO: calculate actual text size with PIL
 		show=2
 		if len(entry[1])*fs*.7 > width:
 			show=1
-		if fs*2 > height:
+		if fs*2 > height or width<fs*min(len(entry[1]),6)*.3:
 			show=0
 		label(entry, level+1, visible=show)
 
@@ -489,7 +489,7 @@ def table(dirname, level=0, width='100%', height='100%'):
 	if globals().get('table_width',0) == 0 or type(globals()['table_width']) == str:
 		globals()['table_width'] = float(width)
 	if globals().get('table_height',0) == 0 or type(globals()['table_height']) == str:
-		globals()['table_height'] = float(width)
+		globals()['table_height'] = float(height)
 	# label table:
 	namespaces = dirname.split(os.sep)
 	if len(namespaces) > 1 and level > 0:
