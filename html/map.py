@@ -33,14 +33,14 @@ def dir_contents(dirname):
         res=[]
         if dirname==':':
                 dirname=''
-        for d, f, s in _names:
+        for d, f, s, mt in _names:
                 if f=='':
                         if d.startswith(dirname):
                                 subs=d[len(dirname):]
                                 if subs.count(':') == 1:
-                                        res.append((d,f,s))
+                                        res.append((d,f,s,mt))
                 if d==dirname:
-                        res.append((d,f,s))
+                        res.append((d,f,s,mt))
         return res
 
 
@@ -87,15 +87,22 @@ def resources(dirname):
 				du += filesize
 			 #disk usage of contained files
 			for fn in filter(valid_filetype, files):
-				filesize = disk_usage(os.path.join(dirname, fn))
+				filepath=os.path.join(dirname, fn)
+				filesize = disk_usage(filepath)
 				du += filesize
-				results.append( (relpath(dirname), basename(fn), filesize) )
-			results.append( (relpath(dirname), '', du) )
+				results.append( (relpath(dirname), basename(fn), filesize, 
+					os.path.getmtime(filepath)) )
+			results.append( (relpath(dirname), '', du, 
+				os.path.getmtime(dirname)) )
 			# save directory disk use in dictionary
 			_diskusage[dirname] = du
 	limite=sorted([x[2] for x in results if not x[1]==''])
 	globals()['_min_size'] = limite[0]
 	globals()['_max_size'] = limite[-1]
+	limite=sorted([x[3] for x in results])
+	globals()['_oldest'] = limite[0]
+	globals()['_newest'] = limite[-1]
+	globals()['_time_threshold'] = _oldest+(_newest-_oldest)/2
 	return sorted(results, key=lambda x:x[2], reverse=True)
 
 
@@ -133,10 +140,21 @@ def font_size(diskuse):
 def font_class(diskuse):
 	return 'size{0}'.format(font_size(diskuse)-1)
 
+# if file was modified recently, compute marking color
+def mark_cell(item):
+	if item[3]>_time_threshold:
+		sign = (item[3]-_time_threshold)/(_newest-_time_threshold)
+		red = int(255-5*sign)
+		#print >> sys.stderr, item[3]-_time_threshold
+		blue=int(255-30*sign)
+		green=int(255-60*sign)
+		return 'style="background-color:#{0}{1}{2};"'.format(hex(red)[2:], 
+			hex(blue)[2:], hex(green)[2:])
+	return ''
 
 # format and echo a label for given path, filename, size of disk usage, and
 # indentation level
-def label((path, filename, diskuse), level, visible=2):
+def label((path, filename, diskuse, modtime), level, visible=2):
 	ns = ':'.join(path.split(':')[1:]+[''])
 	link = '<a href="{0}">{1}</a>'
 	href = _baseurl + ns + filename
@@ -248,10 +266,10 @@ def compute_layout(items, level, width, height):
 	tag_row = '<td class="tooltip" {0}height="{1:.0f}%">'
 	tr_tag_open=False
 	# determining total namespace sapce
-	directory, _, full_size = items.pop(0)
+	directory, _, full_size, _ = items.pop(0)
 
 	# precompute cell layout and size
-	for path, filename, size in items:
+	for path, filename, size, modtime in items:
 		ratio = float(size) / full_size
 		if space_h*width > space_v*height*h_favor and space_h*width*ratio > len(filename)*font_size(size)*.7:
 			cover = space_h * ratio
@@ -287,6 +305,7 @@ def compute_layout(items, level, width, height):
 			# TODO: optimize for speed?
 			rspan = len(filter(lambda cell:cell[0]=='tr', stack))+1
 			span = ('', 'rowspan="{0}" '.format(rspan))[int(rspan>1)]
+			span+=mark_cell(item)
 			print indent(level+1)+tag_column.format(span, dim*100)
 			recurse(item, level+1, dim*width, space_v*height)
 			space_h-=dim
@@ -296,6 +315,7 @@ def compute_layout(items, level, width, height):
 				print indent(level)+'<tr>'
 			cspan = len(filter(lambda cell:cell[0]=='td', stack))+1
 			span = ('', 'colspan="{0}" '.format(cspan))[int(cspan>1)]
+			span+=mark_cell(item)
 			print indent(level+1)+tag_row.format(span, dim*100)
 			recurse(item, level+1, space_h*width, dim*height)
 			space_v-=dim
