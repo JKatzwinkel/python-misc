@@ -28,24 +28,26 @@ def basename(filename):
 		return '.'.join(filename.split('.')[:-1])
 	return filename
 
-def is_child(namespace, entry):
-	# entry is subdirectory if and only if no separators remain
-	# after removing prepending higher directory path
-	if entry[1] == '':
-		if namespace==':':
-			namespace=''
-			if not entry[0].startswith(':'):
-				entry[0] = ':'+entry[0]
-		if entry[0].startswith(namespace+':'):
-			return len(':'.join(entry[0].split(namespace+':')[1:]).split(':')) is 1
-	return False
+# returns contents of directory, including directory itself
+def dir_contents(dirname):
+        res=[]
+        for d, f, s in _names:
+                if f=='':
+                        if d.startswith(dirname):
+                                subs=d[len(dirname):]
+                                if subs.count(':') < 1:
+                                        res.append((d,f,s))
+                elif d==dirname:
+                        res.append((d,f,s))
+        return res
 
 # For the specified directory, return a list of the contained files ans
 # immediate subdirectories, sorted by disk space consumption and
 # beginning with the directory itself, followed by its largest child
 def largest(dirname):
-	res=filter(lambda x:x[0] == dirname or is_child(dirname, x), _names)
-	return sorted(res, key=lambda x:x[1]!='')
+        res = sorted(dir_contents(dirname), key=lambda x:x[1] != '')
+        return res
+
 
 # Return disk space consumption of the resource under the given path.
 # If referencing a directory, the return value is computed by summing up

@@ -236,23 +236,25 @@ def filtered(entries):
 # ====== FILE TREE PARSING FUNCTIONS ======
 #TODO: clean up!
 
-# Returns True if triple entry represents a directory,
-# i.e. looks sth like ('path', '', xL), which is a direct
-# subdirectory of directory dirname. False otherwise.
-def is_child(dirname, entry):
-	# entry is subdirectory if and only if no file seperators remain
-	# after removing prepending higher directory path
-	if entry[1] == '':
-		if entry[0].startswith(dirname+os.sep):
-			return len(entry[0].split(dirname+os.sep)[1].split(os.sep)) is 1
-	return False
+# returns contents of directory, including directory itself
+def dir_contents(dirname):
+        res=[]
+        for d, f, s in _names:
+                if f=='':
+                        if d.startswith(dirname):
+                                subs=d[len(dirname):]
+                                if subs.count(':') < 1:
+                                        res.append((d,f,s))
+                elif d==dirname:
+                        res.append((d,f,s))
+        return res
 
 # For the specified directory, return a list of the contained files ans
 # immediate subdirectories, sorted by disk space consumption and
 # beginning with the directory itself, followed by its largest child
 def largest(dirname):
-	res=filter(lambda x:x[0] == dirname or is_child(dirname, x), _names)
-	return sorted(res, key=lambda x:x[1]!='')
+        res = sorted(dir_contents(dirname), key=lambda x:x[1] != '')
+        return res
 
 # Return disk space consumption of the resource under the given path.
 # If referencing a directory, the return value is computed by summing up
