@@ -7,12 +7,8 @@ from math import log as log_nat
 _names=[]
 _diskusage={}
 _baseurl = 'https://192.168.178.1/wiki/doku.php?id='
-_documentroot = '/media/Data/Codes/Python/python-misc/'
-_filetypes=['txt', 'xml', 'py', 'html']
-
-# http://wiki.python.org/moin/HowTo/Sorting/
-# http://stackoverflow.com/questions/955941/how-to-identify-whether-a-file-is-normal-file-or-directory-using-python
-# http://stackoverflow.com/questions/1392413/calculating-a-directory-size-using-python
+_documentroot = '/var/lib/dokuwiki/data/pages/'
+_filetypes=['txt']#, 'xml', 'py', 'html']
 
 # is extension of given file of interest?
 def valid_filetype(filename):
@@ -51,7 +47,6 @@ def largest(dirname):
         res = sorted(dir_contents(dirname), key=lambda x:x[1] != '')
         return res
 
-
 # Return disk space consumption of the resource under the given path.
 # If referencing a directory, the return value is computed by summing up
 # the disk_usage values of the contained resources recursively.
@@ -64,14 +59,12 @@ def disk_usage(path):
 	else:
 		return os.path.getsize(path)
 
-
 # makes the given path relative to _documentroot
 def relpath(path):
 	res = os.path.relpath(path, _documentroot)
 	if res == '.':
 		return ':'
 	return ':'.join(['']+res.split(os.sep))
-
 
 def resources(dirname):
 	results=[]
@@ -102,7 +95,8 @@ def resources(dirname):
 	limite=sorted([x[3] for x in results])
 	globals()['_oldest'] = limite[0]
 	globals()['_newest'] = limite[-1]
-	globals()['_time_threshold'] = _oldest+(_newest-_oldest)*9/10
+	thresh = _oldest+(_newest-_oldest)*9/10
+	globals()['_time_threshold'] = filter(lambda x:x>thresh, limite)[0]
 	return sorted(results, key=lambda x:x[2], reverse=True)
 
 
@@ -112,7 +106,6 @@ def resources(dirname):
 def log(x):
 	return log_nat(x)/log_nat(2)
 
-
 _font_classes=5.
 # prepare global constraints for file size <-> font size mapping
 # scale
@@ -121,7 +114,7 @@ def init_log_scale():
 	globals()['_log_scale']=_font_classes/(log(_max_size)-log(_min_size)+1)
 	globals()['_min_size']=log(_min_size)
 	globals()['_max_size']=log(_max_size)
-	globals()['_font_sizes']=[i+7 for i in range(0,11)]
+	globals()['_font_sizes']=[int(round(i**2/2.+8)) for i in range(0,11)]
 
 
 # returns a whitespace-only string of a certain length that can be used
@@ -144,10 +137,11 @@ def font_class(diskuse):
 def mark_cell(item):
 	if item[3]>_time_threshold:
 		sign = (item[3]-_time_threshold)/(_newest-_time_threshold)
-		red = int(255-5*sign)
+		sign = sign**4
+		red = 255
 		#print >> sys.stderr, item[3]-_time_threshold
-		blue=int(255-30*sign)
-		green=int(255-60*sign)
+		blue=int(255-80*sign)
+		green=int(255-120*sign)
 		return 'style="background-color:#{0}{1}{2};"'.format(hex(red)[2:], 
 			hex(blue)[2:], hex(green)[2:])
 	return ''
@@ -209,7 +203,7 @@ def recurse(entry, level, width, height):
 		show=2
 		if len(entry[1])*fs*.7 > width:
 			show=1
-		if width<fs*min(len(entry[1]),7)*.5:
+		if width<fs*min(len(entry[1]),7)*.3:
 			show=0
 		if fs*1.6 > height:
 			show=0

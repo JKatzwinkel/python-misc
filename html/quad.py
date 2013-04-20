@@ -328,7 +328,8 @@ def resources(dirname):
 	limite=sorted([x[3] for x in results])
 	globals()['_oldest'] = limite[0]
 	globals()['_newest'] = limite[-1]
-	globals()['_time_threshold'] = _oldest+(_newest-_oldest)*9/10
+	thresh = _oldest+(_newest-_oldest)*9/10
+	globals()['_time_threshold'] = filter(lambda x:x>thresh, limite)[0]
 	return sorted(results, key=lambda x:x[2], reverse=True)
 
 
@@ -382,7 +383,7 @@ def init_log_scale():
 	globals()['_log_scale']=_font_classes/(log(_max_size)-log(_min_size)+1)
 	globals()['_min_size']=log(_min_size)
 	globals()['_max_size']=log(_max_size)
-	globals()['_font_sizes']=[i+9 for i in range(0,11)]
+	globals()['_font_sizes']=[int(round(i**2/2.+8)) for i in range(0,11)]
 
 # returns a whitespace-only string of a certain length that can be used
 # to indent output
@@ -401,12 +402,13 @@ def font_class(diskuse):
 _now = time()
 # if file was modified recently, compute marking color
 def mark_cell(item):
-	if item[3]>_time_threshold:
+	if item[3]>=_time_threshold:
 		sign = (item[3]-_time_threshold)/(_newest-_time_threshold)
-		red = int(255-5*sign)
+		sign = sign**4
+		red = 255
 		#print >> sys.stderr, item[3]-_time_threshold
-		blue=int(255-30*sign)
-		green=int(255-60*sign)
+		blue=int(255-80*sign)
+		green=int(255-120*sign)
 		return 'style="background-color:#{0}{1}{2};"'.format(hex(red)[2:], 
 			hex(blue)[2:], hex(green)[2:])
 	return ''
@@ -478,7 +480,7 @@ def recurse(entry, level, width, height):
 		show=2
 		if len(entry[1])*fs*.7 > width:
 			show=1
-		if width<fs*min(len(entry[1]),7)*.5:
+		if width<fs*min(len(entry[1]),7)*.3:
 			show=0
 		if fs*1.7 > height:
 			show=0
