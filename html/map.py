@@ -95,7 +95,7 @@ def resources(dirname):
 	limite=sorted([x[3] for x in results])
 	globals()['_oldest'] = limite[0]
 	globals()['_newest'] = limite[-1]
-	thresh = _oldest+(_newest-_oldest)*9/10
+	thresh = _oldest+(_newest-_oldest)*19/20
 	globals()['_time_threshold'] = filter(lambda x:x>thresh, limite)[0]
 	return sorted(results, key=lambda x:x[2], reverse=True)
 
