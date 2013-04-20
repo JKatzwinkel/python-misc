@@ -92,10 +92,10 @@ def resources(dirname):
 				du += filesize
 				results.append( (relpath(dirname), basename(fn), filesize, 
 					os.path.getmtime(filepath)) )
-			results.append( (relpath(dirname), '', du, 
+			results.append( (relpath(dirname), '', du+1, 
 				os.path.getmtime(dirname)) )
 			# save directory disk use in dictionary
-			_diskusage[dirname] = du
+			_diskusage[dirname] = du+1
 	limite=sorted([x[2] for x in results if not x[1]==''])
 	globals()['_min_size'] = limite[0]
 	globals()['_max_size'] = limite[-1]

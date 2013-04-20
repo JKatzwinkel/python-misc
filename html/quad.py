@@ -311,7 +311,7 @@ def resources(dirname):
 			results.append((dirname, fn, filesize, os.path.getmtime(filepath)))
 		# only list directory if the depth of its location is small enough
 		#if depth <= _maxdepth:
-		results.append((dirname, '', du, os.path.getmtime(dirname)))
+		results.append((dirname, '', du+1, os.path.getmtime(dirname)))
 		# save directory disk use in dictionary
 		# Because of the recursive disk space computation, even directories that
 		# are nested too deep to be displayed have tp register their size
@@ -320,7 +320,7 @@ def resources(dirname):
 		#
 		# save disk space consumption value in dictionary for lookup by parent
 		# +1 : ensure subdirectories are not listed before any of their parents
-		_diskusage[dirname] = du
+		_diskusage[dirname] = du+1
 	# register disk use of smallest and largest file
 	limite=sorted([x[2] for x in results if not x[1]==''])
 	globals()['_min_size'] = limite[0]
