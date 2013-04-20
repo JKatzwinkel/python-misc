@@ -39,7 +39,7 @@ def dir_contents(dirname):
                                 subs=d[len(dirname):]
                                 if subs.count(':') == 1:
                                         res.append((d,f,s,mt))
-                if d==dirname:
+                if d==dirname or d==dirname+':' and f!='':
                         res.append((d,f,s,mt))
         return res
 
@@ -102,7 +102,7 @@ def resources(dirname):
 	limite=sorted([x[3] for x in results])
 	globals()['_oldest'] = limite[0]
 	globals()['_newest'] = limite[-1]
-	globals()['_time_threshold'] = _oldest+(_newest-_oldest)/2
+	globals()['_time_threshold'] = _oldest+(_newest-_oldest)*9/10
 	return sorted(results, key=lambda x:x[2], reverse=True)
 
 
@@ -121,7 +121,7 @@ def init_log_scale():
 	globals()['_log_scale']=_font_classes/(log(_max_size)-log(_min_size)+1)
 	globals()['_min_size']=log(_min_size)
 	globals()['_max_size']=log(_max_size)
-	globals()['_font_sizes']=[i+9 for i in range(0,11)]
+	globals()['_font_sizes']=[i+7 for i in range(0,11)]
 
 
 # returns a whitespace-only string of a certain length that can be used
@@ -211,7 +211,7 @@ def recurse(entry, level, width, height):
 			show=1
 		if width<fs*min(len(entry[1]),7)*.5:
 			show=0
-		if fs*1.7 > height:
+		if fs*1.6 > height:
 			show=0
 		label(entry, level+1, visible=show)
 
