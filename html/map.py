@@ -191,9 +191,9 @@ def recurse(entry, level, width, height):
 		show=2
 		if len(entry[1])*fs*.7 > width:
 			show=1
-		if width<fs*min(len(entry[1]),6)*.3:
+		if width<fs*min(len(entry[1]),7)*.5:
 			show=0
-		if fs*2 > height:
+		if fs*1.7 > height:
 			show=0
 		label(entry, level+1, visible=show)
 
