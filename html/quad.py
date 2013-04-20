@@ -452,11 +452,12 @@ def label((path, filename, diskuse, modtime), level, visible=2):
 		cell_content = "{0} ({1})".format(cell_content, cell_diskuse)
 	else:
 		cell_content = "{0}".format(cell_content)
-
-	element = '<span dir="LTR" class="{1}">{0}</span>'.format(cell_content, font_class(diskuse))
+	if visible>0:
+		element = '<span dir="LTR" class="{1}">{0}</span>'.format(cell_content, font_class(diskuse))
 	#element = '<font size="{0}pt" dir="LTR">{1}</font>'.format(
 	#							font_size(diskuse), cell_content)
-	# <font> has been deprecated since HTML 4.0! We will use css style as of now
+	else:
+		element = '<span dir="LTR" class="dots">{0}</span>'.format(cell_content)
 	print indent(level)+'<ul class="hidden"><li><span dir="LTR" class="size3">{0}</span></li>'.format(filename)
 	print indent(level)+'<li><span dir="LTR" class="size2">{0}</span></li></ul>'.format(cell_diskuse)
 	print indent(level)+element
@@ -477,7 +478,9 @@ def recurse(entry, level, width, height):
 		show=2
 		if len(entry[1])*fs*.7 > width:
 			show=1
-		if fs*2 > height or width<fs*min(len(entry[1]),6)*.3:
+		if width<fs*min(len(entry[1]),7)*.5:
+			show=0
+		if fs*1.7 > height:
 			show=0
 		label(entry, level+1, visible=show)
 
