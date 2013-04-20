@@ -239,15 +239,17 @@ def filtered(entries):
 # returns contents of directory, including directory itself
 def dir_contents(dirname):
         res=[]
+        #print dirname
         for d, f, s in _names:
                 if f=='':
-                        if d.startswith(dirname):
-                                subs=d[len(dirname):]
-                                if subs.count(':') < 1:
+                        if d.startswith(dirname+os.sep):
+                                subs=d[len(dirname)+1:]
+                                if subs.count(os.sep) < 1:
                                         res.append((d,f,s))
-                elif d==dirname:
+                if d==dirname:
                         res.append((d,f,s))
         return res
+
 
 # For the specified directory, return a list of the contained files ans
 # immediate subdirectories, sorted by disk space consumption and
@@ -432,10 +434,7 @@ def label((path, filename, diskuse), level, visible=2):
 	else:
 		cell_content = "{0}".format(cell_content)
 
-	if visible>1:
-		element = '<span dir="LTR" class="{1}">{0}</span>'.format(cell_content, font_class(diskuse))
-	else:
-		element = '<span dir="LTR" class="size0">{0}</span>'.format(cell_content)
+	element = '<span dir="LTR" class="{1}">{0}</span>'.format(cell_content, font_class(diskuse))
 	#element = '<font size="{0}pt" dir="LTR">{1}</font>'.format(
 	#							font_size(diskuse), cell_content)
 	# <font> has been deprecated since HTML 4.0! We will use css style as of now
@@ -626,6 +625,11 @@ for i,px in enumerate(_font_sizes):
 	print '			font-size: {0}px;'.format(px)
 	print '		}'
 print '''
+		span.dots {
+			line-height: 1px;
+			height: 3px;
+			display: block;
+		}
 		td {
 			border: 1px solid;
 			background-color: white;
@@ -693,6 +697,8 @@ print '''
 <body>
 <div width="100%" height="600" align="center" style="padding:30px">'''
 #print '<!--', _names, '-->'
+for n in _names:
+	print n, '<br/>'
 print '<h4>Showing contents of: "{0}"</h4>'.format(_root)
 print '<i>{0}</i>'.format(sys.argv)
 # print 'smallest: {0}, largest: {1}, scale: {2}'.format(_min_size, _max_size, _log_scale)

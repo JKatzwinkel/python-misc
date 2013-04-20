@@ -31,15 +31,18 @@ def basename(filename):
 # returns contents of directory, including directory itself
 def dir_contents(dirname):
         res=[]
+        if dirname==':':
+                dirname=''
         for d, f, s in _names:
                 if f=='':
                         if d.startswith(dirname):
                                 subs=d[len(dirname):]
-                                if subs.count(':') < 1:
+                                if subs.count(':') == 1:
                                         res.append((d,f,s))
-                elif d==dirname:
+                if d==dirname:
                         res.append((d,f,s))
         return res
+
 
 # For the specified directory, return a list of the contained files ans
 # immediate subdirectories, sorted by disk space consumption and
@@ -163,10 +166,10 @@ def label((path, filename, diskuse), level, visible=2):
 		cell_content = "{0} ({1})".format(cell_content, cell_diskuse)
 	else:
 		cell_content = "{0}".format(cell_content)
-	if visible>1:
+	if visible>0:
 		element = '<span dir="LTR" class="{1}">{0}</span>'.format(cell_content, font_class(diskuse))
-	elif visible>0:
-		element = '<span dir="LTR" class="size0">{0}</span>'.format(cell_content)
+#	elif visible>0:
+#		element = '<span dir="LTR" class="size0">{0}</span>'.format(cell_content)
 	else:
 		element = '<span dir="LTR" class="dots">{0}</span>'.format(cell_content)
 	print indent(level)+'<ul class="hidden"><li><span dir="LTR" class="size3">{0}</span></li>'.format(filename)
