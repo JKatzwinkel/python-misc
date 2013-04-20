@@ -5,6 +5,7 @@ import re
 from math import log as log_nat
 from getopt import gnu_getopt
 from fnmatch import fnmatch
+from time import time
 
 # Global variables holding input data
 _names=[] # list of contents
@@ -240,14 +241,14 @@ def filtered(entries):
 def dir_contents(dirname):
         res=[]
         #print dirname
-        for d, f, s in _names:
+        for d, f, s, mt in _names:
                 if f=='':
                         if d.startswith(dirname+os.sep):
                                 subs=d[len(dirname)+1:]
                                 if subs.count(os.sep) < 1:
-                                        res.append((d,f,s))
+                                        res.append((d,f,s,mt))
                 if d==dirname:
-                        res.append((d,f,s))
+                        res.append((d,f,s,mt))
         return res
 
 
@@ -298,7 +299,8 @@ def resources(dirname):
 		# Consider only files satisfying all requirements set
 		for fn in files:
 			# Summing up disk usage of contained files
-			filesize = disk_usage(os.path.join(dirname, fn))
+			filepath=os.path.join(dirname, fn)
+			filesize = disk_usage(filepath)
 			du += filesize
 			# TODO: reproduce option for stripping filetype extensions or even
 			# TODO: label/link/url formatting using field placeholders
@@ -306,10 +308,10 @@ def resources(dirname):
 			#
 			# only list files if the depth of this directory in the tree is OK
 			#if depth < _maxdepth:
-			results.append((dirname, fn, filesize))
+			results.append((dirname, fn, filesize, os.path.getmtime(filepath)))
 		# only list directory if the depth of its location is small enough
 		#if depth <= _maxdepth:
-		results.append((dirname, '', du))
+		results.append((dirname, '', du, os.path.getmtime(dirname)))
 		# save directory disk use in dictionary
 		# Because of the recursive disk space computation, even directories that
 		# are nested too deep to be displayed have tp register their size
@@ -323,6 +325,10 @@ def resources(dirname):
 	limite=sorted([x[2] for x in results if not x[1]==''])
 	globals()['_min_size'] = limite[0]
 	globals()['_max_size'] = limite[-1]
+	limite=sorted([x[3] for x in results])
+	globals()['_oldest'] = limite[0]
+	globals()['_newest'] = limite[-1]
+	globals()['_time_threshold'] = _oldest+(_newest-_oldest)/2
 	return sorted(results, key=lambda x:x[2], reverse=True)
 
 
@@ -392,12 +398,25 @@ def font_size(diskuse):
 def font_class(diskuse):
 	return 'size{0}'.format(font_size(diskuse)-1)
 
+_now = time()
+# if file was modified recently, compute marking color
+def mark_cell(item):
+	if item[3]>_time_threshold:
+		sign = (item[3]-_time_threshold)/(_newest-_time_threshold)
+		red = int(255-5*sign)
+		#print >> sys.stderr, item[3]-_time_threshold
+		blue=int(255-30*sign)
+		green=int(255-60*sign)
+		return 'style="background-color:#{0}{1}{2};"'.format(hex(red)[2:], 
+			hex(blue)[2:], hex(green)[2:])
+	return ''
+
 # format and echo a label for given path, filename, size of disk usage, and
 # indentation level
 # TODO: implement template system for custom label formatting via command line
 # TODO: implement wrapper method decorate(...space_v...) to print empty cells
 # without labels inside
-def label((path, filename, diskuse), level, visible=2):
+def label((path, filename, diskuse, modtime), level, visible=2):
 	ns = _delimiter.join(path.split(os.sep)+[''])
 	link = '<a href="{0}">{1}</a>'
 	href = _baseurl + ns + filename
@@ -516,16 +535,12 @@ def compute_layout(items, level, width, height):
 	# TODO: adjust
 	h_favor = 4.-2.7*(width / globals()['table_width'])
 	print indent(level), '<!--', h_favor, width, globals()['table_width'], height, '-->'
-	# output templates
-	tag_column='<td class="tooltip" {0}width="{1:.0f}%">'
-	tag_row = '<td class="tooltip" {0}height="{1:.0f}%">'
-	tr_tag_open=False
 	# determining total namespace sapce
-	directory, _, full_size = items.pop(0)
+	directory, _, full_size, _ = items.pop(0)
 
 	# precompute cell layout and size
 	#TODO: also precompute cell labels to know if cell will be wide enough
-	for path, filename, size in items:
+	for path, filename, size, modtime in items:
 		ratio = float(size) / full_size
 		print "<!-- ", path, filename, size, full_size, 'ratio:', ratio, "-->"
 
@@ -550,6 +565,11 @@ def compute_layout(items, level, width, height):
 
 	space_h=1.
 	space_v=1.
+	# output templates
+	#TODO: make class extendable
+	tag_column='<td class="tooltip" {0}width="{1:.0f}%">'
+	tag_row = '<td class="tooltip" {0}height="{1:.0f}%">'
+	tr_tag_open=False
 	# write cell layout HTML output
 	for item in items:
 		tag, dim = stack.pop(0)
@@ -571,6 +591,7 @@ def compute_layout(items, level, width, height):
 			# TODO: optimize for speed?
 			rspan = len(filter(lambda cell:cell[0]=='tr', stack))+1
 			span = ('', 'rowspan="{0}" '.format(rspan))[int(rspan>1)]
+			span+=mark_cell(item)
 			print indent(level+1)+tag_column.format(span, dim*100)
 			recurse(item, level+1, dim*width, space_v*height)
 			space_h-=dim
@@ -580,6 +601,7 @@ def compute_layout(items, level, width, height):
 				print indent(level)+'<tr>'# height={0:.0f}>'.format(dim*height)
 			cspan = len(filter(lambda cell:cell[0]=='td', stack))+1
 			span = ('', 'colspan="{0}" '.format(cspan))[int(cspan>1)]
+			span+=mark_cell(item)
 			print indent(level+1)+tag_row.format(span, dim*100)
 			recurse(item, level+1, space_h*width, dim*height)
 			space_v-=dim
@@ -652,6 +674,9 @@ print '''
 		td:hover {
 			background-color: #F0FFE0;
 		}
+		td.modified:hover {
+			background-color: #F0C0D0;
+		}
 		table {
 			background-color: white;
 			padding: 0px;
@@ -697,8 +722,6 @@ print '''
 <body>
 <div width="100%" height="600" align="center" style="padding:30px">'''
 #print '<!--', _names, '-->'
-for n in _names:
-	print n, '<br/>'
 print '<h4>Showing contents of: "{0}"</h4>'.format(_root)
 print '<i>{0}</i>'.format(sys.argv)
 # print 'smallest: {0}, largest: {1}, scale: {2}'.format(_min_size, _max_size, _log_scale)
