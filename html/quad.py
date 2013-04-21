@@ -672,6 +672,8 @@ print '''
 		a {
 			color: #3A3;
 			text-decoration: none;
+  		display: block;
+  		line-height: 4px;
 		}
 		a:visited, a:hover {
 			color: #171;
