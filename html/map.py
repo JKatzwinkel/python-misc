@@ -369,8 +369,10 @@ print '''
 		a {
 			color: #3A3;
 			text-decoration: none;
-  		display: block;
-  		line-height: 4px;
+			display: block;
+			line-height: 4px;
+			text-shadow: -1px -1px 0px white,
+										1px 1px 2px #841;
 		}
 		a:visited, a:hover {
 			color: #171;
@@ -388,15 +390,11 @@ print '''
 		table:hover {
 			background-color: #C0E0FF;
 		}
-		table.namespace {
-			background-color: #99D;
-		}
-		table.namespace:hover {
-			background-color: #B0A0FF;
-		}
 		ul.hidden {
 			list-style-type:none;
 			align: left;
+			box-shadow: 5px 5px 5px #807050;
+			padding: 5px;
 		}
 		.tooltip > .hidden,
 		.tooltip > .hidden > a {
@@ -409,7 +407,11 @@ print '''
 			font-size: 8pt;
 			background-color: #FFF;
 			border: 1px solid #CCC;
-			margin: 20px 10px;
+		}
+		.tooltip:hover > .hidden > a	{
+			margin: 5px 8px;
+			padding: 4px 4px;
+			box-shadow: 5px 5px 5px #807050;
 		}
 		.tooltip:hover > span.hidden a {
 			text-decoration: none;
