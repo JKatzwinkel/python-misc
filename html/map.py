@@ -135,16 +135,17 @@ def font_class(diskuse):
 
 # if file was modified recently, compute marking color
 def mark_cell(item):
+	res=''
 	if item[3]>_time_threshold:
 		sign = (item[3]-_time_threshold)/(_newest-_time_threshold)
 		sign = sign**4
 		red = 255
 		#print >> sys.stderr, item[3]-_time_threshold
-		blue=int(255-80*sign)
-		green=int(255-120*sign)
-		return 'style="background-color:#{0}{1}{2};"'.format(hex(red)[2:], 
+		blue=int(255-90*sign)
+		green=int(255-140*sign)
+		res = 'style="background-color:#{0}{1}{2};'.format(hex(red)[2:], 
 			hex(blue)[2:], hex(green)[2:])
-	return ''
+	return res+'"'
 
 # format and echo a label for given path, filename, size of disk usage, and
 # indentation level
@@ -184,6 +185,10 @@ def label((path, filename, diskuse, modtime), level, visible=2):
 #		element = '<span dir="LTR" class="size0">{0}</span>'.format(cell_content)
 	else:
 		element = '<span dir="LTR" class="dots">{0}</span>'.format(cell_content)
+	# TODO: move into css class
+	element = element.format(
+			['',' style="font-weight:bold; font-style: italic;"'][int(
+				modtime>_newest-60*60*12)])
 	print indent(level)+'<ul class="hidden"><li><span dir="LTR" class="size3">{0}</span></li>'.format(filename)
 	print indent(level)+'<li><span dir="LTR" class="size2">{0}</span></li></ul>'.format(cell_diskuse)
 	print indent(level)+element
