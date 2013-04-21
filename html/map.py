@@ -180,11 +180,11 @@ def label((path, filename, diskuse, modtime), level, visible=2):
 	else:
 		cell_content = "{0}".format(cell_content)
 	if visible>0:
-		element = '<span dir="LTR" class="{1}">{0}</span>'.format(cell_content, font_class(diskuse))
+		element = '<span dir="LTR" class="{1}"{{0}}>{0}</span>'.format(cell_content, font_class(diskuse))
 #	elif visible>0:
 #		element = '<span dir="LTR" class="size0">{0}</span>'.format(cell_content)
 	else:
-		element = '<span dir="LTR" class="dots">{0}</span>'.format(cell_content)
+		element = '<span dir="LTR" class="dots"{{0}}>{0}</span>'.format(cell_content)
 	# TODO: move into css class
 	element = element.format(
 			['',' style="font-weight:bold; font-style: italic;"'][int(
