@@ -3,6 +3,7 @@ import os
 import sys
 import cgi
 from math import log as log_nat
+from time import time
 
 _names=[]
 _diskusage={}
@@ -133,6 +134,7 @@ def font_size(diskuse):
 def font_class(diskuse):
 	return 'size{0}'.format(font_size(diskuse)-1)
 
+_now=time()
 # if file was modified recently, compute marking color
 def mark_cell(item):
 	res=''
@@ -141,8 +143,8 @@ def mark_cell(item):
 		sign = sign**4
 		red = 255
 		#print >> sys.stderr, item[3]-_time_threshold
-		blue=int(255-90*sign)
-		green=int(255-140*sign)
+		blue=int(255-100*sign)
+		green=int(255-160*sign)
 		res = 'style="background-color:#{0}{1}{2};'.format(hex(red)[2:], 
 			hex(blue)[2:], hex(green)[2:])
 	return res+'"'
@@ -188,7 +190,7 @@ def label((path, filename, diskuse, modtime), level, visible=2):
 	# TODO: move into css class
 	element = element.format(
 			['',' style="font-weight:bold; font-style: italic;"'][int(
-				modtime>_newest-60*60*12)])
+				modtime>_now-60*60*12)])
 	print indent(level)+'<ul class="hidden"><li><span dir="LTR" class="size3">{0}</span></li>'.format(filename)
 	print indent(level)+'<li><span dir="LTR" class="size2">{0}</span></li></ul>'.format(cell_diskuse)
 	print indent(level)+element
