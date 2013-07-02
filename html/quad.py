@@ -385,19 +385,23 @@ def init_log_scale():
 	globals()['_max_size']=log(_max_size)
 	globals()['_font_sizes']=[int(round(i**2/2.+8)) for i in range(0,11)]
 
+
 # returns a whitespace-only string of a certain length that can be used
 # to indent output
 def indent(level):
 	return '  '*level
+
 
 # return font size in which a file of given size will be labeled in html
 def font_size(diskuse):
 	#return int(min(8,max(0,log(diskuse)/2-3)+1))
 	return 1+int((log(diskuse)-_min_size)*_log_scale)
 
+
 # return the css font class in which a label for a file of given size should be printed
 def font_class(diskuse):
 	return 'size{0}'.format(font_size(diskuse)-1)
+
 
 _now = time()
 # if file was modified recently, compute marking color
@@ -413,6 +417,7 @@ def mark_cell(item):
 		res = 'style="background-color:#{0}{1}{2};'.format(hex(red)[2:], 
 			hex(blue)[2:], hex(green)[2:])
 	return res+'"'
+
 
 # format and echo a label for given path, filename, size of disk usage, and
 # indentation level
@@ -464,7 +469,7 @@ def label((path, filename, diskuse, modtime), level, visible=2):
 	# TODO: move into css class
 	element = element.format(
 			['',' style="font-weight:bold; font-style: italic;"'][int(
-				modtime>_newest-60*60*12)])
+				modtime>_now-60*60*12)])
 	print indent(level)+'<ul class="hidden"><li><span dir="LTR" class="size3">{0}</span></li>'.format(filename)
 	print indent(level)+'<li><span dir="LTR" class="size2">{0}</span></li></ul>'.format(cell_diskuse)
 	print indent(level)+element
