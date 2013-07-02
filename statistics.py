@@ -6,13 +6,11 @@ def pearson(X, Y):
 	N=len(X)
 	meanX=1.*sum(X)/N
 	meanY=1.*sum(Y)/N
+	N-=1
+	# standard deviation
+	sDevX=sqrt(sum([(x-meanX)**2 for x in X])/N)
+	sDevY=sqrt(sum([(y-meanY)**2 for y in Y])/N)
 	
-	sDevProd=0
-	cov=0
-	for i in range(0,N):
-		varX=X[i]-meanX
-		varY=Y[i]-meanY
-		cov+=varX*varY
-		sDevProd+=varX**2*varY**2
-	sDev=sqrt(sDevProd)
-	return cov/sDev
+	r=sum([(x-meanX)/sDevX*(y-meanY)/sDevY for (x,y) in zip(X,Y)])/N
+	return r
+	
