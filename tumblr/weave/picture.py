@@ -4,8 +4,11 @@ from PIL import Image as pil
 import os
 from random import choice
 from math import sqrt as sqr
+import re
+
 import util.statistics as stats
 import util.measures as measure
+import util.inout
 
 # scale down to half size
 def scaledown(a):
@@ -61,10 +64,9 @@ class Histogram:
 		for band in self.data:
 			aa.extend(band)
 		if bands:
-			while len(aa) < bands*32;
+			while len(aa) < bands*32:
 				aa.extend(aa)
 		return aa
-
 
 	# calculate distance between two image histograms
 	def distance(self, other):
@@ -75,64 +77,70 @@ class Histogram:
 		dist = sum(map(sum(map(lambda (i,j):(i-j)**2, comp))**.5))/len(comp)
 		return dist**.5
 
+	#simple histogram representation
+	def __repr__(self):
+		res=[]
+		for thresh in [200,150,100,50,25,0]:
+			row=[[' ','.',':'][int(v>thresh)+int(v>thresh+15)] for v in
+				self.array()]
+			res.append(''.join(row))
+		return "\n".join(res)
+
+
+
+
+
+
+
+
+
 
 
 # featured Image
 class Pict:
+	# registry
 	imgs={}
-	def __init__(self, path, name, slots={}):
+	# initialize for given 
+	def __init__(self, path, name, image):
 		self.path=path
 		self.name=name
 		self.sources=[]
-		self.info="<unknown>"
-		self.mode=slots.get('mode','None')
-		self.size=slots.get('size',(0,0))
-		self.histogram=slots.get('histogram', [])
-		self.histoscale=slots.get('histoscale', 1)
-		if len(self.histogram) < 1:
-			filename=os.sep.join([self.path, self.name])
-			try:
-				self.pict=pil.open(filename)
-				self.size=self.pict.size
-				self.mode=self.pict.mode
-				self.histogram=self.pict.histogram()
-				del self.pict
-				#os.remove(filename)
-				# scale down histogram
-				#ratio=len(self.histogram)/96
-				#hist=[sum(self.histogram[i*ratio:(i+1)*ratio]) for i in range(0,32)]
-				#self.histogram=[v/ratio for v in hist]
-				#while len(self.histogram)>32:
-				hist=self.histogram[:]
-				for i in [1,2,3]:
-					if len(hist)>96 or self.mode != 'RGB':
-						hist=scalehalf(hist) # scale histogram down to 32re tones
-				norm=max(hist)/255.
-				if norm>1:
-					self.histogram=[int(v/norm) for v in hist]
-					self.histoscale=int(norm)
-				else:
-					self.histogram=hist[:]
-				if self.mode=='RGBA':
-					self.histogram=self.histogram[:96]
-					self.mode='RGB'
-			except:
-				print filename, 'broken' 
+		self.relates={} # TODO
+		#self.info="<unknown>"
+		#self.mode = ''
+		#self.size = (0,0)
+		#self.dim = 0
+		#self.ext = ''
+		if isinstance(image, pil.Image):
+			self.mode = image.mode
+			self.size = image.size
+			self.histogram = Histogram(image)
+		else:
+			self.mode=slots.get('mode','None')
+			self.size=slots.get('size',(0,0))
+			self.histogram=slots.get('histogram', [])
+			self.dim = slots.get('format', 500)
+			self.ext = slots.get('extension', 'jpg')
+			self.relates = slots.get('similar', {})
+			self.sources = slots.get('hosted', [])
+
 		self.info='{0} {1}'.format(self.size, self.mode)
-		self.relates={}
-		Tum.imgs[name]=self
+		Pict.imgs[name]=self
 		#print '\r{0}'.format(len(Tum.imgs)),
 
 	def show(self):
 		print self.sources
-		self.pict=pil.open(os.sep.join([self.path, self.name]))
+		self.pict=pil.open(self.location)
 		self.pict.show()
 		del self.pict
 	
-	
+	@property
+	def filename(self):
+		return '{}_{}.{}'.format(self.name, self.dim, self.ext)
+
 	@property
 	def location(self):
-		return os.sep.join([self.path, self.name])
+		return os.sep.join([self.path, self.filename])
 	
 	@property
 	def origin(self):
@@ -203,13 +211,62 @@ class Pict:
 				self.info, self.sources[0], len(self.sources))
 		return '<{0} - No record> '.format(self.info)
 	
-	#simple histogram representation
-	@property
-	def hist(self):
-		res=[]
-		for thresh in [200,150,100,50,25,0]:
-			row=[[' ','.',':'][int(v>thresh)+int(v>thresh+15)] for v in
-				self.histogram]
-			res.append(''.join(row))
-		return "\n".join(res)
-		#return ''.join([" _.-~'^`"[v/36] for v in self.histogram])
+
+
+
+
+
+idex=re.compile('_(\w{19})_')
+
+def lookup(name):
+	p = Pict.imgs.get(name)
+	if p:
+		return p
+	m = idex.search(name)
+	if m:
+		p = Pict.imgs.get(m.group(1))
+	return p
+
+
+# loads the image at the given URL and returns a Pict image container
+def openurl(url, save=True):
+	image = util.inout.open_img_url(url)
+	if image:
+		name = idex.search(url).group(1)
+		# do we have it alerady?
+		pict = lookup(name)
+		if pict:
+			print '{} already here: {}'.format(url, pict)
+			#if pict.dim < dim:
+				#print 'But format is better: {} vs. {}'.format(pict.dim, dim)
+		else:
+			pict = Pict('images', name, image) #TODO
+			pict.ext = url.split('.')[-1]
+			m = re.search('_([1-9][0-9]{2,3})\.', url)
+			pict.dim=int(m.group(1))
+			if save == True:
+				image.save(pict.location)
+			del image
+		return pict
+	else:
+		return None
+
+
+# load image from file
+def openfile(path, filename):
+	fn=os.sep.join([path, filename])
+	try:
+		image = pil.open(fn)
+		if image:
+			name = idex.search(filename).group(1)
+			pict = Pict(path, name, image)
+			del image
+			return pict
+	except Exception, e:
+		print e.message
+		print 'Could not load {}.'.format(fn)
+	return None
+
+# return all instances aliove
+def pictures():
+	return Pict.imgs.values()

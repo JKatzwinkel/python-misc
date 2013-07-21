@@ -1,27 +1,32 @@
+#!/usr/bin/python
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import xml.etree.ElementTree as ET
 
-import weave.picture
+from urllib2 import urlopen, Request
+from PIL import Image as pil
+from io import BytesIO
+
+
 
 def saveXML(images, filename):
 	f=open(filename, 'w')
 	f.write('<?xml version="1.0" standalone="yes"?>\n<images>\n')
 	for p in images:
-		attr=p.name.split('_')
-		extf = attr[-1].split('.')
+		#attr=p.name.split('_')
+		#extf = attr[-1].split('.')
 		f.write(' <image id="{}" extension="{}" format="{}">\n'.format(
-						attr[1], extf[1], extf[0]))
+						p.name, p.ext, p.dim))
 		attr=p.size
 		f.write('  <size width="{}" height="{}"/>\n'.format(attr[0], attr[1]))
 		f.write('  <location>{}</location>\n'.format(p.location))
-		histo = weave.picture.Histogram(p.histogram)
+		histo = p.histogram
 		f.write('  <histogram bands="{}">{}</histogram>\n'.format(
-						len(histo.bands), histo.hex()))
+						histo.bands, histo.hex()))
 		f.write('  <hosted times="{}">\n'.format(len(p.sources)))
-		for s in p.sources:
-			f.write('   <at when="{}">{}</at>\n'.format(0,s.name))
+		#for s in p.sources:
+			#f.write('   <at when="{}">{}</at>\n'.format(0,s.name))
 		f.write('  </hosted>\n')
 		f.write('  <similar num="{}">\n'.format(len(p.relates)))
 		for s in p.relates.items():
@@ -78,3 +83,16 @@ def loadXML(filename):
 				known[data['id']]=True
 				data={}
 	return imgs
+
+
+# goes to the internets and gets an image. returns PIL Image
+def open_img_url(url):
+	image = None
+	try:
+		sck = urlopen(url)
+		image = pil.open(BytesIO(sck.read()))
+	except Exception, e:
+		print e.message
+		print 'Could not retrieve {}. '.format(url)
+	return image
+

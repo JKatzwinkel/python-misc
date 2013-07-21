@@ -6,9 +6,10 @@ from urlparse import urlparse, urlsplit, urljoin
 import re
 from time import time
 
+import weave.picture as picture
 
-class Manager:
-
+# crawler. 
+class Crawler:
 	def __init__(self):
 		self.visited={}
 		self.frontier=set()
@@ -46,11 +47,9 @@ class Manager:
 		url = self.current
 		refparts = urlsplit(url)
 		if not refparts.scheme:
-			url=urljoin('http://', url)
-			if not refparts.netloc:
-				url = urljoin(url, ''.join(refparts[2:4]))
+			url=''.join(['http://', url])
 		# request
-		req = Request(self.current)#, headers={
+		req = Request(url)#, headers={
 			#'User Agent':'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:16.0) Gecko/20100101 Firefox/16.0',
 			#'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
 			#'Accept-Language': 'en-US,en;q=0.5',
@@ -131,19 +130,22 @@ idex=re.compile('_(\w{19})_')
 #tumblr_mpkl2n8aqK1r0fb8eo1_500.jpg
 
 
-def retrieve(url, max=10):
-	manager = Manager()
-	manager.init(url)
-	c=0
-	while manager.next() and c<3:
-		manager.crawl()
-		c+=1
+images = []
 
-	for imgs in manager.images.values():
+def crawl(url, n=10):
+	crawler = Crawler()
+	crawler.init(url)
+	c=0
+	while crawler.next() and c < n:
+		crawler.crawl()
+		c += 1
+
+	for blog, imgs in crawler.images.items():
 		for img in imgs:
-			name = idex.search(img).group(1)
-			ext = img.split('.')[-1]
+			#name = idex.search(img).group(1)
 			best = best_version(img)
-			print name, best
-			urlretrieve(best, 'images/{}.{}'.format(name,ext))
-	
+			print best
+			#urlretrieve(best, 'images/{}.{}'.format(name,ext))
+			pict = picture.openurl(best)
+			pict.sources.append(blog) #TODO!
+			images.append(pict)
