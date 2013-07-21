@@ -12,7 +12,8 @@ from io import BytesIO
 # saves a list of images to an XML file
 def saveImages(images, filename):
 	f=open(filename, 'w')
-	f.write('<?xml version="1.0" standalone="yes"?>\n<images>\n')
+	f.write('<?xml version="1.0" standalone="yes"?>\n')
+	f.write('<images num="{}">\n'.format(len(images)))
 	for p in images:
 		#attr=p.name.split('_')
 		#extf = attr[-1].split('.')
@@ -36,6 +37,9 @@ def saveImages(images, filename):
 	f.write('</images>\n')
 	f.close()
 
+##############################################################
+##############################################################
+##############################################################
 
 # loads image container records from XML file
 def loadImages(filename):
@@ -69,7 +73,7 @@ def loadImages(filename):
 		# REACT ON END TAG
 		else:
 			if elem.tag == 'histogram':
-				data['bands'] = elem.attrib.get('bands', 0)
+				data['bands'] = int(elem.attrib.get('bands', 0))
 				dump = elem.text
 				histogram=[]
 				if dump:
@@ -87,6 +91,7 @@ def loadImages(filename):
 				known[data['id']]=True
 				data={}
 	return imgs
+
 
 
 # goes to the internets and gets an image. returns PIL Image
@@ -130,3 +135,75 @@ def savegroups(groups, filename):
 		f.write(' </div>\n')
 	f.write('</body>\n</html>\n')
 	f.close()
+
+
+##############################################################
+##############################################################
+##############################################################
+##############################################################
+##############################################################
+##############################################################
+##############################################################
+
+
+# saves a list of images to an XML file
+def saveBlogs(blogs, filename):
+	f=open(filename, 'w')
+	f.write('<?xml version="1.0" standalone="yes"?>\n')
+	f.write('<blogs num="{}">\n'.format(len(blogs)))
+	for p in blogs:
+		#attr=p.name.split('_')
+		#extf = attr[-1].split('.')
+		f.write(' <blog name="{}" seen="{}">\n'.format(
+						p.name, p.seen))
+		f.write('  <images>\n')
+		# existing files
+		for i in p.proper_imgs:
+			f.write('   <img when="{}">{}</img>\n'.format(0,i.name))
+		# removed images
+		for i in p.dead_imgs:
+			f.write('   <img when="{}">{}</img>\n'.format(0,i))
+		f.write('  </images>\n')
+		# links incoming and outgoing
+		f.write('  <links>\n')
+		for s in p.links:
+			f.write('   <out>{}</out>\n'.format(s.name))
+		for s in p.linked:
+			f.write('   <in>{}</in>\n'.format(s.name))
+		f.write('  </links>\n')
+		f.write(' </blog>\n')
+	f.write('</blogs>\n')
+	f.close()
+
+# loads image container records from XML file
+def loadBlogs(filename):
+	records=[]
+	data={}
+	for event, elem in ET.iterparse(filename, events=('start','end')):
+		# ON OPENING TAGS:
+		if event == 'start':
+			if elem.tag == 'blog':
+				data=elem.attrib
+			# read image list
+			if elem.tag == 'images':
+				data['images']=[]
+			if elem.tag == 'img':
+				try:
+					data.get('images').append(elem.text)
+				except:
+					data['images']=[elem.text]
+			# ream link lists
+			if elem.tag == 'links':
+				data['in'] = []
+				data['out'] = []
+			if elem.tag in ['out', 'in']:
+				try:
+					data.get(elem.tag).append(elem.text)
+				except:
+					data[elem.tag] = [elem.text]
+		# CLOSING TAGS:
+		else:
+			if elem.tag == 'blog':
+				records.append(data)
+				data = {}
+	return records

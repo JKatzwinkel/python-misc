@@ -4,7 +4,7 @@ import index
 import weave.picture as picture
 import util.cluster as clustering
 
-index.crawl('acrosstheweb.tumblr.com', num=5)
+index.crawl('tumblr.com', num=5)
 picts = index.pictures()
 blogs = index.blogs()
 

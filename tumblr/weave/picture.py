@@ -18,10 +18,7 @@ def scaledown(a):
 
 
 
-
-
-
-###################################################################
+##################################################################
 
 # bw or color histogram of an image
 class Histogram:
@@ -151,6 +148,7 @@ class Pict:
 		Pict.imgs[name]=self
 		#print '\r{0}'.format(len(Pict.imgs)),
 
+	# load and show picture
 	def show(self):
 		print self.sources
 		self.pict=pil.open(self.location)
@@ -230,6 +228,7 @@ class Pict:
 				print source.name,
 			print 
 	
+	# tostring
 	def __repr__(self):
 		if len(self.sources) > 0:
 			return '<{0}, orig: {1} ({2} src)>'.format(
@@ -254,14 +253,32 @@ class Pict:
 
 idex=re.compile('_(\w{19})_')
 
-def lookup(name):
+# find image by name
+def get(name):
 	p = Pict.imgs.get(name)
 	if p:
 		return p
 	m = idex.search(name)
-	if m != None:
+	if m:
 		p = Pict.imgs.get(m.group(1))
 	return p
+
+
+# return all instances aliove
+def pictures():
+	return Pict.imgs.values()
+
+
+# establishes a link between two pictures
+def connect(p,q,sim):
+	p.relates[q]=sim
+	q.relates[p]=sim
+
+
+
+##############################################################
+##############         Image IO         ######################
+##############################################################
 
 
 # loads the image at the given URL and returns a Pict image container
@@ -322,13 +339,3 @@ def opendump(slots):
 		return Pict(path, name, slots)
 	return None
 
-
-# return all instances aliove
-def pictures():
-	return Pict.imgs.values()
-
-
-# establishes a link between two pictures
-def connect(p,q,sim):
-	p.relates[q]=sim
-	q.relates[p]=sim
