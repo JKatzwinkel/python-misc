@@ -7,38 +7,73 @@ from math import sqrt as sqr
 import util.statistics as stats
 import util.measures as measure
 
+# scale down to half size
 def scaledown(a):
 	return [a[i]+a[i+1] for i in range(0,len(a),2)]
 
+
+# bw or color histogram of an image
 class Histogram:
+	# create a histogram object representing an image's histogram
+	# or histogram data passed as an array
 	def __init__(self, image):
 		data=[]
 		bands=1
 		if isinstance(image, pil.Image):
 			data = image.histogram()
 			bands = min(3, len(image.mode)) # cut A band of RGBA images
+			# scale, normalize
+			# only if data is extracted from actual image
+			while len(data) > bands*32:
+				data = scaledown(data)
+			# normalize: 255 means entire image is of colors of a bin
+			h,w = image.size
+			maxx = h*w
+			data = [bin * 255. / maxx for bin in data]
+		# if hostogram is given as a list, guess number of color bands
 		elif type(image) is list:
 			data = image[:]
 			bands=1
 			if len(data)>64:
 				bands=3
 		# struct band hists
-		self.bands = []
+		self.data = []
+		self.bands = bands
+		# split array into color histograms
 		size=max(len(data)/bands, 32)
 		for b in range(0,len(data), size):
-			self.bands.append(data[b:b+size])
+			self.data.append(data[b:b+size])
 		# prepare median values
 		self.mediane = [stats.median_histogram(band) 
-											for band in self.bands]
+											for band in self.data]
 		self._hex=''
 
+	# return hex representation
 	def hex(self):
 		if len(self._hex)<1:
-			aa=[]
-			for band in self.bands:
-				aa.extend(band)
+			aa = self.array()
 			self._hex=''.join([('%02x' % b) for b in aa])
 		return self._hex
+
+	# returns all bands in one single array
+	def array(self, bands=None):
+		aa=[]
+		for band in self.data:
+			aa.extend(band)
+		if bands:
+			while len(aa) < bands*32;
+				aa.extend(aa)
+		return aa
+
+
+	# calculate distance between two image histograms
+	def distance(self, other):
+		bands=max(self.bands, other.bands)
+		a = self.array(bands=bands)
+		b = other.array(bands=bands)
+		comp = zip(a, b)
+		dist = sum(map(sum(map(lambda (i,j):(i-j)**2, comp))**.5))/len(comp)
+		return dist**.5
 
 
 
