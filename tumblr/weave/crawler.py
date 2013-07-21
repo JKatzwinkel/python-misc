@@ -7,6 +7,7 @@ import re
 from time import time
 
 import weave.picture as picture
+import weave.tumblr as tumblr
 
 # crawler. 
 class Crawler:
@@ -29,7 +30,7 @@ class Crawler:
 			self.links[self.current] = set([url])
 
 	def next(self):
-		if len(self.frontier)>0:
+		if len(self.frontier) > 0:
 			url = self.frontier.pop()
 		else:
 			return None
@@ -123,7 +124,7 @@ def best_version(imgurl):
 # http://stackoverflow.com/questions/3042757/downloading-a-picture-via-urllib-and-python
 #
 
-tumblrex=re.compile('(http://)?\w*\.tumblr.com/?$')
+tumblrex=re.compile('(http://)?\w*\.tumblr.com')
 imgex=re.compile('http://[0-9]{2}\.media\.tumblr\.com(/[0-9a-f]*)?/tumblr_\w*\.(jpg|png)')
 idex=re.compile('_(\w{19})_')
 #http://31.media.tumblr.com/f87d34d3d0d945857bd48deb5e934372/
@@ -141,11 +142,12 @@ def crawl(url, n=10):
 		c += 1
 
 	for blog, imgs in crawler.images.items():
+		t = tumblr.create(blog)
 		for img in imgs:
 			#name = idex.search(img).group(1)
 			best = best_version(img)
 			print best
 			#urlretrieve(best, 'images/{}.{}'.format(name,ext))
 			pict = picture.openurl(best)
-			pict.sources.append(blog) #TODO!
+			t.feature(pict)
 			images.append(pict)

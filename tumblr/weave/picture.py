@@ -74,7 +74,7 @@ class Histogram:
 		a = self.array(bands=bands)
 		b = other.array(bands=bands)
 		comp = zip(a, b)
-		dist = sum(map(sum(map(lambda (i,j):(i-j)**2, comp))**.5))/len(comp)
+		dist = sum(map(lambda (i,j):(i-j)**2, comp))**.5/len(comp)
 		return dist**.5
 
 	#simple histogram representation
@@ -126,7 +126,7 @@ class Pict:
 
 		self.info='{0} {1}'.format(self.size, self.mode)
 		Pict.imgs[name]=self
-		#print '\r{0}'.format(len(Tum.imgs)),
+		#print '\r{0}'.format(len(Pict.imgs)),
 
 	def show(self):
 		print self.sources
@@ -166,13 +166,15 @@ class Pict:
 		msr.append(1-mood)
 		colorful=measure.image_histrelcor(self, pict)
 		msr.extend(colorful)
+		dist = measure.image_hist_dist(self, pict)
+		msr.append(1-dist/255)
 		return sum(msr)/len(msr)
 	
 	# finds related images
 	def similar(self, n=10):
 		sim=[]
 		hosts=self.sources[:]
-		sim.extend([choice(Tum.imgs.values()) for i in range(n*2)])
+		sim.extend([choice(Pict.imgs.values()) for i in range(n*2)])
 		while hosts != [] and len(sim)<n*10:
 			host=hosts.pop(0)
 			hosts.extend(host.relates)
@@ -270,3 +272,9 @@ def openfile(path, filename):
 # return all instances aliove
 def pictures():
 	return Pict.imgs.values()
+
+
+# establishes a link between two pictures
+def connect(p,q,sim):
+	p.relates[q]=sim
+	q.relates[p]=sim
