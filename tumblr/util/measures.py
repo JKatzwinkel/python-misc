@@ -4,6 +4,24 @@ from math import sqrt as sqr
 from random import randrange as rnd
 import util.statistics as stats
 
+# statistics and similarity measure repositories
+# for Images
+hist_distances = {}
+hist_correlations = {}
+
+def lookup(registry, p, q):
+	record = registry.get(p, {})
+	v = record.get(q)
+	if v:
+		return v
+	registry[p] = record
+
+def register(registry, p, q, value):
+	record = registry.get(p, {})
+	record[q] = value
+	registry[p] = record
+	
+
 # computes the similarity of two picture's histograms
 # based on Pearson coefficient
 def image_histograms(p, q):
@@ -13,6 +31,9 @@ def image_histograms(p, q):
 	# one just stays in its black'n'white space.
 	# handle maximum colorspace, however
 	#colspace=sorted([p.mode, q.mode], key=lambda m:len(m))[-1]
+	v = lookup(hist_correlations, p, q)
+	if v:
+		return v
 	bands = max(p.histogram.bands, q.histogram.bands)
 	correlations=[]
 	for offset in range(bands):
@@ -24,6 +45,7 @@ def image_histograms(p, q):
 		correlations.append(corr)
 	# now how do we put them together?
 	#res=sum(correlations)/len(correlations)
+	register(hist_correlations, p, q, correlations)
 	return correlations
 	
 
@@ -65,4 +87,10 @@ def image_histrelcor(p,q):
 
 # difference between the histograms of two pictures
 def image_hist_dist(p, q):
-	return p.histogram.distance(q.histogram)
+	v = lookup(hist_distances, p, q)
+	if v:
+		return v
+	dist = p.histogram.distance(q.histogram)
+	register(hist_distances, p, q, dist)
+	return dist
+	

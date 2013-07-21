@@ -18,6 +18,9 @@ class Crawler:
 		self.images={}
 		self.current = None
 
+
+
+
 	def addpage(self, url):
 		lastvisit = self.visited.get(url)
 		if lastvisit == None:
@@ -28,6 +31,9 @@ class Crawler:
 			linked.update([url])
 		else:
 			self.links[self.current] = set([url])
+
+
+
 
 	def next(self):
 		if len(self.frontier) > 0:
@@ -40,9 +46,13 @@ class Crawler:
 		self.current = url
 		return url
 
+
+	# seed url
 	def init(self, url):
 		self.frontier.update([url])
 
+
+	# parse one page
 	def crawl(self):
 		# check url scheme
 		url = self.current
@@ -61,7 +71,10 @@ class Crawler:
 			#'Cache-Control': 'max-age=0'
 			#})
 		print url
-		page = urlopen(req)
+		try:
+			page = urlopen(req)
+		except:
+			return
 		mimetype = page.info().gettype()
 		if mimetype != 'text/html':
 			return
@@ -104,18 +117,21 @@ class Crawler:
 		self.images[self.current] = imgs
 
 
+
+# high resolution!
 def best_version(imgurl):
 	m = re.search('_([1-9][0-9]{2,3})\.', imgurl)
-	dim=int(m.group(1))
-	# count down sizes
-	for d in filter(lambda x:x>=dim, [1280,800,500,400,250]):
-		url = re.sub('_([1-9][0-9]{2,3})\.', '_{}.'.format(d), imgurl)
-		try:
-			req = Request(url)
-			urlopen(req)
-			return url
-		except:
-			pass
+	if m:
+		dim=int(m.group(1))
+		# count down sizes
+		for d in filter(lambda x:x>=dim, [1280,800,500,400,250]):
+			url = re.sub('_([1-9][0-9]{2,3})\.', '_{}.'.format(d), imgurl)
+			try:
+				req = Request(url)
+				urlopen(req)
+				return url
+			except:
+				pass
 	return imgurl
 	
 

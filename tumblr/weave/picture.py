@@ -51,12 +51,14 @@ class Histogram:
 											for band in self.data]
 		self._hex=''
 
+
 	# return hex representation
 	def hex(self):
 		if len(self._hex)<1:
 			aa = self.array()
 			self._hex=''.join([('%02x' % b) for b in aa])
 		return self._hex
+
 
 	# returns all bands in one single array
 	def array(self, bands=None):
@@ -68,14 +70,16 @@ class Histogram:
 				aa.extend(aa)
 		return aa
 
+
 	# calculate distance between two image histograms
 	def distance(self, other):
 		bands=max(self.bands, other.bands)
 		a = self.array(bands=bands)
 		b = other.array(bands=bands)
 		comp = zip(a, b)
-		dist = sum(map(lambda (i,j):(i-j)**2, comp))**.5/len(comp)
+		dist = sum(map(lambda (i,j):(i-j)**2, comp))/len(comp)
 		return dist**.5
+
 
 	#simple histogram representation
 	def __repr__(self):
@@ -225,7 +229,7 @@ def lookup(name):
 	if p:
 		return p
 	m = idex.search(name)
-	if m:
+	if m != None:
 		p = Pict.imgs.get(m.group(1))
 	return p
 
@@ -234,7 +238,12 @@ def lookup(name):
 def openurl(url, save=True):
 	image = util.inout.open_img_url(url)
 	if image:
-		name = idex.search(url).group(1)
+		m = idex.search(url)
+		if m != None:
+			name = m.group(1)
+		else:
+			name = url.split('/')[-1]
+			print 'WARNING: ', name
 		# do we have it alerady?
 		pict = lookup(name)
 		if pict:
@@ -245,7 +254,10 @@ def openurl(url, save=True):
 			pict = Pict('images', name, image) #TODO
 			pict.ext = url.split('.')[-1]
 			m = re.search('_([1-9][0-9]{2,3})\.', url)
-			pict.dim=int(m.group(1))
+			if m:
+				pict.dim=int(m.group(1))
+			else:
+				pict.dim = pict.size[0]
 			if save == True:
 				image.save(pict.location)
 			del image

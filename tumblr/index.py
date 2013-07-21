@@ -8,8 +8,10 @@ from math import sqrt as sqr
 
 import util.statistics as stat
 import util.measures as measure
+import util.inout as inout
 import weave.picture as picture
 import weave.tumblr as tumblr
+import weave.crawler as crawler
 
 idex=re.compile('_(\w{19})_')
 
@@ -75,5 +77,51 @@ def stumblr(seed, filename):
 		f.write(' <b>{}</b>\n'.format(e.message))
 	f.write('</body>\n</html>\n')
 	f.close()
+
+
+
+#TODO sollte eigentlich nach util.inout
+# craft html page for groups of images
+def savegroups(groups, filename):
+	f=open(os.sep.join(['html', filename]), 'w')
+	f.write('<html>\n<body>')
+	for group in groups[:50]:
+		f.write(' <div>\n')
+		f.write('  <h3>{} Members</h3/>\n'.format(len(group)))
+		p=group.pop(0)
+		f.write('  <table height="{}">\n'.format(p.size[1]))
+		f.write('   <tr><td rowspan="2">\n')
+		f.write('    <img src="../{}"/><br/>\n'.format(p.location))
+		f.write('   </td>\n')
+		thmbsize=min(p.size[1]/2, 300)
+		rowheight=thmbsize+10
+		for i,s in enumerate(group):
+			f.write('     <td height="{}" valign="top">\n'.format(rowheight))
+			f.write('      <img src="../{}" height="{}"><br/>\n'.format(s.location, thmbsize))
+			if (s.origin):
+				f.write('      {}\n'.format(s.origin.name))
+			f.write('     </td>\n')
+			if i+1==len(group)/2:
+				f.write('    </tr><tr>\n')
+				rowheight=p.size[1]-rowheight
+		f.write('   </tr>\n  </table>\n')
+		f.write(' </div>\n')
+	f.write('</body>\n</html>\n')
+	f.close()
+
+
+# all known images
+def pictures():
+	return picture.pictures()
+
+
+# kraeucht und flaeucht
+def crawl(seed, num=10):
+	crawler.crawl(seed, n=num)
+
+
+# speichere bildersammlung als XML
+def saveXML(images, filename):
+	inout.saveXML(images, filename)
 
 
