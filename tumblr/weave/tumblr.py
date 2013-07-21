@@ -29,7 +29,10 @@ class Blog:
 	
 	# interlinks a blog and an image
 	def feature(self, img):
-		pict = picture.lookup(img)
+		if isinstance(img, picture.Pict):
+			pict = img
+		else:
+			pict = picture.lookup(img)
 		if pict:
 			self.features.add(pict)
 			pict.sources.append(self)

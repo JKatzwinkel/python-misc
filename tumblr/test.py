@@ -5,7 +5,7 @@ import weave.crawler as crawler
 import weave.picture as picture
 import util.inout
 
-crawler.crawl('acrosstheweb.tumblr.com', n=20)
+crawler.crawl('.tumblr.com', n=50)
 
 picts = picture.pictures()
 

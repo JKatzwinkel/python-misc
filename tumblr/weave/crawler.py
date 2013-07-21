@@ -81,8 +81,9 @@ class Crawler:
 						href = urljoin(url, ''.join(refparts[2:4]))
 						#links.append(href)
 				elif refparts.scheme == 'http':
-					if tumblrex.match(href):
-						links.update([href])
+					m = tumblrex.match(href)
+					if m:
+						links.update([m.group(2)])
 		# images
 		for link in soup.find_all('img'):
 			src = link.get('src')
@@ -124,7 +125,7 @@ def best_version(imgurl):
 # http://stackoverflow.com/questions/3042757/downloading-a-picture-via-urllib-and-python
 #
 
-tumblrex=re.compile('(http://)?\w*\.tumblr.com')
+tumblrex=re.compile('(http://)?(\w*\.tumblr.com).*')
 imgex=re.compile('http://[0-9]{2}\.media\.tumblr\.com(/[0-9a-f]*)?/tumblr_\w*\.(jpg|png)')
 idex=re.compile('_(\w{19})_')
 #http://31.media.tumblr.com/f87d34d3d0d945857bd48deb5e934372/
