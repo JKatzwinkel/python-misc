@@ -14,6 +14,9 @@ class Cluster:
 	
 	def distance(self, other):
 		distances = []
+		dist = self.distances.get(other)
+		if dist:
+			return dist
 		for p in self.members:
 			for q in other.members:
 				dist = measures.image_hist_dist(p,q)
@@ -48,7 +51,7 @@ def avg_linkage(images, goal):
 		clusters.append(Cluster([p]))
 	# continue until number is reached
 	while len(clusters) > goal:
-		best = (None, None, 255)
+		best = (None, None, 10000)
 		for i in range(len(clusters)):
 			a=clusters[i]
 			for b in clusters[i+1:]:

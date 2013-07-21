@@ -9,15 +9,15 @@ from PIL import Image as pil
 from io import BytesIO
 
 
-
-def saveXML(images, filename):
+# saves a list of images to an XML file
+def saveImages(images, filename):
 	f=open(filename, 'w')
 	f.write('<?xml version="1.0" standalone="yes"?>\n<images>\n')
 	for p in images:
 		#attr=p.name.split('_')
 		#extf = attr[-1].split('.')
-		f.write(' <image id="{}" extension="{}" format="{}">\n'.format(
-						p.name, p.ext, p.dim))
+		f.write(' <image id="{}" extension="{}" mode="{}" format="{}">\n'.format(
+						p.name, p.ext, p.mode, p.dim))
 		attr=p.size
 		f.write('  <size width="{}" height="{}"/>\n'.format(attr[0], attr[1]))
 		f.write('  <location>{}</location>\n'.format(p.location))
@@ -36,11 +36,14 @@ def saveXML(images, filename):
 	f.write('</images>\n')
 	f.close()
 
-def loadXML(filename):
+
+# loads image container records from XML file
+def loadImages(filename):
 	imgs=[]
 	data={}
 	known={}
 	for event, elem in ET.iterparse(filename, events=('start','end')):
+		# ON OPENING TAGS:
 		if event == 'start':
 			if elem.tag == 'image':
 				data=elem.attrib
@@ -49,9 +52,7 @@ def loadXML(filename):
 												int(elem.attrib.get('height',0)))
 			if elem.tag == 'location':
 				data['location'] = elem.text
-
 			if elem.tag == 'hosted':
-				#data['num_hosts'] = elem.attrib.get('times',0)
 				data['hosts']=[]
 			if elem.tag == 'at':
 				try:
@@ -65,9 +66,10 @@ def loadXML(filename):
 					data['similar'][elem.text] = float(elem.attrib.get('m',0))
 				except:
 					data['similar']={elem.text:elem.attrib.get('m',0)}
+		# REACT ON END TAG
 		else:
 			if elem.tag == 'histogram':
-				data['histogram_bands'] = elem.attrib.get('bands', 0)
+				data['bands'] = elem.attrib.get('bands', 0)
 				dump = elem.text
 				histogram=[]
 				if dump:
@@ -76,7 +78,9 @@ def loadXML(filename):
 				else:
 					print 'No histogram dump:', data.get('id')
 				data['histogram'] = histogram
+			# image tag closed:
 			if elem.tag == 'image':
+				# instantiate a picture
 				imgs.append(data)
 				if known.get(data['id']):
 					print 'double: {} !'.format(data['id'])
@@ -96,3 +100,33 @@ def open_img_url(url):
 		print 'Could not retrieve {}. '.format(url)
 	return image
 
+
+
+# craft html page for groups of images
+def savegroups(groups, filename):
+	f=open(os.sep.join(['html', filename]), 'w')
+	f.write('<html>\n<body>')
+	for group in groups[:50]:
+		f.write(' <div>\n')
+		f.write('  <h3>{} Members</h3/>\n'.format(len(group)))
+		p=group.pop(0)
+		height=min(600, p.size[1])
+		f.write('  <table height="{}">\n'.format(height))
+		f.write('   <tr><td rowspan="2">\n')
+		f.write('    <img src="../{}"/><br/>\n'.format(p.location))
+		f.write('   </td>\n')
+		thmbsize=min(height/2, 300)
+		rowheight=thmbsize+10
+		for i,s in enumerate(group):
+			f.write('     <td height="{}" valign="top">\n'.format(rowheight))
+			f.write('      <img src="../{}" height="{}"><br/>\n'.format(s.location, thmbsize))
+			if (s.origin):
+				f.write('      {}\n'.format(s.origin.name))
+			f.write('     </td>\n')
+			if i+1==len(group)/2:
+				f.write('    </tr><tr>\n')
+				rowheight=p.size[1]-rowheight
+		f.write('   </tr>\n  </table>\n')
+		f.write(' </div>\n')
+	f.write('</body>\n</html>\n')
+	f.close()

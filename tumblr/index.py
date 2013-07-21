@@ -28,8 +28,8 @@ def simpairs():
 			if sim>.5:
 				res.append((p,q,sim))
 				picture.connect(p,q,sim)
-		if i%100==0:
-			print '\t{}\t/\t{}'.format(i, len(imgs)),
+		#if i%100==0:
+			#print '\t{}\t/\t{}'.format(i, len(imgs)),
 	print '\tDone!\t\t\t'
 	f=open('html/.twins.html','w')
 	f.write('<html>\n<body>')
@@ -80,39 +80,15 @@ def stumblr(seed, filename):
 
 
 
-#TODO sollte eigentlich nach util.inout
-# craft html page for groups of images
-def savegroups(groups, filename):
-	f=open(os.sep.join(['html', filename]), 'w')
-	f.write('<html>\n<body>')
-	for group in groups[:50]:
-		f.write(' <div>\n')
-		f.write('  <h3>{} Members</h3/>\n'.format(len(group)))
-		p=group.pop(0)
-		f.write('  <table height="{}">\n'.format(p.size[1]))
-		f.write('   <tr><td rowspan="2">\n')
-		f.write('    <img src="../{}"/><br/>\n'.format(p.location))
-		f.write('   </td>\n')
-		thmbsize=min(p.size[1]/2, 300)
-		rowheight=thmbsize+10
-		for i,s in enumerate(group):
-			f.write('     <td height="{}" valign="top">\n'.format(rowheight))
-			f.write('      <img src="../{}" height="{}"><br/>\n'.format(s.location, thmbsize))
-			if (s.origin):
-				f.write('      {}\n'.format(s.origin.name))
-			f.write('     </td>\n')
-			if i+1==len(group)/2:
-				f.write('    </tr><tr>\n')
-				rowheight=p.size[1]-rowheight
-		f.write('   </tr>\n  </table>\n')
-		f.write(' </div>\n')
-	f.write('</body>\n</html>\n')
-	f.close()
 
 
 # all known images
 def pictures():
 	return picture.pictures()
+
+# all known blogs
+def blogs():
+	return tumblr.blogs()
 
 
 # kraeucht und flaeucht
@@ -120,8 +96,35 @@ def crawl(seed, num=10):
 	crawler.crawl(seed, n=num)
 
 
+##############################################################
+####             Images / Blog IO                      #######
+##############################################################
 # speichere bildersammlung als XML
-def saveXML(images, filename):
-	inout.saveXML(images, filename)
+def saveImages(images, filename):
+	inout.saveImages(images, filename)
 
 
+# load XML dump
+def loadImages(filename):
+	records = inout.loadImages(filename)
+	imgs = [picture.opendump(rec) for rec in records]
+	#TODO: durch die relates und sources listen gehen und ids
+	# durch instanzen ersetzen
+	return imgs
+
+# speichere bildersammlung als XML
+def saveBlogs(blogs, filename):
+	inout.saveBlogs(blogs, filename)
+
+
+# load XML dump
+def loadBlogs(filename):
+	records = inout.loadBlogs(filename)
+	blgs = [tumblr.opendump(rec) for rec in records]
+	#TODO: durch die relates und sources listen gehen und ids
+	# durch instanzen ersetzen
+	return blgs
+
+# craft html page for groups of images
+def savegroups(groups, filename):
+	inout.savegroups(groups, filename)

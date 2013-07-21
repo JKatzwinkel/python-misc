@@ -15,30 +15,41 @@ def scaledown(a):
 	return [a[i]+a[i+1] for i in range(0,len(a),2)]
 
 
+
+
+
+
+
+
+###################################################################
+
 # bw or color histogram of an image
 class Histogram:
 	# create a histogram object representing an image's histogram
 	# or histogram data passed as an array
-	def __init__(self, image):
+	def __init__(self, image, bands=0):
 		data=[]
-		bands=1
 		if isinstance(image, pil.Image):
-			data = image.histogram()
-			bands = min(3, len(image.mode)) # cut A band of RGBA images
-			# scale, normalize
-			# only if data is extracted from actual image
-			while len(data) > bands*32:
-				data = scaledown(data)
-			# normalize: 255 means entire image is of colors of a bin
-			h,w = image.size
-			maxx = h*w
-			data = [bin * 255. / maxx for bin in data]
+			try:
+				data = image.histogram()
+				bands = min(3, len(image.mode)) # cut A band of RGBA images
+				# scale, normalize
+				# only if data is extracted from actual image
+				while len(data) > bands*32:
+					data = scaledown(data)
+				# normalize: 255 means entire image is of colors of a bin
+				h,w = image.size
+				maxx = h*w
+				data = [bin * 255. / maxx for bin in data]
+			except:
+				data = [10]*96
 		# if hostogram is given as a list, guess number of color bands
 		elif type(image) is list:
 			data = image[:]
-			bands=1
-			if len(data)>64:
-				bands=3
+			if bands < 1:
+				bands=1
+				if len(data)>64:
+					bands=3
 		# struct band hists
 		self.data = []
 		self.bands = bands
@@ -94,11 +105,18 @@ class Histogram:
 
 
 
-
-
-
-
-
+##############################################################
+##############################################################
+##############################################################
+##############################################################
+##############################################################
+##############################################################
+##############################################################
+##############################################################
+##############################################################
+##############################################################
+##############################################################
+##############################################################
 
 # featured Image
 class Pict:
@@ -120,13 +138,14 @@ class Pict:
 			self.size = image.size
 			self.histogram = Histogram(image)
 		else:
-			self.mode=slots.get('mode','None')
-			self.size=slots.get('size',(0,0))
-			self.histogram=slots.get('histogram', [])
-			self.dim = slots.get('format', 500)
-			self.ext = slots.get('extension', 'jpg')
-			self.relates = slots.get('similar', {})
-			self.sources = slots.get('hosted', [])
+			self.mode = image.get('mode','None')
+			self.size = image.get('size',(0,0))
+			histogram = image.get('histogram', [])
+			self.histogram = Histogram(histogram, bands=image.get('bands'))
+			self.dim = image.get('format', 500)
+			self.ext = image.get('extension', 'jpg')
+			self.relates = image.get('similar', {})
+			self.sources = image.get('hosted', [])
 
 		self.info='{0} {1}'.format(self.size, self.mode)
 		Pict.imgs[name]=self
@@ -219,7 +238,18 @@ class Pict:
 	
 
 
-
+##############################################################
+##############################################################
+##############################################################
+##############################################################
+##############################################################
+##############################################################
+##############################################################
+##############################################################
+##############################################################
+##############################################################
+##############################################################
+##############################################################
 
 
 idex=re.compile('_(\w{19})_')
@@ -280,6 +310,18 @@ def openfile(path, filename):
 		print e.message
 		print 'Could not load {}.'.format(fn)
 	return None
+
+
+# create pict cntainer from single record
+def opendump(slots):
+	loc = slots.get('location')
+	if loc:
+		loc = loc.split(os.sep)
+		path = os.sep.join(loc[:-1])
+		name = slots.get('id')
+		return Pict(path, name, slots)
+	return None
+
 
 # return all instances aliove
 def pictures():
