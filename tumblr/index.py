@@ -115,7 +115,8 @@ def loadImages(filename):
 	imgs = [picture.opendump(rec) for rec in records]
 	# replace string identifiers with the instances they reference
 	for p in imgs:
-		p.clean_links()
+		if p:
+			p.clean_links()
 	return imgs
 
 # speichere bildersammlung als XML

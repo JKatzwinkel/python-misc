@@ -6,7 +6,9 @@ import util.cluster as clustering
 
 index.load()
 
-index.crawl('weloveariagiovanni.tumblr.com', num=20)
+seed = sorted(index.blogs(), key=lambda t:len(t.proper_imgs))[-1]
+
+index.crawl(seed.url(), num=20)
 picts = index.pictures()
 blogs = index.blogs()
 

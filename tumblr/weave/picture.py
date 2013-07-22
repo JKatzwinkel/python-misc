@@ -306,7 +306,13 @@ def connect(p,q,sim):
 	q.relates[p]=sim
 
 
-
+removed = set()
+# update collection. filter removed files
+def sync():
+	for p in pictures():
+		if not os.path.exists(p.location):
+			del Pict.imgs[p.name]
+			removed.add(p.name)
 
 ##############################################################
 ##############         Image IO         ######################

@@ -92,6 +92,7 @@ def loadImages(filename):
 					print 'double: {} !'.format(data['id'])
 				known[data['id']]=True
 				data={}
+	print 'Read {} images into memory.'.format(len(imgs))
 	return imgs
 
 
@@ -210,4 +211,5 @@ def loadBlogs(filename):
 			if elem.tag == 'blog':
 				records.append(data)
 				data = {}
+	print 'Read {} blog objects.'.format(len(records))
 	return records

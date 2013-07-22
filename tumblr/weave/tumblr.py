@@ -112,17 +112,19 @@ def opendump(slots):
 	#reify data set
 	t = Blog.blogs.get(name)
 	if not t:
-		t = create(name)
+		t = create(name, time=float(slots.get('seen')))
 	# connect related image identifiers, whereever possible
 	# using reification as well
 	for p in slots.get('images', []):
 		t.assign_img(p)
 	# reify hyperlink identifiers
 	for l in slots.get('out', []):
-		t.link(l)
+		if l:
+			t.link(l)
 	for l in slots.get('in', []):
-		ln = get(l)
-		if ln:
-			ln.link(t)
+		if l:
+			ln = get(l)
+			if ln:
+				ln.link(t)
 	return t
 

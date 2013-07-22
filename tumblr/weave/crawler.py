@@ -67,6 +67,7 @@ class Crawler:
 				self.images[t] = imgs
 				# done with this blog/url
 				# TODO: unless we want to check additional pages, but later
+				t.seen = time()
 				self.latest = t
 				return True
 		return False
@@ -192,6 +193,7 @@ images = []
 
 # go to the internets and browse through there!
 def crawl(url, n=10):
+	print 'Starting crawler.'
 	seed = tumblr.get(url)
 	if not seed:
 		seed = tumblr.create(url)
