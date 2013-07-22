@@ -121,6 +121,14 @@ class Pict:
 	imgs={}
 	# initialize for given 
 	def __init__(self, path, name, image):
+		# TODO: eigentlich ist der pfad hier ueberfluessig. der indexer
+		# sollte ein default projektverzeichnise fuehren, wo er
+		# alle bilder reinschmeiszt und rausholt. fuer abweichende
+		# verzeichnisse koennte der parameter optional gemacht werden
+		# TODO> dann haette man auch eine einfache moeglichkeit, 
+		# geloeschte von vorhandenen bildern zu unterscheiden ohne
+		# unterschiedliche klassen verwenden oder die metadaten
+		# wegschmeiszen zu muessen.
 		self.path=path
 		self.name=name
 		self.sources=[]
@@ -131,6 +139,7 @@ class Pict:
 		#self.dim = 0
 		#self.ext = ''
 		#self.date = 0 # date of retrieval (timestamp)
+		#self.url = None #TODO: implementieren
 		if isinstance(image, pil.Image):
 			self.mode = image.mode
 			self.size = image.size
