@@ -25,21 +25,26 @@ class Crawler:
 		if len(query) < 1:
 			query = sorted(tumblr.blogs(), 
 				key=lambda t:len(t.proper_imgs)/(len(t.images)+1),
-				reverse=True)
+				reverse=True)[:10]
 		# frontier is actual Blog instances!
 		self.frontier=set(query)
 		self.parser = Parser(self)
+		self.latest = None
 		# what we gather
 		self.images = {}
 
 
 	# choose next blog to visit
 	def next_blog(self):
-		# pick random blog from frontier list
-		blog = self.frontier.pop()
-		# move blog to visited list and save time
-		self.visited[blog] = time()
-		return blog
+		try:
+			# pick random blog from frontier list
+			blog = self.frontier.pop()
+			# move blog to visited list and save time
+			self.visited[blog] = time()
+			return blog
+		except:
+			print 'List is empty. Nowhere to go.'
+		return None
 
 
 	# perform one step of the crawling process
@@ -62,6 +67,7 @@ class Crawler:
 				self.images[t] = imgs
 				# done with this blog/url
 				# TODO: unless we want to check additional pages, but later
+				self.latest = t
 				return True
 		return False
 
@@ -82,9 +88,15 @@ class Crawler:
 				return self.parser.parse(page)
 		except Exception, e:
 			print 'Error: {} couldnt be accessed.'.format(url)
-			e.message()
+			print e.message
 			return None
 
+
+	def status(self):
+		temp = '{:4} < {:4} \t{:5} Img. \t {}'
+		n = sum([len(l) for l in self.images.values()])
+		return temp.format(len(self.visited), len(self.frontier),
+			n, self.latest.name)
 
 ##############################################################
 ##############################################################
@@ -111,18 +123,6 @@ class Parser:
 
 
 
-	def next(self):
-		if len(self.frontier) > 0:
-			url = self.frontier.pop()
-		else:
-			return None
-		#lastvisit = self.visited.get(url)
-		#if lastvisit == None:
-		self.visited[url] = time()
-		self.current = url
-		return url
-
-
 	# parse one page
 	def parse(self, page):
 		# Hmmmm...
@@ -138,7 +138,7 @@ class Parser:
 				refparts = urlsplit(href)
 				if not refparts.scheme:
 					if not refparts.netloc:
-						href = urljoin(url, ''.join(refparts[2:4]))
+						href = urljoin(page.url, ''.join(refparts[2:4]))
 						#links.append(href)
 				elif refparts.scheme == 'http':
 					m = tumblrex.match(href)
@@ -152,7 +152,7 @@ class Parser:
 				refparts = urlsplit(src)
 				if not refparts.scheme:
 					if not refparts.netloc:
-						href = urljoin(url, ''.join(refparts[2:4]))
+						href = urljoin(page.url, ''.join(refparts[2:4]))
 						#imgs.append(href)
 				elif refparts.scheme == 'http':
 					if imgex.match(src):
@@ -182,10 +182,10 @@ def best_version(imgurl):
 			try:
 				req = Request(url)
 				urlopen(req)
-				return url
+				return (url, d)
 			except:
 				pass
-	return imgurl
+	return (imgurl, dim)
 	
 
 
@@ -194,35 +194,45 @@ def best_version(imgurl):
 # http://stackoverflow.com/questions/3042757/downloading-a-picture-via-urllib-and-python
 #
 
-tumblrex=re.compile('(http://)?(\b\w*\.tumblr.com).*')
+tumblrex=re.compile('(http://)?(\w*\.tumblr.com).*')
 imgex=re.compile('http://[0-9]{2}\.media\.tumblr\.com(/[0-9a-f]*)?/tumblr_\w*\.(jpg|png)')
 idex=re.compile('_(\w{19,})_')
-#http://31.media.tumblr.com/f87d34d3d0d945857bd48deb5e934372/
 #tumblr_mpkl2n8aqK1r0fb8eo1_500.jpg
-
+#urlretrieve(best, 'images/{}.{}'.format(name,ext))
 
 images = []
-blogs = tumblr.blogs()
-pictures = picture
-
-def crawl(url, n=10):
-	crawler = Crawler()
-	crawler.init(url)
-	c=0
-	while crawler.next() and c < n:
-		crawler.crawl()
-		c += 1
-
-	for blog, imgs in crawler.images.items():
-		t = tumblr.create(blog)
-		for img in imgs:
-			#name = idex.search(img).group(1)
-			best = best_version(img)
-			print best
-			#urlretrieve(best, 'images/{}.{}'.format(name,ext))
-			pict = picture.openurl(best)
-			t.feature(pict)
-			images.append(pict)
 
 # go to the internets and browse through there!
-def 
+def crawl(url, n=10):
+	seed = tumblr.get(url)
+	if not seed:
+		seed = tumblr.create(url)
+	crawler = Crawler([seed])
+	c=0
+	# wait for the crawler to be done
+	while crawler.crawling() and c < n:
+		print crawler.status()
+		c += 1
+	print 'Done.'
+	# now handle the collected image URLs
+	for t, imgs in crawler.images.items():
+		for img in imgs:
+			# look for high resolutions
+			best, dim = best_version(img)
+			# check if image is already known
+			# and if we can extract its Id
+			m = idex.match(best)
+			if m:
+				name = m.group(1)
+				pict = picture.get(name)
+				# if image is not on the disk yet, or if its resolution
+				# is lower than the available ones, download the image
+				if not pict or pict.dim < dim:
+					pict = picture.openurl(best)
+				# if downloading was succesful, append it to list of 
+				# retrieved images and assign it to the blog it appeared on
+				if pict:
+					images.append(pict)
+					t.assign_img(pict)
+	# thats it
+	return images

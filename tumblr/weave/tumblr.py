@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 import re
-from time import time()
+from time import time
 
 import weave.picture as picture
 
@@ -43,7 +43,7 @@ class Blog:
 		if isinstance(img, picture.Pict):
 			pict = img
 		else:
-			pict = picture.lookup(img)
+			pict = picture.get(img)
 		if pict:
 			self.images.add(pict)
 			pict.sources.append(self)
@@ -103,9 +103,15 @@ def create(url, time=0):
 # create from dictionary
 def opendump(slots):
 	name = slots.get('name')
-	t = Blog.blogs.get(name, create(name))
+	#reify data set
+	t = Blog.blogs.get(name)
+	if not t:
+		t = create(name)
+	# connect related image identifiers, whereever possible
+	# using reification as well
 	for p in slots.get('images', []):
 		t.assign_img(p)
+	# reify hyperlink identifiers
 	for l in slots.get('out', []):
 		t.link(l)
 	return t

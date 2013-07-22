@@ -43,6 +43,7 @@ def saveImages(images, filename):
 
 # loads image container records from XML file
 def loadImages(filename):
+	print 'Reading images metadata from ', filename
 	imgs=[]
 	data={}
 	known={}
@@ -177,6 +178,7 @@ def saveBlogs(blogs, filename):
 
 # loads image container records from XML file
 def loadBlogs(filename):
+	print 'Reading blog metadata from ', filename
 	records=[]
 	data={}
 	for event, elem in ET.iterparse(filename, events=('start','end')):

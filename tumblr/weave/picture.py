@@ -157,7 +157,7 @@ class Pict:
 	
 	@property
 	def filename(self):
-		return '{}_{}.{}'.format(self.name, self.dim, self.ext)
+		return '{}.{}'.format(self.name, self.ext)
 
 	@property
 	def location(self):
@@ -168,6 +168,29 @@ class Pict:
 		if len(self.sources)>0:
 			return self.sources[0]
 		return None
+
+	# remove string identifiers from link list, either by
+	# replacing them with their corresponding instance, or 
+	# by deleting them
+	def clean_links(self):
+		objects = [(k, get(k)) for k in self.relates.keys()]
+		links = {}
+		for k, obj in objects:
+			if obj:
+				links[obj] = self.relates.get(k)
+		self.relates = links
+
+	# remove string identifiers from link list, either by
+	# replacing them with their corresponding instance, or 
+	# by deleting them
+	def clean_sources(self):
+		src = []
+		for s in self.sources:
+			if not isinstance(s, tumblr.Blog):
+				obj = tumblr.get(s)
+				if obj:
+					self.sources.append(obj)
+		self.sources = src
 	
 	# calculates similarity measure between two images
 	# -1: negative correlation, 1: perfect correlation/identity
@@ -234,7 +257,8 @@ class Pict:
 			return '<{0}, orig: {1} ({2} src)>'.format(
 				self.info, self.sources[0], len(self.sources))
 		return '<{0} - No record> '.format(self.info)
-	
+
+
 
 
 ##############################################################
@@ -276,6 +300,7 @@ def connect(p,q,sim):
 
 
 
+
 ##############################################################
 ##############         Image IO         ######################
 ##############################################################
@@ -292,22 +317,23 @@ def openurl(url, save=True):
 			name = url.split('/')[-1]
 			print 'WARNING: ', name
 		# do we have it alerady?
-		pict = lookup(name)
+		pict = get(name)
 		if pict:
 			print '{} already here: {}'.format(url, pict)
-			#if pict.dim < dim:
-				#print 'But format is better: {} vs. {}'.format(pict.dim, dim)
-		else:
-			pict = Pict('images', name, image) #TODO
-			pict.ext = url.split('.')[-1]
-			m = re.search('_([1-9][0-9]{2,3})\.', url)
-			if m:
-				pict.dim=int(m.group(1))
+			if pict.dim < dim:
+				print 'But format is better: {} vs. {}'.format(pict.dim, dim)
 			else:
-				pict.dim = pict.size[0]
-			if save == True:
-				image.save(pict.location)
-			del image
+				return pict
+		pict = Pict('images', name, image) #TODO
+		pict.ext = url.split('.')[-1]
+		m = re.search('_([1-9][0-9]{2,3})\.', url)
+		if m:
+			pict.dim=int(m.group(1))
+		else:
+			pict.dim = pict.size[0]
+		if save == True:
+			image.save(pict.location)
+		del image
 		return pict
 	else:
 		return None

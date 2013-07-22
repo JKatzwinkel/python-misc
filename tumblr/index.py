@@ -17,9 +17,11 @@ idex=re.compile('_(\w{19})_')
 
 # search for images similar to each other, link them
 def simpairs():
-	print 'Begin computing image similarities'
 	res=[]
 	imgs=picture.pictures()
+	print 'Begin computing similarities between {} images'.format(
+		len(imgs))
+	# BEGIN
 	for i in range(len(imgs)):
 		for j in range(i+1,len(imgs)):
 			p=imgs[i]
@@ -44,8 +46,8 @@ def simpairs():
 				p.location, q.location))
 	f.write('</body>\n</html>\n')
 	f.close()
+	print 'Done'
 	return res
-
 
 
 
@@ -79,7 +81,9 @@ def stumblr(seed, filename):
 	f.close()
 
 
-
+##############################################################
+##############################################################
+##############################################################
 
 
 # all known images
@@ -99,6 +103,7 @@ def crawl(seed, num=10):
 ##############################################################
 ####             Images / Blog IO                      #######
 ##############################################################
+
 # speichere bildersammlung als XML
 def saveImages(images, filename):
 	inout.saveImages(images, filename)
@@ -108,22 +113,48 @@ def saveImages(images, filename):
 def loadImages(filename):
 	records = inout.loadImages(filename)
 	imgs = [picture.opendump(rec) for rec in records]
-	#TODO: durch die relates und sources listen gehen und ids
-	# durch instanzen ersetzen
+	# replace string identifiers with the instances they reference
+	for p in imgs:
+		p.clean_links()
 	return imgs
 
 # speichere bildersammlung als XML
 def saveBlogs(blogs, filename):
 	inout.saveBlogs(blogs, filename)
 
-
 # load XML dump
 def loadBlogs(filename):
 	records = inout.loadBlogs(filename)
 	blgs = [tumblr.opendump(rec) for rec in records]
-	#TODO: durch die relates und sources listen gehen und ids
-	# durch instanzen ersetzen
+	# replace string identifiers in image sources lists
+	# with newly created Blog instances
+	igms = picture.pictures()
+	for p in imgs:
+		p.clean_sources()
 	return blgs
+
+# try to load images and blogs from default files
+def load():
+	if os.path.exists('images.xml'):
+		loadImages('images.xml')
+	if os.path.exists('blogs.xml'):
+		loadBlogs('blogs.xml')
+
+
+
+# save imgs and blogs to default files
+def save():
+	saveImages(pictures(), 'images.xml')
+	saveBlogs(blogs(), 'blogs.xml')
+
+# goes through the given images list and changes neighbour
+# string identifiers into image instances
+# has to be done after importing XML dunp
+def reify(array):
+	res = [picture.get(a) for a in array]
+	return res
+
+
 
 # craft html page for groups of images
 def savegroups(groups, filename):
