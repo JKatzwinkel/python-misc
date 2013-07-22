@@ -229,11 +229,13 @@ def crawl(url, n=10):
 				# if downloading was succesful, append it to list of 
 				# retrieved images and assign it to the blog it appeared on
 				if pict:
+					pict.date = time()
 					images.append(pict)
 					t.assign_img(pict)
 					print '   {} - {} {}'.format(pict.name, pict.dim, pict.size)
 			else:
 				print 'Keine Id gefunden'
+	# Puh endlich fertig!
 	print 'Retrieved {} images from {} blogs.'.format(
 		len(images), len(crawler.images))
 	# thats it

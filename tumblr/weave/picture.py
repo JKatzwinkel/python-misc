@@ -130,10 +130,12 @@ class Pict:
 		#self.size = (0,0)
 		#self.dim = 0
 		#self.ext = ''
+		#self.date = 0 # date of retrieval (timestamp)
 		if isinstance(image, pil.Image):
 			self.mode = image.mode
 			self.size = image.size
 			self.histogram = Histogram(image)
+			self.date = 0 # zusehen, dasz man das aus der datei holt
 		else:
 			self.mode = image.get('mode','None')
 			self.size = image.get('size',(0,0))
@@ -141,6 +143,7 @@ class Pict:
 			self.histogram = Histogram(histogram, bands=image.get('bands'))
 			self.dim = image.get('format', 500)
 			self.ext = image.get('extension', 'jpg')
+			self.date = float(image.get('time', 0))
 			self.relates = image.get('similar', {})
 			self.sources = image.get('hosted', [])
 

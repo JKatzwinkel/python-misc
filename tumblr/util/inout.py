@@ -22,7 +22,7 @@ def saveImages(images, filename):
 						p.name, p.ext, p.mode, p.dim))
 		attr=p.size
 		f.write('  <size width="{}" height="{}"/>\n'.format(attr[0], attr[1]))
-		f.write('  <location>{}</location>\n'.format(p.location))
+		f.write('  <location time="{}">{}</location>\n'.format(p.date, p.location))
 		histo = p.histogram
 		f.write('  <histogram bands="{}">{}</histogram>\n'.format(
 						histo.bands, histo.hex()))
@@ -58,6 +58,7 @@ def loadImages(filename):
 												int(elem.attrib.get('height',0)))
 			if elem.tag == 'location':
 				data['location'] = elem.text
+				data['time'] = float(elem.attrib.get('time', 0))
 			if elem.tag == 'hosted':
 				data['hosts']=[]
 			if elem.tag == 'at':
