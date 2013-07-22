@@ -40,7 +40,8 @@ class Crawler:
 			# pick random blog from frontier list
 			blog = self.frontier.pop()
 			# move blog to visited list and save time
-			self.visited[blog] = time()
+			now = time()
+			self.visited[blog] = now
 			return blog
 		except:
 			print 'List is empty. Nowhere to go.'
