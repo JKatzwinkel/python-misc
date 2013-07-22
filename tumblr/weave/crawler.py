@@ -110,19 +110,6 @@ class Parser:
 		self.crawler = crawler
 
 
-	def addpage(self, url):
-		lastvisit = self.visited.get(url)
-		if lastvisit == None:
-			if not url in self.frontier:
-				self.frontier.update([url])
-		linked = self.links.get(self.current)
-		if linked:
-			linked.update([url])
-		else:
-			self.links[self.current] = set([url])
-
-
-
 	# parse one page
 	def parse(self, page):
 		# Hmmmm...
@@ -173,11 +160,12 @@ class Parser:
 
 # high resolution!
 def best_version(imgurl):
+	dim = 0
 	m = re.search('_([1-9][0-9]{2,3})\.', imgurl)
 	if m:
 		dim=int(m.group(1))
 		# count down sizes
-		for d in filter(lambda x:x>=dim, [1280,800,500,400,250]):
+		for d in filter(lambda x:x >= dim, [1280,800,500,400,250,100]):
 			url = re.sub('_([1-9][0-9]{2,3})\.', '_{}.'.format(d), imgurl)
 			try:
 				req = Request(url)
@@ -196,7 +184,7 @@ def best_version(imgurl):
 
 tumblrex=re.compile('(http://)?(\w*\.tumblr.com).*')
 imgex=re.compile('http://[0-9]{2}\.media\.tumblr\.com(/[0-9a-f]*)?/tumblr_\w*\.(jpg|png)')
-idex=re.compile('_(\w{19,})_')
+idex=re.compile('_(\w{19})_')
 #tumblr_mpkl2n8aqK1r0fb8eo1_500.jpg
 #urlretrieve(best, 'images/{}.{}'.format(name,ext))
 
@@ -214,25 +202,36 @@ def crawl(url, n=10):
 		print crawler.status()
 		c += 1
 	print 'Done.'
+
 	# now handle the collected image URLs
 	for t, imgs in crawler.images.items():
+		print t.name
 		for img in imgs:
 			# look for high resolutions
 			best, dim = best_version(img)
 			# check if image is already known
 			# and if we can extract its Id
-			m = idex.match(best)
+			m = idex.search(best)
 			if m:
 				name = m.group(1)
 				pict = picture.get(name)
 				# if image is not on the disk yet, or if its resolution
 				# is lower than the available ones, download the image
-				if not pict or pict.dim < dim:
+				if not pict:
+					pict = picture.openurl(best)
+				elif pict.dim < dim:
+					print '     upgradable image: {} from {} to {}'.format(
+						name, pict.dim, dim)
 					pict = picture.openurl(best)
 				# if downloading was succesful, append it to list of 
 				# retrieved images and assign it to the blog it appeared on
 				if pict:
 					images.append(pict)
 					t.assign_img(pict)
+					print '   {} - {} {}'.format(pict.name, pict.dim, pict.size)
+			else:
+				print 'Keine Id gefunden'
+	print 'Retrieved {} images from {} blogs.'.format(
+		len(images), len(crawler.images))
 	# thats it
 	return images

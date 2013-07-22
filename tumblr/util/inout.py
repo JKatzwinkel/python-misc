@@ -7,6 +7,7 @@ except ImportError:
 from urllib2 import urlopen, Request
 from PIL import Image as pil
 from io import BytesIO
+import os
 
 
 # saves a list of images to an XML file
@@ -115,11 +116,12 @@ def savegroups(groups, filename):
 	for group in groups[:50]:
 		f.write(' <div>\n')
 		f.write('  <h3>{} Members</h3/>\n'.format(len(group)))
-		p=group.pop(0)
-		height=min(600, p.size[1])
+		p = group.pop(0)
+		height = min(500, p.size[1])
 		f.write('  <table height="{}">\n'.format(height))
 		f.write('   <tr><td rowspan="2">\n')
-		f.write('    <img src="../{}"/><br/>\n'.format(p.location))
+		f.write('    <img src="../{}" height="{}"/>\n'.format(
+			p.location, height))
 		f.write('   </td>\n')
 		thmbsize=min(height/2, 300)
 		rowheight=thmbsize+10
@@ -188,7 +190,7 @@ def loadBlogs(filename):
 				data=elem.attrib
 			# read image list
 			if elem.tag == 'images':
-				data['images']=[]
+				data['images'] = []
 			if elem.tag == 'img':
 				try:
 					data.get('images').append(elem.text)

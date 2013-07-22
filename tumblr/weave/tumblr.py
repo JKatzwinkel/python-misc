@@ -19,14 +19,19 @@ class Blog:
 		self.name=name.split('.')[0]
 		self.links=set()
 		self.linked=set()
-		self.images=set()
+		self.images=[]
 		self.seen = 0
 		#register
 		Blog.blogs[self.name]=self
 	
 	# interlinks this blog with another one
 	def link(self, blogname):
-		b2=Blog.blogs.get(blogname, create(blogname))
+		if type(blogname) == str:
+			b2=get(blogname)
+		else:
+			b2 = blogname
+		if not b2:
+			b2 = create(blogname)
 		self.links.add(b2)
 		b2.linked.add(self)
 		return b2
@@ -45,10 +50,11 @@ class Blog:
 		else:
 			pict = picture.get(img)
 		if pict:
-			self.images.add(pict)
+			self.images.append(pict)
 			pict.sources.append(self)
+			#print 'assigning {} to {}.'.format(pict.name, self.name)
 		else:
-			self.images.add(img)
+			self.images.append(img)
 	
 	@property
 	def proper_imgs(self):
@@ -114,5 +120,9 @@ def opendump(slots):
 	# reify hyperlink identifiers
 	for l in slots.get('out', []):
 		t.link(l)
+	for l in slots.get('in', []):
+		ln = get(l)
+		if ln:
+			ln.link(t)
 	return t
 

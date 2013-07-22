@@ -6,7 +6,7 @@ import util.cluster as clustering
 
 index.load()
 
-index.crawl('tumblr.com', num=5)
+index.crawl('weloveariagiovanni.tumblr.com', num=20)
 picts = index.pictures()
 blogs = index.blogs()
 
@@ -21,6 +21,6 @@ index.stumblr(picts[0], 'walk.html')
 #index.saveBlogs(blogs, 'blogs.xml')
 index.save()
 
-#clusters = clustering.avg_linkage(picts, 10)
-#groups = [c.members for c in clusters]
-#index.savegroups(groups, 'cluster.html')
+clusters = clustering.avg_linkage(picts, 10)
+groups = [c.members for c in clusters]
+index.savegroups(groups, 'cluster.html')

@@ -173,11 +173,15 @@ class Pict:
 	# replacing them with their corresponding instance, or 
 	# by deleting them
 	def clean_links(self):
-		objects = [(k, get(k)) for k in self.relates.keys()]
+		# generate objects for str keys
+		objects = [(k, get(k)) for k in self.relates.keys() ] 
+		# repopulate link list
 		links = {}
 		for k, obj in objects:
 			if obj:
 				links[obj] = self.relates.get(k)
+		#print ' reification impact: {} -> {}'.format(
+			#len(self.relates), len(links))
 		self.relates = links
 
 	# remove string identifiers from link list, either by
@@ -189,7 +193,7 @@ class Pict:
 			if not isinstance(s, tumblr.Blog):
 				obj = tumblr.get(s)
 				if obj:
-					self.sources.append(obj)
+					src.append(obj)
 		self.sources = src
 	
 	# calculates similarity measure between two images
@@ -279,13 +283,16 @@ idex=re.compile('_(\w{19})_')
 
 # find image by name
 def get(name):
-	p = Pict.imgs.get(name)
-	if p:
+	if type(name) == str:
+		p = Pict.imgs.get(name)
+		if p:
+			return p
+		m = idex.search(name)
+		if m:
+			p = Pict.imgs.get(m.group(1))
 		return p
-	m = idex.search(name)
-	if m:
-		p = Pict.imgs.get(m.group(1))
-	return p
+	print type(name)
+	return name
 
 
 # return all instances aliove
@@ -311,7 +318,7 @@ def openurl(url, save=True):
 	image = util.inout.open_img_url(url)
 	if image:
 		m = idex.search(url)
-		if m != None:
+		if m:
 			name = m.group(1)
 		else:
 			name = url.split('/')[-1]
@@ -320,15 +327,17 @@ def openurl(url, save=True):
 		pict = get(name)
 		if pict:
 			print '{} already here: {}'.format(url, pict)
-			if pict.dim < dim:
-				print 'But format is better: {} vs. {}'.format(pict.dim, dim)
-			else:
-				return pict
+			del image
+			return pict
+			#if pict.dim < dim:
+				#print 'But format is better: {} vs. {}'.format(pict.dim, dim)
+			#else:
+				#return pict
 		pict = Pict('images', name, image) #TODO
 		pict.ext = url.split('.')[-1]
 		m = re.search('_([1-9][0-9]{2,3})\.', url)
 		if m:
-			pict.dim=int(m.group(1))
+			pict.dim = int(m.group(1))
 		else:
 			pict.dim = pict.size[0]
 		if save == True:

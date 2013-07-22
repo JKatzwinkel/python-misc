@@ -128,9 +128,9 @@ def loadBlogs(filename):
 	blgs = [tumblr.opendump(rec) for rec in records]
 	# replace string identifiers in image sources lists
 	# with newly created Blog instances
-	igms = picture.pictures()
-	for p in imgs:
-		p.clean_sources()
+	#imgs = picture.pictures()
+	#for p in imgs:
+		#p.clean_sources()
 	return blgs
 
 # try to load images and blogs from default files
