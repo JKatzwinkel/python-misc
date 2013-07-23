@@ -22,18 +22,19 @@ def saveImages(images, filename):
 						p.name, p.ext, p.mode, p.dim))
 		attr=p.size
 		f.write('  <size width="{}" height="{}"/>\n'.format(attr[0], attr[1]))
-		f.write('  <location time="{}">{}</location>\n'.format(p.date, p.location))
-		histo = p.histogram
-		f.write('  <histogram bands="{}">{}</histogram>\n'.format(
+		if p.location != None:
+			f.write('  <location time="{}">{}</location>\n'.format(p.date, p.location))
+			histo = p.histogram
+			f.write('  <histogram bands="{}">{}</histogram>\n'.format(
 						histo.bands, histo.hex()))
-		f.write('  <hosted times="{}">\n'.format(len(p.sources)))
-		for s in p.sources:
-			f.write('   <at when="{}">{}</at>\n'.format(0,s.name))
-		f.write('  </hosted>\n')
-		f.write('  <similar num="{}">\n'.format(len(p.relates)))
-		for s in p.relates.items():
-			f.write('   <img m="{:1.3}">{}</img>\n'.format(s[1],s[0].name))
-		f.write('  </similar>\n')
+			f.write('  <hosted times="{}">\n'.format(len(p.sources)))
+			for s in p.sources:
+				f.write('   <at when="{}">{}</at>\n'.format(0,s.name))
+			f.write('  </hosted>\n')
+			f.write('  <similar num="{}">\n'.format(len(p.relates)))
+			for s in p.relates.items():
+				f.write('   <img m="{:1.3}">{}</img>\n'.format(s[1],s[0].name))
+			f.write('  </similar>\n')
 		f.write(' </image>\n')
 	f.write('</images>\n')
 	f.close()
