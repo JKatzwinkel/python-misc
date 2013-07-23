@@ -120,7 +120,7 @@ class Pict:
 	# registry
 	imgs={}
 	# initialize for given 
-	def __init__(self, path, name, image):
+	def __init__(self, name, image, path='images'):
 		# TODO: eigentlich ist der pfad hier ueberfluessig. der indexer
 		# sollte ein default projektverzeichnise fuehren, wo er
 		# alle bilder reinschmeiszt und rausholt. fuer abweichende
@@ -318,13 +318,13 @@ def connect(p,q,sim):
 	q.relates[p]=sim
 
 
-removed = set()
+
 # update collection. filter removed files
 def sync():
-	for p in pictures():
+	for p in Pict.imgs.values():
 		if not os.path.exists(p.location):
-			del Pict.imgs[p.name]
-			removed.add(p.name)
+			p.location = None
+			
 
 ##############################################################
 ##############         Image IO         ######################
@@ -351,7 +351,7 @@ def openurl(url, save=True):
 				#print 'But format is better: {} vs. {}'.format(pict.dim, dim)
 			#else:
 				#return pict
-		pict = Pict('images', name, image) #TODO
+		pict = Pict(name, image) #TODO
 		pict.ext = url.split('.')[-1]
 		m = re.search('_([1-9][0-9]{2,3})\.', url)
 		if m:
@@ -373,7 +373,7 @@ def openfile(path, filename):
 		image = pil.open(fn)
 		if image:
 			name = idex.search(filename).group(1)
-			pict = Pict(path, name, image)
+			pict = Pict(name, image, path=path)
 			del image
 			return pict
 	except Exception, e:
@@ -389,6 +389,6 @@ def opendump(slots):
 		loc = loc.split(os.sep)
 		path = os.sep.join(loc[:-1])
 		name = slots.get('id')
-		return Pict(path, name, slots)
+		return Pict(name, slots, path=path)
 	return None
 
