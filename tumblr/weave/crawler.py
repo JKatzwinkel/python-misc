@@ -122,29 +122,17 @@ class Parser:
 		# links
 		for link in soup.find_all('a'):
 			href = link.get('href')
-			# are we able to open this?
 			if href:
-				refparts = urlsplit(href)
-				if not refparts.scheme:
-					if not refparts.netloc:
-						href = urljoin(page.url, ''.join(refparts[2:4]))
-						#links.append(href)
-				elif refparts.scheme == 'http':
-					m = tumblrex.match(href)
-					if m:
-						links.add(m.group(2))
+				m = tumblrex.match(href)
+				if m:
+					links.add(m.group(2))
 		# images
 		for link in soup.find_all('img'):
 			src = link.get('src')
-			# are we able to open this?
 			if src:
-				refparts = urlsplit(src)
-				if not refparts.scheme:
-					if not refparts.netloc:
-						href = urljoin(page.url, ''.join(refparts[2:4]))
-						#imgs.append(href)
-				elif refparts.scheme == 'http':
-					if imgex.match(src):
+				if imgex.match(src):
+					# is it worth downloading or do we already have it?
+					if img_relevant(src):
 						imgs.add(src)
 		# save
 		#for link in list(links):
@@ -159,24 +147,41 @@ class Parser:
 ##############################################################
 ##############################################################
 
+# is a URL to an image worth downloading?
+def img_relevant(url):
+	m = idex.search(url)
+	if m:
+		p = picture.get(m.group(1))
+		# is image known and has not been deleted?
+		if p and p.location:
+			if dim_class(url) > p.dim:
+				return True
+	return False
+
+
+# try to extract the image size class indicated by a URL
+def dim_class(url):
+	dim = 0
+	m = re.search(imgdimex, imgurl)
+	if m:
+		dim = int(m.group(1))
+	return dim
+
 
 # high resolution!
 def best_version(imgurl):
-	dim = 0
-	m = re.search('_([1-9][0-9]{2,3})\.', imgurl)
-	if m:
-		dim=int(m.group(1))
-		# count down sizes
-		for d in filter(lambda x:x >= dim, [1280,800,500,400,250,100]):
-			url = re.sub('_([1-9][0-9]{2,3})\.', '_{}.'.format(d), imgurl)
-			try:
-				req = Request(url)
-				urlopen(req)
-				return (url, d)
-			except:
-				pass
+	dim = dim_class(imgurl)
+	# count down sizes
+	for d in filter(lambda x:x >= dim, [1280,800,500,400,250,100]):
+		url = re.sub('_([1-9][0-9]{2,3})\.', '_{}.'.format(d), imgurl)
+		try:
+			req = Request(url)
+			urlopen(req)
+			return (url, d)
+		except:
+			pass
 	return (imgurl, dim)
-	
+
 
 
 
@@ -187,6 +192,7 @@ def best_version(imgurl):
 tumblrex=re.compile('(http://)?(\w*\.tumblr.com).*')
 imgex=re.compile('http://[0-9]{2}\.media\.tumblr\.com(/[0-9a-f]*)?/tumblr_\w*\.(jpg|png)')
 idex=re.compile('_(\w{19})_')
+imgdimes=re.compile('_([1-9][0-9]{2,3})\.')
 #tumblr_mpkl2n8aqK1r0fb8eo1_500.jpg
 #urlretrieve(best, 'images/{}.{}'.format(name,ext))
 
