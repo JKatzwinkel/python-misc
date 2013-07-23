@@ -10,9 +10,14 @@ import weave.picture as picture
 import weave.tumblr as tumblr
 
 
+##############################################################
+####################    CRAWLER    ###########################
+##############################################################
+
+
 class Crawler:
 	# optionally, give a list of blogs we should start with
-	def __init__(self, query=[]):
+	def __init__(self, numblogs, query=[]):
 		self.visited={}
 		# ignore blogs that we have seen recently
 		now = time()
@@ -24,32 +29,41 @@ class Crawler:
 		# TODO: heuristik ausdenken!
 		if len(query) < 1:
 			query = sorted(tumblr.blogs(), 
-				key=lambda t:len(t.proper_imgs)/(len(t.images)+1),
+				#key=lambda t:len(t.proper_imgs)/(len(t.images)+1),
+				key = lambda t: t.score,
 				reverse=True)[:10]
 		# frontier is actual Blog instances!
 		self.frontier=set(query)
-		self.parser = Parser(self)
 		self.latest = None
+		self.numblogs = numblogs
+		self.parser = Parser(self)
 		# what we gather
 		self.images = {}
 
 
 	# choose next blog to visit
 	def next_blog(self):
-		try:
-			# pick random blog from frontier list
-			blog = self.frontier.pop()
+		if len(self.frontier)>0:
+			# pick highest score blog from frontier list
+			cand = sorted(self.frontier, key=lambda t: t.score, 
+				reverse=True)
+			blog = cand[0]
+			self.frontier.remove(blog)
 			# move blog to visited list and save time
 			now = time()
 			self.visited[blog] = now
 			return blog
-		except:
+		else:
 			print 'List is empty. Nowhere to go.'
 		return None
 
 
 	# perform one step of the crawling process
 	def crawling(self):
+		# Abbruchbedingung:
+		if len(self.visited) >= self.numblogs:
+			return False
+		# weiter
 		t = self.next_blog()
 		if t:
 			# get extracted stuff from parser
@@ -95,10 +109,10 @@ class Crawler:
 
 
 	def status(self):
-		temp = '{:4} < {:4} \t{:5} Img. \t {}'
+		temp = '{:4} < {:4} \t{:5} Img. \t {}: {:2.2}'
 		n = sum([len(l) for l in self.images.values()])
 		return temp.format(len(self.visited), len(self.frontier),
-			n, self.latest.name)
+			n, self.latest.name, self.latest.score)
 
 ##############################################################
 ##############################################################
@@ -194,44 +208,54 @@ images = []
 
 # go to the internets and browse through there!
 def crawl(url, n=10):
-	print 'Starting crawler.'
+	print 'Starting crawler at', url
 	seed = tumblr.get(url)
 	if not seed:
 		seed = tumblr.create(url)
-	crawler = Crawler([seed])
-	c=0
+	# create crawler
+	crawler = Crawler(n, query=[seed])
+	
 	# wait for the crawler to be done
-	while crawler.crawling() and c < n:
+	while crawler.crawling():
 		print crawler.status()
-		c += 1
+		
 	print 'Done.'
 
 	# now handle the collected image URLs
 	for t, imgs in crawler.images.items():
 		print t.name
 		for img in imgs:
-			# look for high resolutions
-			best, dim = best_version(img)
 			# check if image is already known
 			# and if we can extract its Id
-			m = idex.search(best)
+			m = idex.search(img)
 			if m:
 				name = m.group(1)
+				# lookup
 				pict = picture.get(name)
 				# if image is not on the disk yet, or if its resolution
 				# is lower than the available ones, download the image
 				if not pict:
-					pict = picture.openurl(best)
-				elif pict.dim < dim:
-					print '     upgradable image: {} from {} to {}'.format(
-						name, pict.dim, dim)
-					pict = picture.openurl(best)
+					# image not known so far
+					pict = picture.openurl(img)
+				else:
+					# look for high resolutions
+					best, dim = best_version(img)
+					if pict.dim < dim:
+						# better version of known image available
+						print '     upgradable image: {} from {} to {}'.format(
+							name, pict.dim, dim)
+						pict = picture.openurl(best)
+					else:
+						# image known. assign to current blog and f.o.
+						t.assign_img(pict)
+						pict = None
 				# if downloading was succesful, append it to list of 
 				# retrieved images and assign it to the blog it appeared on
 				if pict:
 					pict.date = time()
 					images.append(pict)
 					t.assign_img(pict)
+					pict.url = img
 					print '   {} - {} {}'.format(pict.name, pict.dim, pict.size)
 			else:
 				print 'Keine Id gefunden'

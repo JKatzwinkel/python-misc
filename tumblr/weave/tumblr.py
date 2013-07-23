@@ -19,7 +19,7 @@ class Blog:
 		self.name=name.split('.')[0]
 		self.links=set()
 		self.linked=set()
-		self.images=[]
+		self.images=set()
 		self.seen = 0
 		#register
 		Blog.blogs[self.name]=self
@@ -50,12 +50,23 @@ class Blog:
 		else:
 			pict = picture.get(img)
 		if pict:
-			self.images.append(pict)
-			pict.sources.append(self)
+			if not pict in self.images:
+				self.images.add(pict)
+				pict.sources.append(self)
 			#print 'assigning {} to {}.'.format(pict.name, self.name)
 		else:
-			self.images.append(img)
+			if not img in self.images:
+				self.images.add(img)
 	
+	# how many of the images that this blog featured did remain on disk
+	@property
+	def score(self):
+		if len(self.images) > 0:
+			kept = len(filter(lambda p:p.location != None, 
+				self.proper_imgs))
+			return float(kept) / len(self.images)
+		return 0.
+
 	@property
 	def proper_imgs(self):
 		return [i for i in self.images if isinstance(i, picture.Pict)]

@@ -140,7 +140,8 @@ def load():
 		loadImages('images.xml')
 	if os.path.exists('blogs.xml'):
 		loadBlogs('blogs.xml')
-
+	# Check if images are still on disk!!
+	picture.sync() #TODO
 
 
 # save imgs and blogs to default files

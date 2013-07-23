@@ -307,9 +307,9 @@ def get(name):
 	return name
 
 
-# return all instances aliove
+# return all image instances that are saved to a local file
 def pictures():
-	return Pict.imgs.values()
+	return filter(lambda p:p.location != None, Pict.imgs.values())
 
 
 # establishes a link between two pictures

@@ -8,21 +8,15 @@ index.load()
 
 seed = sorted(index.blogs(), key=lambda t:len(t.proper_imgs))[-1]
 
-index.crawl(seed.url(), num=20)
+index.crawl(seed.url(), num=10)
 picts = index.pictures()
 blogs = index.blogs()
-
-#for pict in picts:
-#	print pict.histogram
-#	print pict
 
 index.simpairs()
 index.stumblr(picts[0], 'walk.html')
 
-#index.saveImages(picts, 'images.xml')
-#index.saveBlogs(blogs, 'blogs.xml')
 index.save()
 
-clusters = clustering.avg_linkage(picts, 10)
+clusters = clustering.avg_linkage(picts, 3)
 groups = [c.members for c in clusters]
 index.savegroups(groups, 'cluster.html')
