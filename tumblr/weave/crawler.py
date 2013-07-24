@@ -151,8 +151,7 @@ class Parser:
 			if src:
 				if imgex.match(src):
 					# is it worth downloading or do we already have it?
-					if img_relevant(src):
-						imgs.add(src)
+					imgs.add(src)
 		# save
 		#for link in list(links):
 		#	self.addpage(link)
@@ -263,7 +262,7 @@ def crawl(url, n=30):
 					pict = picture.openurl(best)
 				else:
 					# look for high resolutions
-					if pict.dim < dim:
+					if pict.location and pict.dim < dim:
 						# better version of known image available
 						print '     upgradable image: {} from {} to {}'.format(
 							name, pict.dim, dim)
