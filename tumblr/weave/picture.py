@@ -139,7 +139,7 @@ class Pict:
 		#self.dim = 0
 		#self.ext = ''
 		#self.date = 0 # date of retrieval (timestamp)
-		#self.url = None #TODO: implementieren
+		self.url = None #TODO: implementieren
 		if isinstance(image, pil.Image):
 			self.mode = image.mode
 			self.size = image.size
@@ -148,9 +148,10 @@ class Pict:
 		else:
 			self.mode = image.get('mode','None')
 			self.size = image.get('size',(0,0))
+			self.url = image.get('url')
 			histogram = image.get('histogram', [])
 			self.histogram = Histogram(histogram, bands=image.get('bands'))
-			self.dim = image.get('format', 500)
+			self.dim = int(image.get('format', 500))
 			self.ext = image.get('extension', 'jpg')
 			self.date = float(image.get('time', 0))
 			self.relates = image.get('similar', {})
@@ -163,7 +164,8 @@ class Pict:
 	# load and show picture
 	def show(self):
 		print self.sources
-		self.pict=pil.open(self.location)
+		if self.path:
+			self.pict=pil.open(self.location)
 		self.pict.show()
 		del self.pict
 	
@@ -173,13 +175,26 @@ class Pict:
 
 	@property
 	def location(self):
-		return os.sep.join([self.path, self.filename])
+		if self.path:
+			return os.sep.join([self.path, self.filename])
+		else:
+			return None
+	@property
+	def set_location(self, loc):
+		if self.loc != None:
+			#if re.match('_[1-9][0-9]{2,3}\.(jpg|png)$', loc):
+			if log.endswith('_{}.{}'.format(self.dim, self.ext)):
+				self.path = os.sep.join(loc.split(os.sep)[:-1])
+		else:
+			self.path = loc
+
 	
 	@property
 	def origin(self):
 		if len(self.sources)>0:
 			return self.sources[0]
 		return None
+
 
 	# remove string identifiers from link list, either by
 	# replacing them with their corresponding instance, or 
@@ -304,7 +319,9 @@ def get(name):
 			p = Pict.imgs.get(m.group(1))
 		return p
 	print type(name)
-	return name
+	if name in Pict.imgs.values():
+		return name
+	return None
 
 
 # return all image instances that are saved to a local file
@@ -322,9 +339,10 @@ def connect(p,q,sim):
 # update collection. filter removed files
 def sync():
 	for p in Pict.imgs.values():
-		if not os.path.exists(p.location):
-			p.location = None
-			
+		if p.location:
+			if not os.path.exists(p.location):
+				p.location = None
+
 
 ##############################################################
 ##############         Image IO         ######################
@@ -385,10 +403,12 @@ def openfile(path, filename):
 # create pict cntainer from single record
 def opendump(slots):
 	loc = slots.get('location')
+	name = slots.get('id')
 	if loc:
 		loc = loc.split(os.sep)
 		path = os.sep.join(loc[:-1])
-		name = slots.get('id')
-		return Pict(name, slots, path=path)
-	return None
+	else:
+		path = None
+	return Pict(name, slots, path=path)
 
+###############################################################

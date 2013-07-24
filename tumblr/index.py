@@ -146,7 +146,7 @@ def load():
 
 # save imgs and blogs to default files
 def save():
-	saveImages(pictures(), 'images.xml')
+	saveImages(picture.Pict.imgs.values(), 'images.xml')
 	saveBlogs(blogs(), 'blogs.xml')
 
 # goes through the given images list and changes neighbour

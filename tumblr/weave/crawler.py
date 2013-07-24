@@ -17,7 +17,7 @@ import weave.tumblr as tumblr
 
 class Crawler:
 	# optionally, give a list of blogs we should start with
-	def __init__(self, numblogs, query=[]):
+	def __init__(self, numpics, query=[]):
 		self.visited={}
 		# ignore blogs that we have seen recently
 		now = time()
@@ -35,7 +35,7 @@ class Crawler:
 		# frontier is actual Blog instances!
 		self.frontier=set(query)
 		self.latest = None
-		self.numblogs = numblogs
+		self.numpics = numpics
 		self.parser = Parser(self)
 		# what we gather
 		self.images = {}
@@ -61,7 +61,7 @@ class Crawler:
 	# perform one step of the crawling process
 	def crawling(self):
 		# Abbruchbedingung:
-		if len(self.visited) >= self.numblogs:
+		if sum([len(ii) for ii in self.images.values()]) >= self.numpics:
 			return False
 		# weiter
 		t = self.next_blog()
@@ -167,16 +167,18 @@ def img_relevant(url):
 	if m:
 		p = picture.get(m.group(1))
 		# is image known and has not been deleted?
-		if p and p.location:
-			if dim_class(url) > p.dim:
-				return True
+		if p:
+			#print 'location {}\t dim {} > {} = {}'.format(
+				#p.location != None, dim_class(url), p.dim, dim_class(url)>p.dim)
+		return (p == None) or (p.location != None and dim_class(url) > p.dim)
+	print 'no id found'
 	return False
 
 
 # try to extract the image size class indicated by a URL
 def dim_class(url):
 	dim = 0
-	m = re.search(imgdimex, imgurl)
+	m = re.search(imgdimex, url)
 	if m:
 		dim = int(m.group(1))
 	return dim
@@ -206,14 +208,14 @@ def best_version(imgurl):
 tumblrex=re.compile('(http://)?(\w*\.tumblr.com).*')
 imgex=re.compile('http://[0-9]{2}\.media\.tumblr\.com(/[0-9a-f]*)?/tumblr_\w*\.(jpg|png)')
 idex=re.compile('_(\w{19})_')
-imgdimes=re.compile('_([1-9][0-9]{2,3})\.')
+imgdimex=re.compile('_([1-9][0-9]{2,3})\.')
 #tumblr_mpkl2n8aqK1r0fb8eo1_500.jpg
 #urlretrieve(best, 'images/{}.{}'.format(name,ext))
 
 images = []
 
 # go to the internets and browse through there!
-def crawl(url, n=10):
+def crawl(url, n=30):
 	print 'Starting crawler at', url
 	seed = tumblr.get(url)
 	if not seed:

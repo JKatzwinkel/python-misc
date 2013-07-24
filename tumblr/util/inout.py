@@ -22,6 +22,8 @@ def saveImages(images, filename):
 						p.name, p.ext, p.mode, p.dim))
 		attr=p.size
 		f.write('  <size width="{}" height="{}"/>\n'.format(attr[0], attr[1]))
+		if p.url:
+			f.write('  <url>{}</url>\n'.format(p.url))
 		if p.location != None:
 			f.write('  <location time="{}">{}</location>\n'.format(p.date, p.location))
 			histo = p.histogram
@@ -57,6 +59,8 @@ def loadImages(filename):
 			if elem.tag == 'size':
 				data['size'] = (int(elem.attrib.get('width',0)), 
 												int(elem.attrib.get('height',0)))
+			if elem.tag == 'url':
+				data['url'] = elem.text
 			if elem.tag == 'location':
 				data['location'] = elem.text
 				data['time'] = float(elem.attrib.get('time', 0))
