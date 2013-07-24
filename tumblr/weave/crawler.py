@@ -20,18 +20,11 @@ class Crawler:
 	def __init__(self, numpics, query=[]):
 		self.visited={}
 		# ignore blogs that we have seen recently
-		now = time()
-		for t in tumblr.blogs():
-			if t.seen > now - 300:
-				self.visited[t] = t.seen
-		# if no query is given, we try to get some blogs
-		# with good image output from out database
-		# TODO: heuristik ausdenken!
-		if len(query) < 1:
-			query = sorted(tumblr.blogs(), 
-				#key=lambda t:len(t.proper_imgs)/(len(t.images)+1),
-				key = lambda t: t.score,
-				reverse=True)[:10]
+		# last (6 hours)
+		#now = time()
+		#for t in tumblr.blogs():
+			#if t.seen > now - 3600*6:
+				#self.visited[t] = t.seen
 		# frontier is actual Blog instances!
 		self.frontier=set(query)
 		self.latest = None
@@ -47,11 +40,23 @@ class Crawler:
 			# pick highest score blog from frontier list
 			cand = sorted(self.frontier, key=lambda t: t.score, 
 				reverse=True)
-			blog = cand[0]
-			self.frontier.remove(blog)
-			# move blog to visited list and save time
+			blog = None
 			now = time()
+			# consider only blogs that haven't been visited in the last 6h
+			while not blog:
+				if len(cand) > 0:
+					blog = cand.pop(0)
+				else:
+					return None
+				if blog.seen > now-6*3600:
+					self.visited[blog] = blog.seen
+					self.frontier.remove(blog)
+					blog = None
+			# move blog to visited list and save time
+			if blog in self.frontier:
+				self.frontier.remove(blog)
 			self.visited[blog] = now
+			blog.seen = now
 			return blog
 		else:
 			print 'List is empty. Nowhere to go.'
@@ -82,9 +87,9 @@ class Crawler:
 				self.images[t] = imgs
 				# done with this blog/url
 				# TODO: unless we want to check additional pages, but later
-				t.seen = time()
-				self.latest = t
-				return True
+			t.seen = time()
+			self.latest = t
+			return True
 		return False
 
 
@@ -105,7 +110,7 @@ class Crawler:
 		except Exception, e:
 			print 'Error: {} couldnt be accessed.'.format(url)
 			print e.message
-			return None
+			return {}
 
 
 	def status(self):
@@ -167,7 +172,7 @@ def img_relevant(url):
 	if m:
 		p = picture.get(m.group(1))
 		# is image known and has not been deleted?
-		if p:
+		#if p:
 			#print 'location {}\t dim {} > {} = {}'.format(
 				#p.location != None, dim_class(url), p.dim, dim_class(url)>p.dim)
 		return (p == None) or (p.location != None and dim_class(url) > p.dim)
@@ -216,12 +221,22 @@ images = []
 
 # go to the internets and browse through there!
 def crawl(url, n=30):
+	# if no query is given, we try to get some blogs
+	# with good image output from out database
+	# TODO: heuristik ausdenken!
+	query = sorted(tumblr.blogs(), 
+		#key=lambda t:len(t.proper_imgs)/(len(t.images)+1),
+		key = lambda t: t.score*len(t.links),
+		reverse=True)[:5]
+	# set up suff
 	print 'Starting crawler at', url
 	seed = tumblr.get(url)
 	if not seed:
 		seed = tumblr.create(url)
+	if not seed in query:
+		query = [seed] + query
 	# create crawler
-	crawler = Crawler(n, query=[seed])
+	crawler = Crawler(n, query=query)
 	
 	# wait for the crawler to be done
 	while crawler.crawling():
@@ -242,12 +257,12 @@ def crawl(url, n=30):
 				pict = picture.get(name)
 				# if image is not on the disk yet, or if its resolution
 				# is lower than the available ones, download the image
+				best, dim = best_version(img)
 				if not pict:
 					# image not known so far
-					pict = picture.openurl(img)
+					pict = picture.openurl(best)
 				else:
 					# look for high resolutions
-					best, dim = best_version(img)
 					if pict.dim < dim:
 						# better version of known image available
 						print '     upgradable image: {} from {} to {}'.format(

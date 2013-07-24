@@ -32,8 +32,9 @@ class Blog:
 			b2 = blogname
 		if not b2:
 			b2 = create(blogname)
-		self.links.add(b2)
-		b2.linked.add(self)
+		if not b2 == self:
+			self.links.add(b2)
+			b2.linked.add(self)
 		return b2
 	
 	# prints out links from and to other blogs
