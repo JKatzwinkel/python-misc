@@ -103,50 +103,6 @@ def loadImages(filename):
 
 
 
-# goes to the internets and gets an image. returns PIL Image
-def open_img_url(url):
-	image = None
-	try:
-		sck = urlopen(url)
-		image = pil.open(BytesIO(sck.read()))
-	except Exception, e:
-		print e.message
-		print 'Could not retrieve {}. '.format(url)
-	return image
-
-
-
-# craft html page for groups of images
-def savegroups(groups, filename):
-	f=open(os.sep.join(['html', filename]), 'w')
-	f.write('<html>\n<body>')
-	for group in groups[:50]:
-		f.write(' <div>\n')
-		f.write('  <h3>{} Members</h3/>\n'.format(len(group)))
-		p = group.pop(0)
-		height = min(500, p.size[1])
-		f.write('  <table height="{}">\n'.format(height))
-		f.write('   <tr><td rowspan="2">\n')
-		f.write('    <img src="../{}" height="{}"/>\n'.format(
-			p.location, height))
-		f.write('   </td>\n')
-		thmbsize=min(height/2, 300)
-		rowheight=thmbsize+10
-		for i,s in enumerate(group):
-			f.write('     <td height="{}" valign="top">\n'.format(rowheight))
-			f.write('      <img src="../{}" height="{}"><br/>\n'.format(s.location, thmbsize))
-			if (s.origin):
-				f.write('      {}\n'.format(s.origin.name))
-			f.write('     </td>\n')
-			if i+1==len(group)/2:
-				f.write('    </tr><tr>\n')
-				rowheight=p.size[1]-rowheight
-		f.write('   </tr>\n  </table>\n')
-		f.write(' </div>\n')
-	f.write('</body>\n</html>\n')
-	f.close()
-
-
 ##############################################################
 ##############################################################
 ##############################################################
@@ -168,11 +124,12 @@ def saveBlogs(blogs, filename):
 						p.name, p.seen))
 		f.write('  <images>\n')
 		# existing files
-		for i in p.proper_imgs:
-			f.write('   <img when="{}">{}</img>\n'.format(0,i.name))
-		# removed images
-		for i in p.dead_imgs:
-			f.write('   <img when="{}">{}</img>\n'.format(0,i))
+		for i in p.images:
+			if i:
+				if i.name:
+					f.write('   <img when="{}">{}</img>\n'.format(0,i.name))
+				else:
+					f.write('   <img when="{}">{}</img>\n'.format(0,i))
 		f.write('  </images>\n')
 		# links incoming and outgoing
 		f.write('  <links>\n')
@@ -219,3 +176,57 @@ def loadBlogs(filename):
 				data = {}
 	print 'Read {} blog objects.'.format(len(records))
 	return records
+
+
+
+##############################################################
+##############################################################
+##############################################################
+##############################################################
+##############################################################
+##############################################################
+##############################################################
+
+# goes to the internets and gets an image. returns PIL Image
+def open_img_url(url):
+	image = None
+	try:
+		sck = urlopen(url)
+		image = pil.open(BytesIO(sck.read()))
+	except Exception, e:
+		print e.message
+		print 'Could not retrieve {}. '.format(url)
+	return image
+
+
+
+# craft html page for groups of images
+def savegroups(groups, filename):
+	f=open(os.sep.join(['html', filename]), 'w')
+	f.write('<html>\n<body>')
+	for group in groups[:50]:
+		f.write(' <div>\n')
+		f.write('  <h3>{} Members</h3/>\n'.format(len(group)))
+		p = group.pop(0)
+		height = min(500, p.size[1])
+		f.write('  <table height="{}">\n'.format(height))
+		f.write('   <tr><td rowspan="2">\n')
+		f.write('    <img src="../{}" height="{}"/>\n'.format(
+			p.location, height))
+		f.write('   </td>\n')
+		thmbsize=min(height/2, 300)
+		rowheight=thmbsize+10
+		for i,s in enumerate(group):
+			f.write('     <td height="{}" valign="top">\n'.format(rowheight))
+			f.write('      <img src="../{}" height="{}"><br/>\n'.format(s.location, thmbsize))
+			if (s.origin):
+				f.write('      {}\n'.format(s.origin.name))
+			f.write('     </td>\n')
+			if i+1==len(group)/2:
+				f.write('    </tr><tr>\n')
+				rowheight=p.size[1]-rowheight
+		f.write('   </tr>\n  </table>\n')
+		f.write(' </div>\n')
+	f.write('</body>\n</html>\n')
+	f.close()
+

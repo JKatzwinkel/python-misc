@@ -6,30 +6,59 @@ class Cluster:
 	reg=[]
 	def __init__(self, images):
 		self.members = images[:]
-		self.distances = {}
+		self.distances = {'avg':{}, 'single': {}, 'norm': {}}
 		self.children = []
 		# reg
 		Cluster.reg.append(self)
 	
-	
-	def distance(self, other):
-		distances = []
-		dist = self.distances.get(other)
-		if dist:
-			return dist
+
+	def get_distances(self, other):
+		distances=[]
 		for p in self.members:
 			for q in other.members:
 				dist = measures.image_hist_dist(p,q)
 				for corr in measures.image_histograms(p,q):
 					dist *= 2-corr
 				distances.append(dist)
-		# TODO: or maximum, or minimum/single linkage
-		average = sum(distances) / (len(self) * len(other))
-		self.distances[other] = average
-		other.distances[self] = average
-		return average
+		return distances
 
 	
+	def avg_distance(self, other):
+		dist = self.distances.get('single').get(other)
+		if dist:
+			return dist
+		# TODO: or maximum, or minimum/single linkage
+		distances = self.get_distances(other)
+		single = min(distances)
+		self.distances.get('single')[other] = single
+		other.distances.get('single')[self] = single
+		return single
+
+
+	def single_distance(self, other):
+		dist = self.distances.get('avg').get(other)
+		if dist:
+			return dist
+		# TODO: or maximum, or minimum/single linkage
+		distances = self.get_distances(other)
+		average = min(distances)
+		self.distances.get('avg')[other] = average
+		other.distances.get('avg')[self] = average
+		return average
+
+
+	def norm_distance(self, other):
+		dist = self.distances.get('norm').get(other)
+		if dist:
+			return dist
+		# TODO: or maximum, or minimum/single linkage
+		distances = self.get_distances(other)
+		single = min(distances)*(1+max(distances)-min(distances))
+		self.distances.get('norm')[other] = single
+		other.distances.get('norm')[self] = single
+		return single
+	
+
 	def __len__(self):
 		return len(self.members)
 
@@ -44,7 +73,11 @@ def merge(a, b):
 	return c
 	
 
-def avg_linkage(images, goal):
+LINK_AVG='avg'
+LINK_SINGLE='single'
+LINK_NORM='norm'
+
+def linkage(images, goal, mode=LINK_AVG):
 	Cluster.reg = []
 	clusters = []
 	for p in images:
@@ -55,9 +88,16 @@ def avg_linkage(images, goal):
 		for i in range(len(clusters)):
 			a=clusters[i]
 			for b in clusters[i+1:]:
-				dist = a.distance(b)
+				if mode == LINK_AVG:
+					dist = a.avg_distance(b)
+				elif mode == LINK_SINGLE:
+					dist = a.single_distance(b)
+				else:
+					dist = a.norm_distance(b)
 				if dist < best[2]:
 					best = (a, b, dist)
 		c = merge(best[0], best[1])
 		clusters = Cluster.reg
 	return clusters
+
+

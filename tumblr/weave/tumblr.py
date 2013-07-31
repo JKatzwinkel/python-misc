@@ -70,11 +70,13 @@ class Blog:
 
 	@property
 	def proper_imgs(self):
-		return [i for i in self.images if isinstance(i, picture.Pict)]
+		return [i for i in self.images 
+			if isinstance(i, picture.Pict) and i.path]
 
 	@property
 	def dead_imgs(self):
-		return [i for i in self.images if not isinstance(i, picture.Pict)]	
+		return [i for i in self.images 
+			if not isinstance(i, picture.Pict) or i.path == None]
 	
 	
 	# returns hosted images ordered by popularity

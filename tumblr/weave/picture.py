@@ -10,6 +10,7 @@ import util.statistics as stats
 import util.measures as measure
 import util.inout
 
+
 # scale down to half size
 def scaledown(a):
 	return [a[i]+a[i+1] for i in range(0,len(a),2)]
@@ -155,7 +156,7 @@ class Pict:
 			self.ext = image.get('extension', 'jpg')
 			self.date = float(image.get('time', 0))
 			self.relates = image.get('similar', {})
-			self.sources = image.get('hosted', [])
+			self.sources = image.get('hosts', [])
 
 		self.info='{0} {1}'.format(self.size, self.mode)
 		Pict.imgs[name]=self
@@ -166,8 +167,12 @@ class Pict:
 		print self.sources
 		if self.path:
 			self.pict=pil.open(self.location)
-		self.pict.show()
-		del self.pict
+			self.pict.show()
+			del self.pict
+			return True
+		else:
+			print 'no copy.'
+			return False
 	
 	@property
 	def filename(self):
@@ -211,17 +216,6 @@ class Pict:
 			#len(self.relates), len(links))
 		self.relates = links
 
-	# remove string identifiers from link list, either by
-	# replacing them with their corresponding instance, or 
-	# by deleting them
-	def clean_sources(self):
-		src = []
-		for s in self.sources:
-			if not isinstance(s, tumblr.Blog):
-				obj = tumblr.get(s)
-				if obj:
-					src.append(obj)
-		self.sources = src
 	
 	# calculates similarity measure between two images
 	# -1: negative correlation, 1: perfect correlation/identity
@@ -289,7 +283,20 @@ class Pict:
 				self.info, self.sources[0], len(self.sources))
 		return '<{0} - No record> '.format(self.info)
 
-
+	# del image after call
+	def upgrade(self, image, url, save=True):
+		self.ext = url.split('.')[-1]
+		m = re.search('_([1-9][0-9]{2,3})\.', url)
+		if m:
+			self.dim = int(m.group(1))
+		else:
+			self.dim = image.size[0] # TODO: korrekt?
+		if save == True:
+			image.save(self.location)
+		self.url = url
+		self.size = image.size
+		
+		
 
 
 ##############################################################
@@ -336,9 +343,11 @@ def connect(p,q,sim):
 
 
 
-# update collection. filter removed files
+# update collection. filter removed files, clean references
 def sync():
 	for p in Pict.imgs.values():
+		# replace string identifiers with the instances they reference
+		p.clean_links()
 		if p.location:
 			if not os.path.exists(p.location):
 				p.location = None
@@ -363,6 +372,7 @@ def openurl(url, save=True):
 		pict = get(name)
 		if pict:
 			print '{} already here: {}'.format(url, pict)
+			pict.upgrade(image, url, save=save)
 			del image
 			return pict
 			#if pict.dim < dim:
@@ -370,6 +380,7 @@ def openurl(url, save=True):
 			#else:
 				#return pict
 		pict = Pict(name, image) #TODO
+		pict.url = url
 		pict.ext = url.split('.')[-1]
 		m = re.search('_([1-9][0-9]{2,3})\.', url)
 		if m:
@@ -382,6 +393,7 @@ def openurl(url, save=True):
 		return pict
 	else:
 		return None
+
 
 
 # load image from file

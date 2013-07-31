@@ -7,18 +7,14 @@ import util.cluster as clustering
 
 index.load()
 
-#seed = sorted(index.blogs(), key=lambda t:len(t.proper_imgs))[-1]
-seed = sorted(index.blogs(), key=lambda t:t.score)[-1]
-
-index.crawl(seed.url(), num=20)
-picts = index.pictures()
-blogs = index.blogs()
-
 index.simpairs()
-index.stumblr(picts[0], 'walk.html')
-
 index.save()
 
-clusters = clustering.avg_linkage(picts, 3)
+pics =  picture.pictures()
+pics = sorted(pics, key=lambda p:len(p.relates))
+index.stumblr(pics[-1], 'walk.html')
+
+
+clusters = clustering.linkage(pics, len(pics)/10, mode=clustering.LINK_NORM)
 groups = [c.members for c in clusters]
 index.savegroups(groups, 'cluster.html')

@@ -17,7 +17,7 @@ import weave.tumblr as tumblr
 
 class Crawler:
 	# optionally, give a list of blogs we should start with
-	def __init__(self, numpics, query=[]):
+	def __init__(self, numblogs, query=[]):
 		self.visited={}
 		# ignore blogs that we have seen recently
 		# last (6 hours)
@@ -28,7 +28,7 @@ class Crawler:
 		# frontier is actual Blog instances!
 		self.frontier=set(query)
 		self.latest = None
-		self.numpics = numpics
+		self.numblogs = numblogs
 		self.parser = Parser(self)
 		# what we gather
 		self.images = {}
@@ -48,7 +48,7 @@ class Crawler:
 					blog = cand.pop(0)
 				else:
 					return None
-				if blog.seen > now-6*3600:
+				if blog.seen > now-12*3600:
 					self.visited[blog] = blog.seen
 					self.frontier.remove(blog)
 					blog = None
@@ -66,7 +66,8 @@ class Crawler:
 	# perform one step of the crawling process
 	def crawling(self):
 		# Abbruchbedingung:
-		if sum([len(ii) for ii in self.images.values()]) >= self.numpics:
+		#if sum([len(ii) for ii in self.images.values()]) >= self.numblogs:
+		if len(self.images) >= self.numblogs:
 			return False
 		# weiter
 		t = self.next_blog()
@@ -278,7 +279,8 @@ def crawl(url, n=30):
 					images.append(pict)
 					t.assign_img(pict)
 					pict.url = img
-					print '   {} - {} {}'.format(pict.name, pict.dim, pict.size)
+					#print '   {} - {} {}'.format(pict.name, pict.dim, pict.size)
+					print pict
 			else:
 				print 'Keine Id gefunden'
 	# Puh endlich fertig!

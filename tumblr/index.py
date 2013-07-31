@@ -69,7 +69,7 @@ def stumblr(seed, filename):
 			cnt+=1
 			similar = sorted(p.relates.items(), key=lambda x:x[1], reverse=True)
 			chc=0
-			while chc < len(similar) and visited.get(similar[chc][0]) != None:
+			while visited.get(similar[chc][0]) != None or similar[chc][0].path == None:
 				chc+=1
 			if chc < len(similar):
 				p = similar[chc][0]
@@ -113,10 +113,6 @@ def saveImages(images, filename):
 def loadImages(filename):
 	records = inout.loadImages(filename)
 	imgs = [picture.opendump(rec) for rec in records]
-	# replace string identifiers with the instances they reference
-	for p in imgs:
-		if p:
-			p.clean_links()
 	return imgs
 
 # speichere bildersammlung als XML
@@ -142,6 +138,9 @@ def load():
 		loadBlogs('blogs.xml')
 	# Check if images are still on disk!!
 	picture.sync() #TODO
+	# clean image sources
+	for p in pictures():
+		clean_sources(p)
 
 
 # save imgs and blogs to default files
@@ -156,6 +155,21 @@ def reify(array):
 	res = [picture.get(a) for a in array]
 	return res
 
+# remove string identifiers from an image's link list, either by
+# replacing them with their corresponding instance, or 
+# by --deleting-- creating them
+def clean_sources(p):
+	src = []
+	for s in p.sources:
+		if not isinstance(s, tumblr.Blog):
+			obj = tumblr.get(s)
+			if obj:
+				src.append(obj)
+			else:
+				obj = tumblr.create('{}.tumblr.com'.format(s))
+				obj.assign_img(p)
+				src.append(obj)
+	p.sources = src
 
 
 # craft html page for groups of images
