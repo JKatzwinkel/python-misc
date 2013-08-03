@@ -161,7 +161,7 @@ def reify(array):
 def clean_sources(p):
 	src = []
 	for s in p.sources:
-		if not isinstance(s, tumblr.Blog):
+		if s and not isinstance(s, tumblr.Blog):
 			obj = tumblr.get(s)
 			if obj:
 				src.append(obj)

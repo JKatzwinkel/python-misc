@@ -65,8 +65,10 @@ class Blog:
 		if len(self.images) > 0:
 			kept = len(filter(lambda p:p.location != None, 
 				self.proper_imgs))
-			return float(kept) / len(self.images)
-		return 0.
+			# TODO: page rank oder HITS
+			link_ratio = 1+float(len(self.linked)+1)/(len(self.links)+1)
+			return float(kept) / len(self.images) * link_ratio
+		return 0.05
 
 	@property
 	def proper_imgs(self):
@@ -123,10 +125,12 @@ def create(url, time=0):
 # create from dictionary
 def opendump(slots):
 	name = slots.get('name')
+	last_seen = float(slots.get('seen', 0))
 	#reify data set
 	t = Blog.blogs.get(name)
 	if not t:
-		t = create(name, time=float(slots.get('seen', 0)))
+		t = create(name, time=last_seen)
+	t.seen = last_seen
 	# connect related image identifiers, whereever possible
 	# using reification as well
 	for p in slots.get('images', []):

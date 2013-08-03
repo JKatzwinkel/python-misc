@@ -32,6 +32,7 @@ class Crawler:
 		self.parser = Parser(self)
 		# what we gather
 		self.images = {}
+		self.msg = ''
 
 
 	# choose next blog to visit
@@ -46,17 +47,15 @@ class Crawler:
 			while not blog:
 				if len(cand) > 0:
 					blog = cand.pop(0)
+					if blog.seen > now-6*3600:
+						self.visited[blog] = blog.seen
+						self.frontier.remove(blog)
+						blog = None
 				else:
 					return None
-				if blog.seen > now-12*3600:
-					self.visited[blog] = blog.seen
-					self.frontier.remove(blog)
-					blog = None
 			# move blog to visited list and save time
 			if blog in self.frontier:
 				self.frontier.remove(blog)
-			self.visited[blog] = now
-			blog.seen = now
 			return blog
 		else:
 			print 'List is empty. Nowhere to go.'
@@ -72,6 +71,7 @@ class Crawler:
 		# weiter
 		t = self.next_blog()
 		if t:
+			now = time()
 			# get extracted stuff from parser
 			data = self.extract(t.url())
 			if data:
@@ -81,15 +81,21 @@ class Crawler:
 				for href in data.get('links', []):
 					l = t.link(href)
 					if not self.visited.get(l):
-						self.frontier.add(l)
+						if l.seen < now-3600*6:
+							self.frontier.add(l)
+						else:
+							self.visited[l] = l.seen
 				# now: images! Store them aligned to their blogs for later
 				imgs = self.images.get(t, [])
 				imgs.extend(data.get('images', []))
 				self.images[t] = imgs
 				# done with this blog/url
 				# TODO: unless we want to check additional pages, but later
-			t.seen = time()
+			# done. mark blog as visited
+			t.seen = now
+			self.visited[t] = now
 			self.latest = t
+			self.msg = self.status()
 			return True
 		return False
 
@@ -119,6 +125,9 @@ class Crawler:
 		n = sum([len(l) for l in self.images.values()])
 		return temp.format(len(self.visited), len(self.frontier),
 			n, self.latest.name, self.latest.score)
+
+	def message(self):
+		return self.msg
 
 ##############################################################
 ##############################################################
@@ -227,20 +236,22 @@ def crawl(url, n=30):
 	query = sorted(tumblr.blogs(), 
 		#key=lambda t:len(t.proper_imgs)/(len(t.images)+1),
 		key = lambda t: t.score*len(t.links),
-		reverse=True)[:5]
+		reverse=True)
+	query = filter(lambda t:t.seen<time()-6*3600, query)
+
 	# set up suff
-	print 'Starting crawler at', url
+	#print 'Starting crawler at', url
 	seed = tumblr.get(url)
 	if not seed:
 		seed = tumblr.create(url)
 	if not seed in query:
 		query = [seed] + query
 	# create crawler
-	crawler = Crawler(n, query=query)
+	crawler = Crawler(n, query=query[:5])
 	
 	# wait for the crawler to be done
 	while crawler.crawling():
-		print crawler.status()
+		print crawler.message()
 		
 	print 'Done.'
 
@@ -257,11 +268,14 @@ def crawl(url, n=30):
 				pict = picture.get(name)
 				# if image is not on the disk yet, or if its resolution
 				# is lower than the available ones, download the image
-				best, dim = best_version(img)
+				best, dim = img, dim_class(img)
 				if not pict:
 					# image not known so far
+					best, dim = best_version(img)
 					pict = picture.openurl(best)
 				else:
+					if pict.dim < 1280:
+						best, dim = best_version(img)
 					# look for high resolutions
 					if pict.location and pict.dim < dim:
 						# better version of known image available
