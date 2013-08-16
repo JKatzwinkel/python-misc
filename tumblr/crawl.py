@@ -11,7 +11,7 @@ index.load()
 #seed = sorted(index.blogs(), key=lambda t:len(t.proper_imgs))[-1]
 seed = sorted(index.blogs(), key=lambda t:t.score)[-1]
 
-index.crawl(seed.url(), num=20)
+index.crawl(seed.url(), num=10)
 
 index.save()
 

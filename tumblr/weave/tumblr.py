@@ -146,3 +146,15 @@ def opendump(slots):
 				ln.link(t)
 	return t
 
+
+def queue(num=100):
+	seed = sorted(Blog.blogs.values(), key=lambda t:t.score, reverse=True)
+	seed = filter(lambda t:t.score > .05, seed)
+	seed = filter(lambda t:t.seen<time()-6*3600, seed)
+	res = []
+	for t in seed:
+		res.append(t)
+		res.extend(t.links)
+		res.extend(t.linked)
+	res = filter(lambda t:t.seen<time()-6*3600, res)
+	return res[:num]

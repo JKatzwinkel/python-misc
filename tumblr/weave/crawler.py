@@ -237,7 +237,7 @@ def crawl(url, n=30):
 		#key=lambda t:len(t.proper_imgs)/(len(t.images)+1),
 		key = lambda t: t.score*len(t.links),
 		reverse=True)
-	query = filter(lambda t:t.seen<time()-6*3600, query)
+	query = tumblr.queue()
 
 	# set up suff
 	#print 'Starting crawler at', url
