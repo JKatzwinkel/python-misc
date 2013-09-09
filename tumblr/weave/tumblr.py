@@ -2,6 +2,7 @@
 
 import re
 from time import time
+from random import choice
 
 import weave.picture as picture
 
@@ -21,6 +22,7 @@ class Blog:
 		self.linked=set()
 		self.images=set()
 		self.seen = 0
+		self._score = None
 		#register
 		Blog.blogs[self.name]=self
 	
@@ -62,13 +64,21 @@ class Blog:
 	# how many of the images that this blog featured did remain on disk
 	@property
 	def score(self):
-		if len(self.images) > 0:
-			kept = len(filter(lambda p:p.location != None, 
-				self.proper_imgs))
-			# TODO: page rank oder HITS
-			link_ratio = 1+float(len(self.linked)+1)/(len(self.links)+1)
-			return float(kept) / len(self.images) * link_ratio
-		return 0.05
+		if self._score is None:
+			if len(self.images) > 0:
+				kept = len(filter(lambda p:p.location != None, 
+					self.proper_imgs))
+				# TODO: page rank oder HITS
+				link_ratio = 1+float(len(self.linked)+1)/(len(self.links)+1)
+				vouches = 0;
+				#if len(self.linked) > 0:
+					#for l in self.linked:
+						#vouches += l.score()
+					#vouches /= len(self.linked)
+				self._score = float(kept) / len(self.images) * link_ratio + vouches
+			else:
+				self._score = .05
+		return self._score
 
 	@property
 	def proper_imgs(self):
@@ -154,7 +164,11 @@ def queue(num=100):
 	res = []
 	for t in seed:
 		res.append(t)
-		res.extend(t.links)
-		res.extend(t.linked)
+		#res.extend(t.links)
+		#res.extend(t.linked)
+		if len(t.links)>0:
+			res.append(choice(list(t.links)))
+		if len(t.linked)>0:
+			res.append(choice(list(t.linked)))
 	res = filter(lambda t:t.seen<time()-6*3600, res)
 	return res[:num]

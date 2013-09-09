@@ -181,7 +181,7 @@ class Pict:
 	@property
 	def location(self):
 		if self.path:
-			return os.sep.join([self.path, self.filename])
+			return os.sep.join([self.path, self.filename]).strip()
 		else:
 			return None
 	@property
