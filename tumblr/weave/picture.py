@@ -173,6 +173,14 @@ class Pict:
 		else:
 			print 'no copy.'
 			return False
+
+	# load copy from hard disk and return as pil Image
+	def load(self):
+		if self.path:
+			return pil.open(self.location)
+		print 'no copy.'
+
+
 	
 	@property
 	def filename(self):
@@ -257,6 +265,15 @@ class Pict:
 				connect(self,p,sm)
 		ann.sort(key=lambda x:x[1], reverse=True)
 		return ann[:n]
+
+	# returns the n images most similar to this one.
+	# n is not limited by default
+	def most_similar(self, n=None):
+		res = sorted(self.relates.items(), key=lambda t:t[1])
+		res = map(lambda t:t[0], res)[::-1]
+		if n:
+			res = res[:n]
+		return res
 
 	# look how two pictures are related
 	def compare(self, pict):
