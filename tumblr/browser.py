@@ -39,14 +39,9 @@ class Browser:
 		return img
 
 	def display(self):
-		w,h = self.img.size
-		img = self.img.load()
-		ratio = min([800./w, 740./h])
-		img = img.resize((int(w*ratio),int(h*ratio)), Image.ANTIALIAS)
-		img = ImageTk.PhotoImage(img)
-		#img = self.load_img(self.img, size=(800, 740))
+		img = self.load_img(self.img, size=(800, 740))
 		self.cnv.create_image((500,370), anchor=tk.CENTER, image=img) 
-		self.cur_imgs = [img] # keep ref for objects (garbage coll)
+		#self.cur_imgs = [img] # keep ref for objects (garbage coll)
 		# topleft= NW
 		posx = min([max([500+self.img.size[0]/2+20, 724]),900])
 		# similars
@@ -55,31 +50,20 @@ class Browser:
 		sims = self.img.most_similar()
 		while i < 3 and len(sims)>0:
 			s = sims.pop(0)
-			if s.location:
-				print s, s.location
-				w,h = s.size
-				ratio = min([200./w,223./h]) # scale ratio
-				# blit image
-				img = s.load()
-				img = img.resize((int(w*ratio),int(h*ratio)), Image.ANTIALIAS)
-				img = ImageTk.PhotoImage(img)
+			if s.location and not s in self.hist:
+				img = self.load_img(s, size=(200,223))
 				self.cnv.create_image((posx,140+i*233), 
 					anchor=tk.CENTER, image=img)
-				self.cur_imgs.append(img)
+				#self.cur_imgs.append(img)
 				self.choices.append(s)
 				i+=1
 		# history
 		size = 140.
 		for i,p in enumerate(self.hist[:8]):
-			w,h = p.size
-			ratio = min([size/w,size/h]) # scale ratio
-			# blit image
-			img = p.load()
-			img = img.resize((int(w*ratio),int(h*ratio)), Image.ANTIALIAS)
-			img = ImageTk.PhotoImage(img)
+			img = self.load_img(p, size=(size,size*1.2))
 			self.cnv.create_image((90,90+i*size), 
 				anchor=tk.CENTER, image=img)
-			self.cur_imgs.append(img)
+			#self.cur_imgs.append(img)
 			size-=10
 
 
