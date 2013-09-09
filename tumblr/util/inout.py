@@ -18,8 +18,8 @@ def saveImages(images, filename):
 	for p in images:
 		#attr=p.name.split('_')
 		#extf = attr[-1].split('.')
-		f.write(' <image id="{}" extension="{}" mode="{}" format="{}">\n'.format(
-						p.name, p.ext, p.mode, p.dim))
+		f.write(' <image id="{}" extension="{}" mode="{}" format="{}" stars="{}">\n'.format(
+						p.name, p.ext, p.mode, p.dim, p.rating))
 		attr=p.size
 		f.write('  <size width="{}" height="{}"/>\n'.format(attr[0], attr[1]))
 		if p.url:

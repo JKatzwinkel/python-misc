@@ -5,6 +5,7 @@ import os
 from random import choice
 from math import sqrt as sqr
 import re
+from time import time
 
 import util.statistics as stats
 import util.measures as measure
@@ -141,6 +142,7 @@ class Pict:
 		#self.ext = ''
 		#self.date = 0 # date of retrieval (timestamp)
 		self.url = None #TODO: implementieren
+		self.rating = 0
 		if isinstance(image, pil.Image):
 			self.mode = image.mode
 			self.size = image.size
@@ -157,6 +159,7 @@ class Pict:
 			self.date = float(image.get('time', 0))
 			self.relates = image.get('similar', {})
 			self.sources = image.get('hosts', [])
+			self.rating = int(image.get('stars', 0))
 
 		self.info='{0} {1}'.format(self.size, self.mode)
 		Pict.imgs[name]=self
@@ -299,6 +302,33 @@ class Pict:
 			return '<{0}, orig: {1} ({2} src)>'.format(
 				self.info, self.sources[0], len(self.sources))
 		return '<{0} - No record> '.format(self.info)
+
+	# multiple lines of usefuil information
+	def details(self):
+		if self.date > 0:
+			ago = int(time()-self.date)/60
+			if ago>60:
+				ago /= 60
+				if ago>24:
+					ago/=24
+					ago='({} days ago)'.format(ago)
+				else:
+					ago='({} hours ago)'.format(ago)
+			else:
+				ago='({} minutes ago)'.format(ago)
+		else:
+			ago=''
+		return '\n'.join([
+			'Rating: {}'.format('*'*self.rating),
+			'Size: {}x{} Pixels'.format(self.size[0], self.size[1]),
+			'Filename: {}'.format(self.name),
+			'Mode: {} {}'.format(self.mode, self.ext),
+			'Seen {} times, first on {}'.format(len(self.sources), self.origin),
+			'Timestamp {} {}'.format(self.date, ago),
+			'',
+			'Histogram channel medians: {}'.format(
+				map(lambda v:v*8, self.histogram.mediane))
+			])
 
 	# del image after call
 	def upgrade(self, image, url, save=True):
