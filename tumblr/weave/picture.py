@@ -385,6 +385,12 @@ def to_review():
 	now = time()
 	return [p for p in pictures() if p.reviewed<now-3600*24*31]
 
+# imgs last seen
+def last_reviewed():
+	now = time()
+	return sorted(pictures(), key=lambda p:now-p.reviewed)
+
+
 # highest rated
 def favorites():
 	# rating times month passed since review

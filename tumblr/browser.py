@@ -22,11 +22,22 @@ class Browser:
 		# init img tracking
 		pics = picture.to_review()
 		if len(pics)<1:
-			pics = picture.favorites()[:20]
+			pics = picture.favorites()[:50]
 		self.pool = set(pics)
 		#pics = sorted(pics, key=lambda p:p.rating)
-		self.choose(pics[-1]) # current image as Pict object
-		self.hist = [self.img] # history of recent images
+		# repopulate history
+		self.hist = []
+		for p in picture.last_reviewed()[:30]:
+			if util.days_since(p.reviewed)<.125:
+				self.hist.append(p)
+				if p in self.pool:
+					self.pool.remove(p)
+		# choose image to displ
+		if len(self.hist)<1:
+			self.choose(self.pool.pop()) # current image as Pict object
+			self.hist = [self.img] # history of recent images
+		else:
+			self.choose(self.hist[0])
 		# canvas
 		self.cnv = tk.Canvas(root, bg="black")
 		self.cnv.pack(side='top', fill='both', expand='yes')
@@ -197,6 +208,8 @@ class Browser:
 			self.choose(self.choices[ix])
 			self.hist.insert(0,self.img)
 			self.display()
+		else:
+			self.pool = set(picture.favorites()[:50])
 
 
 	def back(self, key):
@@ -301,12 +314,22 @@ class Browser:
 	# compute similarities for current image
 	def compute_sim(self, key):
 		print 'compute similarities for', self.img
+		res = []
 		for p in picture.pictures():
 			if p != self.img:
 				sim = self.img.similarity(p)
-				if p > .5:
+				if sim > .5:
 					picture.connect(self.img,p,sim)
-		print 'done.'
+					res.append(p)
+					#x=0
+					#for q in res[:10]:
+						#img = self.load_thmb(q)
+						#self.cnv.create_image((x,780), 
+							#anchor=tk.SW, image=img)
+						#self.cur_imgs.append(img)
+						#x += img.width()
+		print 'done. found {} images.'.format(len(res))
+		self.update(key)
 
 
 handlers={113:Browser.back,
