@@ -5,6 +5,7 @@ from time import time
 from random import choice
 
 import weave.picture as picture
+import util.inout as inout
 
 ##############################################################
 ##############################################################
@@ -75,9 +76,12 @@ class Blog:
 					#for l in self.linked:
 						#vouches += l.score()
 					#vouches /= len(self.linked)
-				self._score = float(kept) / len(self.images) * link_ratio + vouches
+				ratings = float(sum([p.rating for p in self.proper_imgs]))
+				if kept>0:
+					ratings /= kept
+				self._score = float(kept) / len(self.images) * link_ratio * (1+ratings) + vouches
 			else:
-				self._score = .05
+				self._score = .03
 		return self._score
 
 	@property
@@ -106,6 +110,34 @@ class Blog:
 	# url where this blog can be found
 	def url(self):
 		return 'http://{}.tumblr.com'.format(self.name)
+
+	# print detailed information
+	def details(self):
+		disk_ratio = 100*len(self.proper_imgs)
+		if len(self.images)>0:
+			disk_ratio /= len(self.images)
+		ratings = 1.*sum([p.rating for p in self.proper_imgs])
+		if len(self.proper_imgs)>0:
+			ratings /= len(self.proper_imgs)
+		infos = [
+			self.name,
+			'Score: {}'.format(int(self.score*100)),
+			'Last visit: {}'.format(inout.time_span_str(self.seen)),
+			'Retrieved images: {}'.format(len(self.images)),
+			'Images kept on disk: {} ({}%)'.format(len(self.proper_imgs), 
+				disk_ratio),
+			'Average rating of remaining images: {}/6'.format(ratings),
+			]
+		if len(self.linked)>0:
+			infos.append('Linked by {} blogs with an average score of {}'.format(
+				len(self.linked), 
+				100*sum([t.score for t in self.linked])/len(self.linked)))
+		if len(self.links)>0:
+			infos.append('Links {} blogs with an average score of {}'.format(
+				len(self.links), 
+				100*sum([t.score for t in self.links])/len(self.links)))
+		return '\n'.join(infos)
+
 
 ##############################################################
 ##############################################################

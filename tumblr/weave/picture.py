@@ -273,7 +273,7 @@ class Pict:
 	# n is not limited by default
 	def most_similar(self, n=None):
 		res = sorted(self.relates.items(), key=lambda t:t[1])
-		res = map(lambda t:t[0], res)[::-1]
+		res = [t[0] for t in res[::-1]]
 		if n:
 			res = res[:n]
 		return res
@@ -305,26 +305,14 @@ class Pict:
 
 	# multiple lines of usefuil information
 	def details(self):
-		if self.date > 0:
-			ago = int(time()-self.date)/60
-			if ago>60:
-				ago /= 60
-				if ago>24:
-					ago/=24
-					ago='({} days ago)'.format(ago)
-				else:
-					ago='({} hours ago)'.format(ago)
-			else:
-				ago='({} minutes ago)'.format(ago)
-		else:
-			ago=''
+		ago = util.inout.time_span_str(self.date)
 		return '\n'.join([
 			'Rating: {}'.format('*'*self.rating),
 			'Size: {}x{} Pixels'.format(self.size[0], self.size[1]),
 			'Filename: {}'.format(self.name),
 			'Mode: {} {}'.format(self.mode, self.ext),
 			'Seen {} times, first on {}'.format(len(self.sources), self.origin),
-			'Timestamp {} {}'.format(self.date, ago),
+			'Timestamp {}, downloaded {}'.format(self.date, ago),
 			'',
 			'Histogram channel medians: {}'.format(
 				map(lambda v:v*8, self.histogram.mediane))
@@ -383,6 +371,10 @@ def pictures():
 	return filter(lambda p:p.location != None, Pict.imgs.values())
 
 
+def newest():
+	now = time()
+	return [p for p in pictures() if p.date>now-3600*12]
+
 # establishes a link between two pictures
 def connect(p,q,sim):
 	p.relates[q]=sim
@@ -399,7 +391,13 @@ def sync():
 			if not os.path.exists(p.location):
 				p.location = None
 
-
+# delete picture from disk
+def delete(p):
+	if p.location:
+		if os.path.exists(p.location):
+			print 'delete image', p
+			os.remove(p.location)
+			p.location = None
 ##############################################################
 ##############         Image IO         ######################
 ##############################################################

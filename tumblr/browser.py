@@ -4,6 +4,7 @@ from PIL import Image, ImageTk
 import index
 import weave.picture as picture
 import weave.tumblr as tumblr
+from time import time
 
 
 class Browser:
@@ -13,14 +14,21 @@ class Browser:
 	def __init__(self, root):
 		self.cur_imgs = [] # backup references against garbage coll.
 		# init img tracking
-		pics =  picture.pictures()
-		pics = sorted(pics, key=lambda p:len(p.relates))
+		pics =  picture.newest()
+		if len(pics)<1:
+			pics = picture.pictures()
+			self.pref = set()
+		else:
+			self.pref = set(pics)
+		pics = sorted(pics, key=lambda p:p.rating)
 		self.img = pics[-1] # current image as Pict object
-		self.hist = [] # history of recent images
+		self.hist = [self.img] # history of recent images
 		self.img_reg = {} # registry to avoid disk access
 		self.thmb_reg = {} # thumbnail registry to avoid resize
 		self.preview_reg = {} # preview registry to avoid resize
 		self.mode = Browser.BROWSE
+		self.changes = False # changes to be saved?
+		self.new_votes = set() # keep track of new ratings
 		# canvas
 		self.cnv = tk.Canvas(root, bg="black")
 		self.cnv.pack(side='top', fill='both', expand='yes')
@@ -28,6 +36,24 @@ class Browser:
 		#self.button = tk.Button(self.cnv, text='button2')
 		#self.button.pack(side='top')
 		self.display()
+
+
+	def get_choices(self):
+		choices = dict(self.img.relates)
+		for p in self.pref:
+			choices[p] = time()-p.date
+		for p, sim in choices.items():
+			score = (1+p.rating) * sim
+			for vote in self.new_votes:
+				adv = p.relates.get(vote)
+				if not adv:
+					adv = vote.relates.get(p,0)
+				score += vote.rating*adv/len(self.new_votes)
+			choices[p] = score
+
+		choices = sorted(choices.items(), key=lambda t:t[1])
+		return [t[0] for t in choices[::-1]]
+
 
 
 	# takes a Pict instance and returns a scaled (if size=(x,y) given)
@@ -64,19 +90,24 @@ class Browser:
 
 	def display(self):
 		self.cur_imgs = [] # keep ref for objects (garbage coll)
+		self.cnv.create_rectangle((0,0,1024,740), fill='black')
 		# history
 		y = 0
 		imgs=[]
 		cover=0
 		for p in self.hist[:15]:
 			img = self.load_thmb(p)
-			imgs.append((img, (0,y)))
+			imgs.append((img, (0,y), p.rating))
 			y+=img.height() - cover
 			self.cur_imgs.append(img)
-			cover = min(80, cover+8)
-		for img, pos in imgs[::-1]:
+			cover = min(80, cover+4)
+		for img, pos, stars in imgs[::-1]:
+			#self.cnv.create_rectangle((pos[0], pos[1],
+				#pos[0]+img.width(), pos[1]+img.height()), fill='black')
 			self.cnv.create_image(pos, 
 				anchor=tk.NW, image=img)
+			self.cnv.create_text(pos[0]+4, pos[1]+4, anchor=tk.NW, 
+					font='Arial 12 bold', fill='white', text='*'*stars)
 
 		# current img
 		img = self.load_img(self.img, size=(760, 740))
@@ -90,13 +121,18 @@ class Browser:
 		i = 0 # counter
 		x,y = posx,0 # curr. thmbnail pos.
 		# retrieve
-		sims = self.img.most_similar()
+		#sims = self.img.most_similar()
+		sims = self.get_choices()
 		while y<740 and len(sims)>0:
 			s = sims.pop(0)
 			if s.location and not s in self.hist:
 				img = self.load_thmb(s)
+				#self.cnv.create_rectangle((1024-img.width(),y,1024,y+img.height()),
+					#fill='black')
 				self.cnv.create_image((1024,y), 
 					anchor=tk.NE, image=img)
+				self.cnv.create_text(1028-img.width(), y+4, anchor=tk.NW, 
+					font='Arial 14 bold', fill='white', text='*'*s.rating)
 				y += img.height()
 				self.cur_imgs.append(img)
 				self.choices.append(s)
@@ -126,15 +162,16 @@ class Browser:
 			if self.img in self.hist:
 				i = self.hist.index(self.img)
 				self.hist = self.hist[i:]
-			else:
+			#else:
 				# save in history
-				self.hist.insert(0,self.img)
+				# self.hist.insert(0,self.img)
 			# forward and paint
 			self.img = self.choices[ix]
+			self.hist.insert(0,self.img)
 			self.display()
 
 
-	def back(self):
+	def back(self, key):
 		if self.img in self.hist:
 			i = self.hist.index(self.img)
 			if i < min([len(self.hist)-1, 15]):
@@ -143,49 +180,113 @@ class Browser:
 			self.img = self.hist[0]
 		self.display()
 
-	def replay(self):
+	def replay(self, key):
 		if self.img in self.hist:
 			i = self.hist.index(self.img)
 			if i > 0:
 				self.img = self.hist[i-1]
 				self.display()
+			else:
+				self.forward(0)
 
 
+	# single image view
+	def display_single(self):
+		w,h=self.img.size
+		#if w>760 or h>740:
+		img = self.load_img(self.img)
+		self.cnv.create_image((500,370), anchor=tk.CENTER, image=img)
+		imgtxt=self.img.details()
+		y = self.text(imgtxt, (0,0))
+		medians = map(lambda b:b*8, self.img.histogram.mediane)
+		if len(medians)<3:
+			medians *= 3
+		med_col = '#{}'.format(''.join([('%02x' % b) for b in medians]))
+		self.cnv.create_rectangle((10,y+20,100,y+84),
+			outline='#fff',
+			fill=med_col)
+		self.text('Color code {}'.format(med_col), (0,y+90))
+		if self.img.origin:
+			blogtxt = self.img.origin.details()
+			self.text(blogtxt, (0,y+130))
+		self.text('Source: {}'.format(self.img.url), (0,724))
+		self.cur_imgs = [img]
 
-	def zoom(self):
+
+	def zoom(self, key):
+		# determine whether to change state		
 		if self.mode == Browser.BROWSE:
-			w,h=self.img.size
-			#if w>760 or h>740:
-			img = self.load_img(self.img)
-			self.cnv.create_image((500,370), anchor=tk.CENTER, image=img)
-			imgtxt=self.img.details()
-			y = self.text(imgtxt, (0,0))
-			medians = map(lambda b:b*8, self.img.histogram.mediane)
-			med_col = '#{}'.format(''.join([('%02x' % b) for b in medians]))
-			self.cnv.create_rectangle((10,y+30,100,y+94),
-				outline='#fff',
-				fill=med_col)
-			self.text('Color code {}'.format(med_col), (0,y+100))
-			self.text('Source: {}'.format(self.img.url), (0,724))
-			self.cur_imgs = [img]
+			self.cnv.create_rectangle((0,0,1024,740), fill='black')
+			self.display_single()
 			self.mode = Browser.SINGLE
 		elif self.mode == Browser.SINGLE:
-			self.cnv.create_rectangle((0,0,780,300), fill='black')
+			self.cnv.create_rectangle((0,0,780,740), fill='black')
 			self.cnv.create_rectangle((0,724,780,740), fill='black')
-			self.display()
-			self.mode = Browser.BROWSE
+			if key in [9,36]:
+				self.display()
+				self.mode = Browser.BROWSE
+			else:
+				self.display_single()
 
+
+
+	def update(self, key):
+		if self.mode == Browser.BROWSE:
+			self.display()
+		elif self.mode == Browser.SINGLE:
+			self.zoom(key)
+
+	def page_up(self, key):
+		if key is 81:
+			if self.img.rating < 6:
+				self.img.rating += 1
+				self.changes = True
+				self.new_votes.add(self.img)
+				self.update(key)
+
+	def page_down(self, key):
+		if key is 89:
+			if self.img.rating > 0:
+				self.img.rating = self.img.rating-1
+				self.new_votes.add(self.img)
+				self.changes = True
+				self.update(key)
+
+	def quit(self, key):
+		if self.changes:
+			print "saving changes..."
+			index.save()
+		root.quit()
+
+	def delete(self, key):
+		index.picture.delete(self.img)
+		if self.img in self.hist:
+			i = self.hist.index(self.img)
+			self.hist = self.hist[i:]
+		self.img = self.choices[0]
+		self.hist.insert(0,self.img)
+		self.mode = Browser.BROWSE
+		self.update(key)
+		self.changes = True
+
+handlers={113:Browser.back,
+					114:Browser.replay,
+					36:Browser.zoom,
+					81:Browser.page_up,
+					89:Browser.page_down,
+					9:Browser.quit,
+					22:Browser.delete,
+					119:Browser.delete}
 
 def key(event):
   print "pressed", event.keycode
   if event.keycode in range(10,20):
   	browser.forward(event.keycode-10)
-  if event.keycode == 113:
-  	browser.back()
-  if event.keycode == 36:
-  	browser.zoom()
-  if event.keycode == 114:
-  	browser.replay()
+
+  # handlers implemented by browser
+  f = handlers.get(event.keycode)
+  if f:
+  	f(browser, event.keycode)
 
    #if len(browser.img.relates.keys()) > 0:
    	#browser.img = browser.img.relates.keys()[0]
