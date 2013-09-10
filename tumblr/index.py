@@ -23,8 +23,8 @@ def simpairs():
 		len(imgs))
 	# BEGIN
 	for i in range(len(imgs)):
+		p=imgs[i]
 		for j in range(i+1,len(imgs)):
-			p=imgs[i]
 			q=imgs[j]
 			sim=p.similarity(q)
 			if sim>.5:

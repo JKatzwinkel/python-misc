@@ -26,7 +26,8 @@ def saveImages(images, filename):
 		if p.url:
 			f.write('  <url>{}</url>\n'.format(p.url))
 		if p.location != None:
-			f.write('  <location time="{}">{}</location>\n'.format(p.date, p.location))
+			f.write('  <location time="{}" reviewed="{}">{}</location>\n'.format(
+				p.date, p.reviewed, p.location))
 			histo = p.histogram
 			f.write('  <histogram bands="{}">{}</histogram>\n'.format(
 						histo.bands, histo.hex()))
@@ -65,6 +66,7 @@ def loadImages(filename):
 			if elem.tag == 'location':
 				data['location'] = elem.text
 				data['time'] = float(elem.attrib.get('time', 0))
+				data['reviewed'] = float(elem.attrib.get('reviewed', 0))
 			if elem.tag == 'hosted':
 				data['hosts']=[]
 			if elem.tag == 'at':

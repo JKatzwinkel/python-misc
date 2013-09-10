@@ -10,6 +10,7 @@ from time import time
 import util.statistics as stats
 import util.measures as measure
 import util.inout
+import util
 
 
 # scale down to half size
@@ -143,11 +144,13 @@ class Pict:
 		#self.date = 0 # date of retrieval (timestamp)
 		self.url = None #TODO: implementieren
 		self.rating = 0
+		self.reviewed = 0 # timestamp of last appearance in browser
 		if isinstance(image, pil.Image):
 			self.mode = image.mode
 			self.size = image.size
 			self.histogram = Histogram(image)
 			self.date = 0 # zusehen, dasz man das aus der datei holt
+			self.reviewed = 0
 		else:
 			self.mode = image.get('mode','None')
 			self.size = image.get('size',(0,0))
@@ -160,6 +163,7 @@ class Pict:
 			self.relates = image.get('similar', {})
 			self.sources = image.get('hosts', [])
 			self.rating = int(image.get('stars', 0))
+			self.reviewed = float(image.get('reviewed', 0))
 
 		self.info='{0} {1}'.format(self.size, self.mode)
 		Pict.imgs[name]=self
@@ -370,10 +374,23 @@ def get(name):
 def pictures():
 	return filter(lambda p:p.location != None, Pict.imgs.values())
 
-
+# pictures downloaded within last 12 h
 def newest():
 	now = time()
-	return [p for p in pictures() if p.date>now-3600*12]
+	return [p for p in pictures() if p.date>now-3600*24*7]
+
+# pictures awaiting appearance in browser
+# = those not seen for a month
+def to_review():
+	now = time()
+	return [p for p in pictures() if p.reviewed<now-3600*24*31]
+
+# highest rated
+def favorites():
+	# rating times month passed since review
+	fav = lambda p:p.rating * (.5+util.days_since(p.reviewed)/31)
+	return sorted(pictures(), key=fav, reverse=True)
+
 
 # establishes a link between two pictures
 def connect(p,q,sim):

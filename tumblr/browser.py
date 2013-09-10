@@ -1,11 +1,11 @@
 import Tkinter as tk
 from PIL import Image, ImageTk
+from time import time
 
 import index
 import weave.picture as picture
 import weave.tumblr as tumblr
-from time import time
-
+import util
 
 class Browser:
 	BROWSE='browse'
@@ -13,22 +13,20 @@ class Browser:
 	DETAIL='detail'
 	def __init__(self, root):
 		self.cur_imgs = [] # backup references against garbage coll.
-		# init img tracking
-		pics =  picture.newest()
-		if len(pics)<1:
-			pics = picture.pictures()
-			self.pref = set()
-		else:
-			self.pref = set(pics)
-		pics = sorted(pics, key=lambda p:p.rating)
-		self.img = pics[-1] # current image as Pict object
-		self.hist = [self.img] # history of recent images
 		self.img_reg = {} # registry to avoid disk access
 		self.thmb_reg = {} # thumbnail registry to avoid resize
 		self.preview_reg = {} # preview registry to avoid resize
 		self.mode = Browser.BROWSE
 		self.changes = False # changes to be saved?
 		self.new_votes = set() # keep track of new ratings
+		# init img tracking
+		pics = picture.to_review()
+		if len(pics)<1:
+			pics = picture.favorites()[:20]
+		self.pool = set(pics)
+		#pics = sorted(pics, key=lambda p:p.rating)
+		self.choose(pics[-1]) # current image as Pict object
+		self.hist = [self.img] # history of recent images
 		# canvas
 		self.cnv = tk.Canvas(root, bg="black")
 		self.cnv.pack(side='top', fill='both', expand='yes')
@@ -39,9 +37,15 @@ class Browser:
 
 
 	def get_choices(self):
+		# suggest pictures with similiarity link to current
 		choices = dict(self.img.relates)
-		for p in self.pref:
-			choices[p] = time()-p.date
+		# prefer pictures in pool,
+		# prefer newest pictures
+		for p in self.pool:
+			boost = min(1.8,util.days_since(p.reviewed)/99)
+			boost += 1.5/(1+util.days_since(p.date))
+			choices[p] = choices.get(p, 0)+boost
+		# calculate scores
 		for p, sim in choices.items():
 			score = (1+p.rating) * sim
 			for vote in self.new_votes:
@@ -50,11 +54,16 @@ class Browser:
 					adv = vote.relates.get(p,0)
 				score += vote.rating*adv/len(self.new_votes)
 			choices[p] = score
-
+		# return candidates ordered by highest score desc.
 		choices = sorted(choices.items(), key=lambda t:t[1])
 		return [t[0] for t in choices[::-1]]
 
 
+	# set pict as currently viewed 
+	def choose(self, pict):
+		self.img = pict
+		pict.reviewed = time()
+		self.changes = True
 
 	# takes a Pict instance and returns a scaled (if size=(x,y) given)
 	# ImageTk.PhotoImage object.
@@ -110,7 +119,7 @@ class Browser:
 					font='Arial 12 bold', fill='white', text='*'*stars)
 
 		# current img
-		img = self.load_img(self.img, size=(760, 740))
+		img = self.load_img(self.img, size=(720, 740))
 		self.cur_imgs.append(img)
 		self.cnv.create_image((500,370), anchor=tk.CENTER, image=img) 
 		# topleft= NW
@@ -131,8 +140,27 @@ class Browser:
 					#fill='black')
 				self.cnv.create_image((1024,y), 
 					anchor=tk.NE, image=img)
-				self.cnv.create_text(1028-img.width(), y+4, anchor=tk.NW, 
-					font='Arial 14 bold', fill='white', text='*'*s.rating)
+				#self.cnv.create_text(1028-img.width(), y+4, anchor=tk.NW, 
+					#font='Arial 14 bold', fill='white', text='*'*s.rating)
+				# write little info caption
+				notes=[]
+				if s.rating>0:
+					notes.append('*'*s.rating)
+				sim = self.img.relates.get(s)
+				if sim:
+					notes.append('{:.1f}%'.format(sim*100))
+				days=util.days_since(s.date)
+				if days<7:
+					notes.append('new!\n({} days)'.format(int(days)))
+				days=int(util.days_since(s.reviewed))
+				if days > 31:
+					if days < 100:
+						notes.append('awaits review\n({} days)'.format(days))
+					else:
+						notes.append('awaits review!')
+				self.cnv.create_text(1020-img.width(), y+4, anchor=tk.NE, 
+					font='Arial 10', justify='right', fill='white', 
+					text='\n'.join(notes))
 				y += img.height()
 				self.cur_imgs.append(img)
 				self.choices.append(s)
@@ -166,7 +194,7 @@ class Browser:
 				# save in history
 				# self.hist.insert(0,self.img)
 			# forward and paint
-			self.img = self.choices[ix]
+			self.choose(self.choices[ix])
 			self.hist.insert(0,self.img)
 			self.display()
 
@@ -175,19 +203,21 @@ class Browser:
 		if self.img in self.hist:
 			i = self.hist.index(self.img)
 			if i < min([len(self.hist)-1, 15]):
-				self.img = self.hist[i+1]
+				self.choose(self.hist[i+1])
 		else:
-			self.img = self.hist[0]
+			self.choose(self.hist[0])
 		self.display()
 
 	def replay(self, key):
 		if self.img in self.hist:
 			i = self.hist.index(self.img)
 			if i > 0:
-				self.img = self.hist[i-1]
+				self.choose(self.hist[i-1])
 				self.display()
 			else:
 				self.forward(0)
+		else:
+			self.forward(0)
 
 
 	# single image view
@@ -263,11 +293,21 @@ class Browser:
 		if self.img in self.hist:
 			i = self.hist.index(self.img)
 			self.hist = self.hist[i:]
-		self.img = self.choices[0]
-		self.hist.insert(0,self.img)
+		self.replay(0)
 		self.mode = Browser.BROWSE
 		self.update(key)
 		self.changes = True
+
+	# compute similarities for current image
+	def compute_sim(self, key):
+		print 'compute similarities for', self.img
+		for p in picture.pictures():
+			if p != self.img:
+				sim = self.img.similarity(p)
+				if p > .5:
+					picture.connect(self.img,p,sim)
+		print 'done.'
+
 
 handlers={113:Browser.back,
 					114:Browser.replay,
@@ -276,7 +316,8 @@ handlers={113:Browser.back,
 					89:Browser.page_down,
 					9:Browser.quit,
 					22:Browser.delete,
-					119:Browser.delete}
+					119:Browser.delete,
+					39:Browser.compute_sim}
 
 def key(event):
   print "pressed", event.keycode
