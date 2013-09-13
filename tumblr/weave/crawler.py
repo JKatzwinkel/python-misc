@@ -8,12 +8,15 @@ from time import time
 
 import weave.picture as picture
 import weave.tumblr as tumblr
+import util
 
 
 ##############################################################
 ####################    CRAWLER    ###########################
 ##############################################################
 
+# blog score times days since last visit. (max 14 days)
+queue_score = lambda t: t.score * min(14,util.days_since(t.seen))
 
 class Crawler:
 	# optionally, give a list of blogs we should start with
@@ -39,7 +42,7 @@ class Crawler:
 	def next_blog(self):
 		if len(self.frontier)>0:
 			# pick highest score blog from frontier list
-			cand = sorted(self.frontier, key=lambda t: t.score, 
+			cand = sorted(self.frontier, key=queue_score, 
 				reverse=True)
 			blog = None
 			now = time()
@@ -47,10 +50,6 @@ class Crawler:
 			while not blog:
 				if len(cand) > 0:
 					blog = cand.pop(0)
-					if blog.seen > now-6*3600:
-						self.visited[blog] = blog.seen
-						self.frontier.remove(blog)
-						blog = None
 				else:
 					return None
 			# move blog to visited list and save time
@@ -233,11 +232,12 @@ def crawl(url, n=30):
 	# if no query is given, we try to get some blogs
 	# with good image output from out database
 	# TODO: heuristik ausdenken!
-	query = sorted(tumblr.blogs(), 
+	#query = sorted(tumblr.blogs(), 
 		#key=lambda t:len(t.proper_imgs)/(len(t.images)+1),
-		key = lambda t: t.score*len(t.links),
-		reverse=True)
-	query = tumblr.queue()
+		#key = lambda t: t.score*len(t.links),
+		#reverse=True)
+	#query = tumblr.queue()
+	query = [p.origin for p in picture.favorites() if p.origin]
 
 	# set up suff
 	#print 'Starting crawler at', url
@@ -247,7 +247,7 @@ def crawl(url, n=30):
 	if not seed in query:
 		query = [seed] + query
 	# create crawler
-	crawler = Crawler(n, query=query[:5])
+	crawler = Crawler(n, query=query[:10])
 	
 	# wait for the crawler to be done
 	while crawler.crawling():
@@ -279,9 +279,10 @@ def crawl(url, n=30):
 					# look for high resolutions
 					if pict.location and pict.dim < dim:
 						# better version of known image available
-						print '     upgradable image: {} from {} to {}'.format(
+						print 'upgradable image: {} from {} to {}'.format(
 							name, pict.dim, dim)
-						pict = picture.openurl(best)
+						upgrade_img = pict.download(url=best)
+						del upgrade_img
 					else:
 						# image known. assign to current blog and f.o.
 						t.assign_img(pict)
@@ -292,11 +293,11 @@ def crawl(url, n=30):
 					pict.date = time()
 					images.append(pict)
 					t.assign_img(pict)
-					pict.url = img
+					pict.url = best
 					#print '   {} - {} {}'.format(pict.name, pict.dim, pict.size)
 					print pict
 			else:
-				print 'Keine Id gefunden'
+				print 'Keine Id gefunden: {}. omitting.'.format(img)
 	# Puh endlich fertig!
 	print 'Retrieved {} images from {} blogs.'.format(
 		len(images), len(crawler.images))

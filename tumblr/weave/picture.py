@@ -309,7 +309,7 @@ class Pict:
 
 	# multiple lines of usefuil information
 	def details(self):
-		ago = util.inout.time_span_str(self.date)
+		ago = util.time_span_str(self.date)
 		return '\n'.join([
 			'Rating: {}'.format('*'*self.rating),
 			'Size: {}x{} Pixels'.format(self.size[0], self.size[1]),
@@ -322,7 +322,7 @@ class Pict:
 				map(lambda v:v*8, self.histogram.mediane))
 			])
 
-	# del image after call
+	# del image after call, ok? memory perspective!
 	def upgrade(self, image, url, save=True):
 		self.ext = url.split('.')[-1]
 		m = re.search('_([1-9][0-9]{2,3})\.', url)
@@ -335,7 +335,18 @@ class Pict:
 		self.url = url
 		self.size = image.size
 		
-		
+	# download image at url and update metadata accordingly
+	# if save=True, local copy is saved to disk/overwritten if present
+	# returns upgraded pil image instance, so make sure to del image
+	# at some point when calling this!
+	def download(self, url=None, save=True):
+		if not url:
+			url = self.url
+		image = util.inout.open_img_url(self.url)
+		self.upgrade(image, url, save=save)
+		return image
+
+
 
 
 ##############################################################

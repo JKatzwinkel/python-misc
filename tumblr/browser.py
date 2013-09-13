@@ -58,7 +58,7 @@ class Browser:
 			choices[p] = choices.get(p, 0)+boost
 		# calculate scores
 		for p, sim in choices.items():
-			score = (1+p.rating) * sim
+			score = (1+p.rating/2) * sim
 			for vote in self.new_votes:
 				adv = p.relates.get(vote)
 				if not adv:
@@ -117,24 +117,25 @@ class Browser:
 		cover=0
 		for p in self.hist[:15]:
 			img = self.load_thmb(p)
-			imgs.append((img, (0,y), p.rating))
-			y+=img.height() - cover
+			self.cnv.create_image((0,y), 
+				anchor=tk.NW, image=img)
+			self.cnv.create_text(0+4, y+4, anchor=tk.NW, 
+					font='Arial 12 bold', fill='white', text='*'*p.rating)
+			if p == self.img:
+				self.cnv.create_rectangle((3,y+3,img.width()-3,y+img.height()-3),
+					outline='yellow', width='3')
+			y += img.height()
+			#imgs.append((img, (0,y), p.rating))
 			self.cur_imgs.append(img)
-			cover = min(80, cover+4)
-		for img, pos, stars in imgs[::-1]:
+			#cover = min(80, cover+4)
+		#for img, pos, stars in imgs[::-1]:
 			#self.cnv.create_rectangle((pos[0], pos[1],
 				#pos[0]+img.width(), pos[1]+img.height()), fill='black')
-			self.cnv.create_image(pos, 
-				anchor=tk.NW, image=img)
-			self.cnv.create_text(pos[0]+4, pos[1]+4, anchor=tk.NW, 
-					font='Arial 12 bold', fill='white', text='*'*stars)
-
 		# current img
 		img = self.load_img(self.img, size=(720, 740))
 		self.cur_imgs.append(img)
 		self.cnv.create_image((500,370), anchor=tk.CENTER, image=img) 
 		# topleft= NW
-
 		# similars
 		posx = min([max([500+self.img.size[0]/2, 724]),784])
 		self.choices = []
@@ -169,8 +170,10 @@ class Browser:
 						notes.append('awaits review\n({} days)'.format(days))
 					else:
 						notes.append('awaits review!')
+				if s.origin:
+					notes.append(s.origin.name)
 				self.cnv.create_text(1020-img.width(), y+4, anchor=tk.NE, 
-					font='Arial 10', justify='right', fill='white', 
+					font='Arial 9', justify='right', fill='white', 
 					text='\n'.join(notes))
 				y += img.height()
 				self.cur_imgs.append(img)
@@ -361,27 +364,13 @@ def key(event):
 # Ok Go
 index.load()
 
+# create tkinter window
 root = tk.Tk()
-root.title('background image')
-
-# pick an image file you have .bmp  .jpg  .gif.  .png
-# load the file and covert it to a Tkinter image object
-imageFile = "images/lda3m4he0E1qdlb01o1.jpg"
-image1 = ImageTk.PhotoImage(Image.open(imageFile))
-
+root.title('tumblr img browser')
 # make the root window the size of the image
 root.geometry("%dx%d+%d+%d" % (1024, 740, 0, 0))
 root.bind("<Key>", key)	
-
-# root has no image argument, so use a label as a panel
-#panel1 = tk.Label(root, image=image1)
-#panel1.pack(side='top', fill='both', expand='yes')
-
-
-
-# save the panel's image from 'garbage collection'
-#panel1.image = image1
-
+# instantiate browser class
 browser = Browser(root)
 
 # start the event loop
