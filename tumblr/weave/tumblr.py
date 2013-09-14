@@ -24,6 +24,7 @@ class Blog:
 		self.links=set() # outgoing
 		self.linked=set() # incoming
 		self.images=set()
+		self.images_times={}
 		self.seen = 0
 		self._score = None
 		#register
@@ -48,21 +49,32 @@ class Blog:
 			print ' {0} --> {1}'.format(self, l)
 		for l in self.linked:
 			print ' {0} <-- {1}'.format(self, l)
+
 	
 	# interlinks a blog and an image
-	def assign_img(self, img):
-		if isinstance(img, picture.Pict):
-			pict = img
+	def assign_img(self, img, time=None):
+		if img:
+			if isinstance(img, picture.Pict):
+				pict = img
+			else:
+				pict = picture.get(img)
+			if pict:
+				if not time:
+					time = pict.date
+				# add image ref to blog obj
+				if not pict in self.images:
+					self.images.add(pict)
+					self.images_times[pict] = time
+				# add blog ref to img obj
+				if not self in pict.sources:
+					pict.sources.append(self)
+				#print 'assigning {} to {}.'.format(pict.name, self.name)
+			else:
+				if not img in self.images:
+					self.images.add(img)
 		else:
-			pict = picture.get(img)
-		if pict:
-			if not pict in self.images:
-				self.images.add(pict)
-				pict.sources.append(self)
-			#print 'assigning {} to {}.'.format(pict.name, self.name)
-		else:
-			if not img in self.images:
-				self.images.add(img)
+			print 'tumblr.assign_img: invalid img ref. wtf!!!'
+
 	
 	# how many of the images that this blog featured did remain on disk
 	@property
@@ -150,7 +162,7 @@ class Blog:
 			ratings /= len(self.proper_imgs)
 		infos = [
 			self.name,
-			'Score: {:.2f}'.format(self.score*100),
+			'Score: {:.2f}'.format(self.score),
 			'Last visit: {}'.format(util.time_span_str(self.seen)),
 			'Retrieved images: {}'.format(len(self.images)),
 			'Images kept on disk: {} ({}%)'.format(len(self.proper_imgs), 
@@ -209,10 +221,14 @@ def opendump(slots):
 	if not t:
 		t = create(name, time=last_seen)
 	t.seen = last_seen
+	t._score = slots.get('score')
 	# connect related image identifiers, whereever possible
 	# using reification as well
 	for p in slots.get('images', []):
-		t.assign_img(p)
+		if not p:
+			print "invalid img ref! very weird.. {}".format(t.name)
+		else:
+			t.assign_img(p)
 	# reify hyperlink identifiers
 	for l in slots.get('out', []):
 		if l:
@@ -223,6 +239,9 @@ def opendump(slots):
 			if ln:
 				ln.link(t)
 	return t
+
+
+###############################################################
 
 #TODO rewrite!
 def queue(num=100):
@@ -241,16 +260,23 @@ def queue(num=100):
 	res = filter(lambda t:t.seen<time()-6*3600, res)
 	return res[:num]
 
+
+
 # do some page rank-like stuff
-def dist_scores():
+def dist_scores(n=5):
+	# total amount of stars a blog's images archieved
 	stars = lambda t: sum([p.rating for p in t.proper_imgs])
-	score = lambda t: float(stars(t)*2+len(t.reviewed_imgs()))
+	# spawn score. total stars times review ratio
+	score = lambda t: float(stars(t)*2 * t.reviewed_imgs())
+	# blog score directory
 	reg = {t:score(t) for t in blogs()}
+	# distribution func: score shares from incoming links added up
 	dist = lambda t: sum([reg.get(l,0)/len(l.links) for l in t.linked])
-	for i in range(5):
+	# iterate n steps
+	for i in range(n):
 		reg = {t:score(t)+dist(t) for t in blogs()}
 		print '.',
 	for t in blogs():
-		t._score = reg.get(t)/100
+		t._score = reg.get(t)
 	print 'ok'
 	return reg

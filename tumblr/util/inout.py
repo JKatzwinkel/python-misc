@@ -10,6 +10,8 @@ from io import BytesIO
 import os
 from time import time
 
+log_msgs=[]
+
 
 # saves a list of images to an XML file
 def saveImages(images, filename):
@@ -25,7 +27,7 @@ def saveImages(images, filename):
 		f.write('  <size width="{}" height="{}"/>\n'.format(attr[0], attr[1]))
 		if p.url:
 			f.write('  <url>{}</url>\n'.format(p.url))
-		if p.location != None:
+		if p.path:
 			f.write('  <location time="{}" reviewed="{}">{}</location>\n'.format(
 				p.date, p.reviewed, p.location))
 			histo = p.histogram
@@ -33,7 +35,8 @@ def saveImages(images, filename):
 						histo.bands, histo.hex()))
 			f.write('  <hosted times="{}">\n'.format(len(p.sources)))
 			for s in p.sources:
-				f.write('   <at when="{}">{}</at>\n'.format(0,s.name))
+				f.write('   <at when="{}">{}</at>\n'.format(
+					s.images_times.get(p,0),s.name))
 			f.write('  </hosted>\n')
 			f.write('  <similar num="{}">\n'.format(len(p.relates)))
 			for s in p.relates.items():
@@ -49,10 +52,11 @@ def saveImages(images, filename):
 
 # loads image container records from XML file
 def loadImages(filename):
-	print 'Reading images metadata from ', filename
+	print 'Reading images metadata from', filename
 	imgs=[]
 	data={}
 	known={}
+	warnings=[]
 	for event, elem in ET.iterparse(filename, events=('start','end')):
 		# ON OPENING TAGS:
 		if event == 'start':
@@ -70,6 +74,7 @@ def loadImages(filename):
 			if elem.tag == 'hosted':
 				data['hosts']=[]
 			if elem.tag == 'at':
+				#TODO: date of retrieval
 				try:
 					data.get('hosts').append(elem.text)
 				except:
@@ -77,10 +82,14 @@ def loadImages(filename):
 			if elem.tag == 'similar':
 				data['similar']={}
 			if elem.tag == 'img':
-				try:
-					data['similar'][elem.text] = float(elem.attrib.get('m',0))
-				except:
-					data['similar']={elem.text:elem.attrib.get('m',0)}
+				if elem.text:
+					try:
+						data['similar'][elem.text] = float(elem.attrib.get('m',0))
+					except:
+						data['similar']={elem.text:elem.attrib.get('m',0)}
+				else:
+					warnings.append('damn! invalid elem.text in {} img element'.format(
+						data.get('id')))
 		# REACT ON END TAG
 		else:
 			if elem.tag == 'histogram':
@@ -101,6 +110,8 @@ def loadImages(filename):
 					print 'double: {} !'.format(data['id'])
 				known[data['id']]=True
 				data={}
+	print '{} warnings.'.format(len(warnings))
+	log_msgs.extend(warnings)
 	print 'Read {} images into memory.'.format(len(imgs))
 	return imgs
 
@@ -123,14 +134,16 @@ def saveBlogs(blogs, filename):
 	for p in blogs:
 		#attr=p.name.split('_')
 		#extf = attr[-1].split('.')
-		f.write(' <blog name="{}" seen="{}">\n'.format(
-						p.name, p.seen))
-		f.write('  <images>\n')
+		f.write(' <blog name="{}" seen="{}" score="{}">\n'.format(
+						p.name, p.seen, p.score))
+		f.write('  <images total="{}" local="{}">\n'.format(
+			len(p.images), len(p.proper_imgs)))
 		# existing files
 		for i in p.images:
 			if i:
 				if i.name:
-					f.write('   <img when="{}">{}</img>\n'.format(0,i.name))
+					f.write('   <img when="{}">{}</img>\n'.format(
+						p.images_times.get(i,0),i.name))
 				else:
 					f.write('   <img when="{}">{}</img>\n'.format(0,i))
 		f.write('  </images>\n')
@@ -147,9 +160,10 @@ def saveBlogs(blogs, filename):
 
 # loads image container records from XML file
 def loadBlogs(filename):
-	print 'Reading blog metadata from ', filename
+	print 'Reading blog metadata from', filename
 	records=[]
 	data={}
+	warnings=[]
 	for event, elem in ET.iterparse(filename, events=('start','end')):
 		# ON OPENING TAGS:
 		if event == 'start':
@@ -159,10 +173,15 @@ def loadBlogs(filename):
 			if elem.tag == 'images':
 				data['images'] = []
 			if elem.tag == 'img':
-				try:
-					data.get('images').append(elem.text)
-				except:
-					data['images']=[elem.text]
+				#TODO: date of retrieval
+				if elem.text:
+					try:
+						data.get('images').append(elem.text)
+					except:
+						data['images']=[elem.text]
+				else:
+					warnings.append('wtf! empty img element in {} record'.format(
+						data.get('name')))
 			# ream link lists
 			if elem.tag == 'links':
 				data['in'] = []
@@ -177,6 +196,8 @@ def loadBlogs(filename):
 			if elem.tag == 'blog':
 				records.append(data)
 				data = {}
+	print '{} warnings.'.format(len(warnings))
+	log_msgs.extend(warnings)
 	print 'Read {} blog objects.'.format(len(records))
 	return records
 

@@ -137,15 +137,16 @@ class Pict:
 		self.name=name
 		self.sources=[]
 		self.relates={} # TODO
-		#self.info="<unknown>"
-		#self.mode = ''
-		#self.size = (0,0)
-		#self.dim = 0
-		#self.ext = ''
-		#self.date = 0 # date of retrieval (timestamp)
+		self.info="<unknown>"
+		self.mode = ''
+		self.size = (0,0)
+		self.dim = 0
+		self.ext = ''
+		self.date = 0 # date of retrieval (timestamp)
 		self.url = None #TODO: implementieren
 		self.rating = 0
 		self.reviewed = 0 # timestamp of last appearance in browser
+		# if pil image is given, analyze that
 		if isinstance(image, pil.Image):
 			self.mode = image.mode
 			self.size = image.size
@@ -153,6 +154,7 @@ class Pict:
 			self.date = 0 # zusehen, dasz man das aus der datei holt
 			self.reviewed = 0
 		else:
+			# given data must be metadata dictionary
 			self.mode = image.get('mode','None')
 			self.size = image.get('size',(0,0))
 			self.url = image.get('url')
@@ -189,7 +191,6 @@ class Pict:
 		print 'no copy.'
 
 
-	
 	@property
 	def filename(self):
 		return '{}.{}'.format(self.name, self.ext)
@@ -275,6 +276,7 @@ class Pict:
 		ann.sort(key=lambda x:x[1], reverse=True)
 		return ann[:n]
 
+
 	# returns the n images most similar to this one.
 	# n is not limited by default
 	def most_similar(self, n=None):
@@ -283,6 +285,7 @@ class Pict:
 		if n:
 			res = res[:n]
 		return res
+
 
 	# look how two pictures are related
 	def compare(self, pict):
@@ -301,12 +304,17 @@ class Pict:
 			for source in p.sources:
 				print source.name,
 			print 
+
 	
 	# tostring
 	def __repr__(self):
+		orig = 'unknown'
+		if self.origin:
+			orig = self.origin.name
 		return u'<{3} {0}, orig: {1} {2}src r{4}>'.format(
-			self.info, self.origin, len(self.sources),
+			self.info, orig, len(self.sources),
 			self.name, '*'*self.rating)
+
 
 	# multiple lines of usefuil information
 	def details(self):
@@ -416,7 +424,6 @@ def connect(p,q,sim):
 	q.relates[p]=sim
 
 
-
 # update collection. filter removed files, clean references
 def sync():
 	for p in Pict.imgs.values():
@@ -468,7 +475,7 @@ def openurl(url, save=True):
 			pict.dim = int(m.group(1))
 		else:
 			pict.dim = pict.size[0]
-		if save == True:
+		if save:
 			image.save(pict.location)
 		del image
 		return pict
@@ -485,6 +492,8 @@ def openfile(path, filename):
 		if image:
 			name = idex.search(filename).group(1)
 			pict = Pict(name, image, path=path)
+			# TODO: use file metadata
+			# is this method even used??
 			del image
 			return pict
 	except Exception, e:

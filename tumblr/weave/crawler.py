@@ -183,7 +183,7 @@ def img_relevant(url):
 		#if p:
 			#print 'location {}\t dim {} > {} = {}'.format(
 				#p.location != None, dim_class(url), p.dim, dim_class(url)>p.dim)
-		return (p == None) or (p.location != None and dim_class(url) > p.dim)
+		return (p == None) or (p.path != None and dim_class(url) > p.dim)
 	print 'no id found'
 	return False
 

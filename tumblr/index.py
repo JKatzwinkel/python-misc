@@ -100,6 +100,10 @@ def crawl(seed, num=10):
 	return crawler.crawl(seed, n=num)
 
 
+# run page rank thingie
+def scores(n):
+	return tumblr.dist_scores(n=n)
+
 ##############################################################
 ####             Images / Blog IO                      #######
 ##############################################################
@@ -121,7 +125,9 @@ def saveBlogs(blogs, filename):
 
 # load XML dump
 def loadBlogs(filename):
+	print 'read in xml...'
 	records = inout.loadBlogs(filename)
+	print 'instantiate blog objects from imported records...'
 	blgs = [tumblr.opendump(rec) for rec in records]
 	# replace string identifiers in image sources lists
 	# with newly created Blog instances
@@ -130,46 +136,58 @@ def loadBlogs(filename):
 		#p.clean_sources()
 	return blgs
 
+# remove string identifiers from an image's link list, either by
+# replacing them with their corresponding instance, or 
+# by --deleting-- creating them
+def clean_sources(p):
+	src = p.sources[:]
+	p.sources = []
+	for s in src:
+		if s:
+			if isinstance(s, tumblr.Blog):
+				t = s
+			else:
+				t = tumblr.get(s)
+			if not t:
+				t = tumblr.create(s)
+			t.assign_img(p)
+
+
 # try to load images and blogs from default files
 def load():
+	print 'loading images.xml'
 	if os.path.exists('images.xml'):
 		loadImages('images.xml')
+	print 'loading blogs.xml'
 	if os.path.exists('blogs.xml'):
 		loadBlogs('blogs.xml')
 	# Check if images are still on disk!!
+	print 'checking local image copies'
 	picture.sync() #TODO
 	# clean image sources
+	print 'resolving blog-image links'
 	for p in pictures():
 		clean_sources(p)
+	# yeah! done!
+	print 'ok'
+	print 'imported {} images, {} of which are locally present ({}%),'.format(
+		len(picture.Pict.imgs), len(pictures()), 
+		100*len(pictures())/len(picture.Pict.imgs))
+	known = [t for t in blogs() if t.seen > 0]
+	print 'and {} blogs, {} of which we have actually been at ({}%).'.format(
+		len(blogs()), len(known),
+		100*len(known)/len(blogs()))
+	newsies = [p for p in pictures() if p.reviewed < 1]
+	if len(newsies)>0:
+		print '{} images are on disk, but are still to'.format(
+			len(newsies))
+		print 'be reviewed.'
 
 
 # save imgs and blogs to default files
 def save():
 	saveImages(picture.Pict.imgs.values(), 'images.xml')
 	saveBlogs(blogs(), 'blogs.xml')
-
-# goes through the given images list and changes neighbour
-# string identifiers into image instances
-# has to be done after importing XML dunp
-def reify(array):
-	res = [picture.get(a) for a in array]
-	return res
-
-# remove string identifiers from an image's link list, either by
-# replacing them with their corresponding instance, or 
-# by --deleting-- creating them
-def clean_sources(p):
-	src = []
-	for s in p.sources:
-		if s and not isinstance(s, tumblr.Blog):
-			obj = tumblr.get(s)
-			if obj:
-				src.append(obj)
-			else:
-				obj = tumblr.create('{}.tumblr.com'.format(s))
-				obj.assign_img(p)
-				src.append(obj)
-	p.sources = src
 
 
 # craft html page for groups of images
