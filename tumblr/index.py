@@ -97,7 +97,7 @@ def blogs():
 
 # kraeucht und flaeucht
 def crawl(seed, num=10):
-	crawler.crawl(seed, n=num)
+	return crawler.crawl(seed, n=num)
 
 
 ##############################################################

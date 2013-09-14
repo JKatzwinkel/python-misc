@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*- 
 
 import re
 from time import time
@@ -79,7 +80,7 @@ class Blog:
 				#link_ratio = 1+float(len(self.linked)+1)/(len(self.links)+1)
 				# kept img ratio
 				#kept_img = float(len(self.proper_imgs))/len(self.images)
-				kept_img = self.reviewed_imgs() /len(self.images)
+				kept_img = 1.*self.reviewed_imgs() /len(self.images)
 				# avg rating of hosted images
 				stars = self.avg_img_rating()
 				# avg rating of images at linked blogs
@@ -88,9 +89,10 @@ class Blog:
 					stars_out /= len(self.links)
 				# score is kept image ratio times avg stars plus
 				# avg incoming stars and outgoing stars
-				self._score = kept_img * stars + stars_in + stars_out
+				self._score = .001 + kept_img * (1+stars)**2 
+				self._score *= (.9+stars_in)*(.95+stars_out)**2
 			else:
-				self._score = stars_in / 10
+				self._score = stars_in / (1+sum([len(t.links) for t in self.linked]))
 		return self._score
 
 	@property
@@ -131,8 +133,8 @@ class Blog:
 
 	# text representation
 	def __repr__(self):
-		return '<{0}: {1}img, {2}cnx>'.format(
-			self.name, len(self.images), len(self.links) + len(self.linked))
+		return u'<{0}: {1}img, {2}/{3}io>'.format(
+			self.name, len(self.images), len(self.linked),len(self.links))
 
 	# url where this blog can be found
 	def url(self):
@@ -238,3 +240,17 @@ def queue(num=100):
 			res.append(choice(list(t.linked)))
 	res = filter(lambda t:t.seen<time()-6*3600, res)
 	return res[:num]
+
+# do some page rank-like stuff
+def dist_scores():
+	stars = lambda t: sum([p.rating for p in t.proper_imgs])
+	score = lambda t: float(stars(t)*2+len(t.reviewed_imgs()))
+	reg = {t:score(t) for t in blogs()}
+	dist = lambda t: sum([reg.get(l,0)/len(l.links) for l in t.linked])
+	for i in range(5):
+		reg = {t:score(t)+dist(t) for t in blogs()}
+		print '.',
+	for t in blogs():
+		t._score = reg.get(t)/100
+	print 'ok'
+	return reg

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*- 
 import Tkinter as tk
 from PIL import Image, ImageTk
 from time import time
@@ -384,6 +385,7 @@ def key(event):
 
 # Ok Go
 index.load()
+index.tumblr.dist_scores()
 
 # create tkinter window
 root = tk.Tk()

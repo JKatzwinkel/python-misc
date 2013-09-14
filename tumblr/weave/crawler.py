@@ -120,10 +120,10 @@ class Crawler:
 
 
 	def status(self):
-		temp = '{:4} < {:4} \t{:5} Img. \t {}: {:2.2}'
+		temp = '{:4} < {:4} \t{:5} Img. \t {}: {:2.2f}'
 		n = sum([len(l) for l in self.images.values()])
 		return temp.format(len(self.visited), len(self.frontier),
-			n, self.latest.name, self.latest.score)
+			n, self.latest.name, self.latest.score*100)
 
 	def message(self):
 		return self.msg
@@ -247,7 +247,7 @@ def crawl(url, n=30):
 	if not seed in query:
 		query = [seed] + query
 	# create crawler
-	crawler = Crawler(n, query=query[:10])
+	crawler = Crawler(n, query=query[:n])
 	
 	# wait for the crawler to be done
 	while crawler.crawling():
@@ -257,7 +257,7 @@ def crawl(url, n=30):
 
 	# now handle the collected image URLs
 	for t, imgs in crawler.images.items():
-		print t.name
+		print t
 		counter = 0
 		for img in imgs:
 			# check if image is already known

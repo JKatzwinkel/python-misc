@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*- 
 
 from PIL import Image as pil
 import os
@@ -303,10 +304,9 @@ class Pict:
 	
 	# tostring
 	def __repr__(self):
-		if len(self.sources) > 0:
-			return '<{0}, orig: {1} ({2} src)>'.format(
-				self.info, self.sources[0], len(self.sources))
-		return '<{0} - No record> '.format(self.info)
+		return u'<{3} {0}, orig: {1} {2}src r{4}>'.format(
+			self.info, self.origin, len(self.sources),
+			self.name, '*'*self.rating)
 
 	# multiple lines of usefuil information
 	def details(self):
