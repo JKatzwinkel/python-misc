@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*- 
 import Tkinter as tk
+from tkFont import Font, families
 from PIL import Image, ImageTk
 from time import time
 
@@ -10,11 +11,14 @@ import util
 
 # key: pict instance, value: (path, image)
 trash = {}
+# font registry for repeated use
+fonts = {}
 
 class Browser:
 	BROWSE='browse'
 	SINGLE='single'
 	DETAIL='detail'
+	BLOG='blog'
 	def __init__(self, root):
 		self.cur_imgs = [] # backup references against garbage coll.
 		self.img_reg = {} # registry to avoid disk access
@@ -41,7 +45,7 @@ class Browser:
 			self.choose(self.pool.pop()) # current image as Pict object
 			self.hist = [self.img] # history of recent images
 		else:
-			self.choose(self.hist[0])
+			self.img = self.hist[0]
 		# canvas
 		self.cnv = tk.Canvas(root, bg="black")
 		self.cnv.pack(side='top', fill='both', expand='yes')
@@ -53,7 +57,10 @@ class Browser:
 
 	def get_choices(self):
 		# suggest pictures with similiarity link to current
-		choices = dict(self.img.relates)
+		if self.mode != Browser.BLOG:
+			choices = dict(self.img.relates)
+		else:
+			choices = {}
 		# prefer pictures in pool,
 		# prefer newest pictures
 		for p in self.pool:
@@ -62,7 +69,7 @@ class Browser:
 			choices[p] = choices.get(p, 0)+boost
 		# calculate scores
 		for p, sim in choices.items():
-			score = (1+p.rating/3) * sim
+			score = (1+p.rating/5) * sim
 			for vote in self.new_votes:
 				adv = p.relates.get(vote)
 				if not adv:
@@ -79,6 +86,16 @@ class Browser:
 		self.img = pict
 		pict.reviewed = time()
 		self.changes = True
+
+
+################################################################
+################################################################
+##########                                           ###########
+##########           gui render stuff                ###########
+##########                                           ###########
+################################################################
+################################################################
+
 
 	# takes a Pict instance and returns a scaled (if size=(x,y) given)
 	# ImageTk.PhotoImage object.
@@ -119,12 +136,13 @@ class Browser:
 		y = 0
 		imgs=[]
 		cover=0
-		for p in self.hist[:15]:
+		for p in self.hist[1:15]:
 			img = self.load_thmb(p)
 			self.cnv.create_image((0,y), 
 				anchor=tk.NW, image=img)
-			self.cnv.create_text(0+4, y+4, anchor=tk.NW, 
-					font='Arial 12 bold', fill='white', text='*'*p.rating)
+			#self.cnv.create_text(0+4, y+4, anchor=tk.NW, 
+				#font='Arial 12 bold', fill='white', text='*'*p.rating)
+			self.mini_desc((img.width()+4, y+4),p)
 			if p == self.img:
 				self.cnv.create_rectangle((3,y+3,img.width()-3,y+img.height()-3),
 					outline='yellow', width='3')
@@ -142,9 +160,11 @@ class Browser:
 		img = self.load_img(self.img, size=(720, 740))
 		self.cur_imgs.append(img)
 		self.cnv.create_image((500,370), anchor=tk.CENTER, image=img) 
+		self.mini_desc((504-img.width()/2,14),self.img)
 		if trash.get(self.img):
-			self.cnv.create_text(500, 4, anchor=tk.CENTER, 
-					font='Arial 14 bold', fill='red', text='In Trash. Hit <Del> to Restore.')
+			self.cnv.create_text(500, 14, anchor=tk.CENTER, 
+					font='Arial 14 bold', fill='red', 
+					text='In Trash. Hit <Del> to Restore.')
 		# topleft= NW
 		# similars
 		posx = min([max([500+self.img.size[0]/2, 724]),784])
@@ -165,47 +185,104 @@ class Browser:
 				#self.cnv.create_text(1028-img.width(), y+4, anchor=tk.NW, 
 					#font='Arial 14 bold', fill='white', text='*'*s.rating)
 				# write little info caption
-				notes=[]
-				if s.rating>0:
-					notes.append('*'*s.rating)
-				sim = self.img.relates.get(s)
-				if sim:
-					notes.append('{:.1f}%'.format(sim*100))
-				days=util.days_since(s.date)
-				if days<7:
-					notes.append('new!\n({} days)'.format(int(days)))
-				days=int(util.days_since(s.reviewed))
-				if days > 31:
-					if days < 100:
-						notes.append('awaits review\n({} days)'.format(days))
-					else:
-						notes.append('awaits review!')
-				if s.origin:
-					notes.append(s.origin.name)
-				self.cnv.create_text(1020-img.width(), y+4, anchor=tk.NE, 
-					font='Arial 9', justify='right', fill='white', 
-					text='\n'.join(notes))
+				self.mini_desc((1020-img.width(),y+4),s,justify='right')
+				#self.cnv.create_text(1020-img.width(), y+4, anchor=tk.NE, 
+					#font='Arial 9', justify='right', fill='white', 
+					#text='\n'.join(notes))
 				y += img.height()
 				self.cur_imgs.append(img)
 				self.choices.append(s)
 
-	def text(self, output, pos):
-		lines = output.split('\n')
+
+	# single image view
+	def display_single(self):
+		w,h=self.img.size
+		#if w>760 or h>740:
+		img = self.load_img(self.img)
+		self.cnv.create_image((500,370), anchor=tk.CENTER, image=img)
+		imgtxt=self.img.details()
+		x,y = self.text(imgtxt, (4,4))
+		medians = map(lambda b:b*8, self.img.histogram.mediane)
+		if len(medians)<3:
+			medians *= 3
+		med_col = '#{}'.format(''.join([('%02x' % b) for b in medians]))
+		self.cnv.create_rectangle((10,y+20,100,y+84),
+			outline='#fff',
+			fill=med_col)
+		self.text('Color code {}'.format(med_col), (0,y+90))
+		if self.img.origin:
+			blogtxt = self.img.origin.details()
+			self.text(blogtxt, (0,y+130))
+		self.text('Source: {}'.format(self.img.url), (0,724))
+		self.cur_imgs = [img]
+
+
+	# text output
+	def text(self, output, pos, anchor=tk.NW, justify='left',
+		font='Arial', size=12, decoration='', shadow=True, split=False):
+		# http://infohost.nmt.edu/tcc/help/pubs/tkinter/web/create_text.html
+		# http://infohost.nmt.edu/tcc/help/pubs/tkinter/web/fonts.html
+		#size = util.grep('[1-9]?[0-9]{1,2}', font, n=0)
+		# choose font
+		fid='{} {} {}'.format(font, size, decoration)
+		f = fonts.get(fid)
+		if not f:
+			w = ['normal', 'bold'][decoration.count('bold')>0]
+			s = ['roman', 'italic'][decoration.count('italic')>0]
+			u = int(decoration.count('underline')>0)
+			f = Font(family=font, size=-size, weight=w,
+				slant=s, underline=u)
+			fonts[fid]=f
+		# start aligning output
 		x, y = pos
-		for n, line in enumerate(lines):
-			self.cnv.create_text(x, y+n*13+1, anchor=tk.NW, 
-				font='Arial 12',
+		for xx,yy in [(0,1),(1,0),(0,-1),(-1,0),(1,1),(2,0)]:
+			self.cnv.create_text(x+xx, y+yy, anchor=anchor, 
+				font=f, 
+				justify=justify,
 				fill='black',
-				text=line)
-			self.cnv.create_text(x+1, y+n*13, anchor=tk.NW, 
-				font='Arial 12',
-				fill='black',
-				text=line)
-			self.cnv.create_text(x, y+n*13, anchor=tk.NW, 
-				font='Arial 12',
-				fill='white',
-				text=line)
-		return y+len(lines)*13
+				text=output)
+		self.cnv.create_text(x, y, anchor=anchor, 
+			font=f, 
+			justify=justify,
+			fill='white',
+			text=output)
+		return x+f.measure(output), y+len(output.split('\n'))*size
+
+
+	# places a short informative text about e.g. a thumbnail
+	# returns bounding box of written text or whatever
+	def mini_desc(self, pos, p, justify='left'):
+		a=tk.NW
+		if justify=='right':
+			a=tk.NE
+		desc = p.short_desc()
+		sim = self.img.relates.get(p)
+		if sim:
+			desc = '\n'.join(['{:.1f}%'.format(sim*100),desc])
+		return self.text(desc, pos, anchor=a, 
+			justify=justify, font='Arial', size=10)
+
+
+	# places a warning sign
+	def message(self, text):
+		w = 400
+		h = w/2**.5
+		x = 1024/2-400/2
+		y = 780/2-282/2
+		self.cnv.create_rectangle((3,y+3,x+w,y+h),
+			fill='black', outline='red', width='5')
+		self.text(text, (x+10,y+10), font='Liberation Serif')
+
+
+
+
+################################################################
+################################################################
+##########                                           ###########
+##########             functionality                 ###########
+##########                                           ###########
+################################################################
+################################################################
 
 
 	def forward(self, ix):
@@ -234,6 +311,8 @@ class Browser:
 			self.choose(self.hist[0])
 		self.display()
 
+	# redo one step in history.
+	# if not in history, move forward
 	def replay(self, key):
 		if self.img in self.hist:
 			i = self.hist.index(self.img)
@@ -246,32 +325,10 @@ class Browser:
 			self.forward(0)
 
 
-	# single image view
-	def display_single(self):
-		w,h=self.img.size
-		#if w>760 or h>740:
-		img = self.load_img(self.img)
-		self.cnv.create_image((500,370), anchor=tk.CENTER, image=img)
-		imgtxt=self.img.details()
-		y = self.text(imgtxt, (0,0))
-		medians = map(lambda b:b*8, self.img.histogram.mediane)
-		if len(medians)<3:
-			medians *= 3
-		med_col = '#{}'.format(''.join([('%02x' % b) for b in medians]))
-		self.cnv.create_rectangle((10,y+20,100,y+84),
-			outline='#fff',
-			fill=med_col)
-		self.text('Color code {}'.format(med_col), (0,y+90))
-		if self.img.origin:
-			blogtxt = self.img.origin.details()
-			self.text(blogtxt, (0,y+130))
-		self.text('Source: {}'.format(self.img.url), (0,724))
-		self.cur_imgs = [img]
-
 
 	def zoom(self, key):
 		# determine whether to change state		
-		if self.mode == Browser.BROWSE:
+		if self.mode in [Browser.BROWSE, Browser.BLOG]:
 			self.cnv.create_rectangle((0,0,1024,740), fill='black')
 			self.display_single()
 			self.mode = Browser.SINGLE
@@ -287,7 +344,7 @@ class Browser:
 
 
 	def update(self, key):
-		if self.mode == Browser.BROWSE:
+		if self.mode in [Browser.BROWSE, Browser.BLOG]:
 			self.display()
 		elif self.mode == Browser.SINGLE:
 			self.zoom(key)
@@ -308,12 +365,22 @@ class Browser:
 				self.changes = True
 				self.update(key)
 
+	def blog_mode(self, key):
+		if self.mode == Browser.BLOG:
+			self.mode = Browser.BROWSE
+		else:
+			if self.img.origin:
+				self.pool = self.img.origin.proper_imgs
+				self.mode = Browser.BLOG
+				self.update(key)
+
 	def quit(self, key):
 		if self.changes:
 			print "saving changes..."
 			index.save()
 		root.quit()
 
+	# delete image/trash it
 	def delete(self, key):
 		trashed = trash.get(self.img)
 		if trashed:
@@ -339,6 +406,8 @@ class Browser:
 	# compute similarities for current image
 	def compute_sim(self, key):
 		print 'compute similarities for', self.img
+		self.message('Compute similarities to {} imgs'.format(
+			picture.pictures()))
 		res = []
 		for p in picture.pictures():
 			if p != self.img:
@@ -356,6 +425,21 @@ class Browser:
 		print 'done. found {} images.'.format(len(res))
 		self.update(key)
 
+	# compute scores of blogs using page rank
+	def compute_scores(self, key):
+		print 'running page rank. yay!'
+		self.message('\n'.join([
+			'Computing blog scores using page rank:',
+			'Iteration steps: 10',
+			'','This might take a while...']))
+		scores = index.scores(10)
+		scs = sorted(scores.items(), key=lambda t:t[1])
+		self.update(key)
+		print 'ok, got new blog scores. highest is {} with {}.'.format(
+			scs[-1][0], scs[-1][1])
+		self.changes=True
+
+
 
 handlers={113:Browser.back,
 					114:Browser.replay,
@@ -365,7 +449,9 @@ handlers={113:Browser.back,
 					9:Browser.quit,
 					22:Browser.delete,
 					119:Browser.delete,
-					39:Browser.compute_sim}
+					39:Browser.compute_sim,
+					40:Browser.compute_scores,
+					56:Browser.blog_mode}
 
 def key(event):
   print "pressed", event.keycode
@@ -385,7 +471,6 @@ def key(event):
 
 # Ok Go
 index.load()
-index.tumblr.dist_scores()
 
 # create tkinter window
 root = tk.Tk()
@@ -396,5 +481,12 @@ root.bind("<Key>", key)
 # instantiate browser class
 browser = Browser(root)
 
+# screen size:
+w = root.winfo_screenwidth()
+h = root.winfo_screenheight() 
+print 'screen size {}x{}'.format(w,h)
 # start the event loop
 root.mainloop()
+
+#for f in families():
+	#print f

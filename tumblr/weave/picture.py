@@ -167,8 +167,8 @@ class Pict:
 			self.sources = image.get('hosts', [])
 			self.rating = int(image.get('stars', 0))
 			self.reviewed = float(image.get('reviewed', 0))
-
-		self.info='{0} {1}'.format(self.size, self.mode)
+		# register
+		self.info='{0} {1}'.format(self.size, self.mode)#TODO we need?
 		Pict.imgs[name]=self
 		#print '\r{0}'.format(len(Pict.imgs)),
 
@@ -330,6 +330,25 @@ class Pict:
 			'Histogram channel medians: {}'.format(
 				map(lambda v:v*8, self.histogram.mediane))
 			])
+
+	# short description of image for mult line output
+	def short_desc(self):
+		notes=[]
+		if self.rating>0:
+			notes.append('*'*self.rating)
+		days=util.days_since(self.date)
+		if days<7:
+			notes.append('new!\n({} days)'.format(int(days)))
+		days=int(util.days_since(self.reviewed))
+		if days > 31:
+			if days < 100:
+				notes.append('awaits review\n({} days)'.format(days))
+			else:
+				notes.append('awaits review!')
+		if self.origin:
+			notes.append(self.origin.name)
+		return '\n'.join(notes)
+
 
 	# del image after call, ok? memory perspective!
 	def upgrade(self, image, url, save=True):

@@ -173,11 +173,11 @@ class Blog:
 		if len(self.linked)>0:
 			infos.append('Linked by {} blogs with an average score of {:.2f}'.format(
 				len(self.linked), 
-				100*sum([t.score for t in self.linked])/len(self.linked)))
+				sum([t.score for t in self.linked])/len(self.linked)))
 		if len(self.links)>0:
 			infos.append('Links {} blogs with an average score of {:.2f}'.format(
 				len(self.links), 
-				100*sum([t.score for t in self.links])/len(self.links)))
+				sum([t.score for t in self.links])/len(self.links)))
 		return '\n'.join(infos)
 
 
@@ -221,7 +221,7 @@ def opendump(slots):
 	if not t:
 		t = create(name, time=last_seen)
 	t.seen = last_seen
-	t._score = slots.get('score')
+	t._score = float(slots.get('score',0))
 	# connect related image identifiers, whereever possible
 	# using reification as well
 	for p in slots.get('images', []):
@@ -264,6 +264,7 @@ def queue(num=100):
 
 # do some page rank-like stuff
 def dist_scores(n=5):
+	print 'run page rank for {} steps.'.format(n)
 	# total amount of stars a blog's images archieved
 	stars = lambda t: sum([p.rating for p in t.proper_imgs])
 	# spawn score. total stars times review ratio
@@ -275,7 +276,7 @@ def dist_scores(n=5):
 	# iterate n steps
 	for i in range(n):
 		reg = {t:score(t)+dist(t) for t in blogs()}
-		print '.',
+	# save new scores to blogs objects
 	for t in blogs():
 		t._score = reg.get(t)
 	print 'ok'
