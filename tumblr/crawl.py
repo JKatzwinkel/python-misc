@@ -12,7 +12,7 @@ hi=sorted(scores.items(), key=lambda t:t[1])
 
 print 'top 5:'
 for i,t in enumerate(hi[-5:][::-1]):
-	print i+1, t[0].name, t[0].score*100
+	print i+1, t[0].name, t[0].score
 
 #seed = sorted(index.blogs(), key=lambda t:len(t.proper_imgs))[-1]
 seed = sorted(index.blogs(), key=lambda t:t.score)[-1]

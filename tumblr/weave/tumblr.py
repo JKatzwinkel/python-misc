@@ -222,6 +222,7 @@ def opendump(slots):
 		t = create(name, time=last_seen)
 	t.seen = last_seen
 	t._score = float(slots.get('score',0))
+	t.url = slots.get('url')
 	# connect related image identifiers, whereever possible
 	# using reification as well
 	for p in slots.get('images', []):
@@ -281,3 +282,4 @@ def dist_scores(n=5):
 		t._score = reg.get(t)
 	print 'ok'
 	return reg
+

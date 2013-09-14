@@ -19,6 +19,7 @@ class Browser:
 	SINGLE='single'
 	DETAIL='detail'
 	BLOG='blog'
+	POPULAR='pop'
 	def __init__(self, root):
 		self.cur_imgs = [] # backup references against garbage coll.
 		self.img_reg = {} # registry to avoid disk access
@@ -27,11 +28,9 @@ class Browser:
 		self.mode = Browser.BROWSE
 		self.changes = False # changes to be saved?
 		self.new_votes = set() # keep track of new ratings
+		self.pool=[]
 		# init img tracking
-		pics = picture.to_review()
-		if len(pics)<1:
-			pics = picture.favorites()[:50]
-		self.pool = set(pics)
+		self.repool()
 		#pics = sorted(pics, key=lambda p:p.rating)
 		# repopulate history
 		self.hist = []
@@ -55,7 +54,17 @@ class Browser:
 		self.display()
 
 
+	# init default image selection from favorites and newsies
+	def repool(self):
+		pics = picture.to_review()
+		if len(pics)<3:
+			pics.extend(picture.favorites()[:50])
+		self.pool.extend(pics)
+		return pics
+
+	# make collection to choose from given current image
 	def get_choices(self):
+		print time(), 'enter get_choices'
 		# suggest pictures with similiarity link to current
 		if self.mode != Browser.BLOG:
 			choices = dict(self.img.relates)
@@ -67,6 +76,13 @@ class Browser:
 			boost = min(1.8,util.days_since(p.reviewed)/99)
 			boost += 1.5/(1+util.days_since(p.date))
 			choices[p] = choices.get(p, 0)+boost
+		# not enough candidates? fill up with favies!
+		# TODO: need we?
+		#if len(choices)<10:
+			#favies=picture.favorites()
+			#for i in range(10-len(choices)):
+				#p = favies.pop(0)
+				#choices[p] = p.relates.get(self.img,0)
 		# calculate scores
 		for p, sim in choices.items():
 			score = (1+p.rating/5) * sim
@@ -78,6 +94,7 @@ class Browser:
 			choices[p] = score
 		# return candidates ordered by highest score desc.
 		choices = sorted(choices.items(), key=lambda t:t[1])
+		print time(), 'return get_choices'
 		return [t[0] for t in choices[::-1]]
 
 
@@ -127,9 +144,9 @@ class Browser:
 		return thmb
 
 
-
-
+	# assemble displayal of main viewing mode
 	def display(self):
+		print time(), 'enter display'
 		self.cur_imgs = [] # keep ref for objects (garbage coll)
 		self.cnv.create_rectangle((0,0,1024,740), fill='black')
 		# history
@@ -192,6 +209,8 @@ class Browser:
 				y += img.height()
 				self.cur_imgs.append(img)
 				self.choices.append(s)
+		print time(), 'return from display'
+
 
 
 	# single image view
@@ -328,7 +347,7 @@ class Browser:
 
 	def zoom(self, key):
 		# determine whether to change state		
-		if self.mode in [Browser.BROWSE, Browser.BLOG]:
+		if self.mode in [Browser.BROWSE, Browser.BLOG, Browser.POPULAR]:
 			self.cnv.create_rectangle((0,0,1024,740), fill='black')
 			self.display_single()
 			self.mode = Browser.SINGLE
@@ -344,10 +363,12 @@ class Browser:
 
 
 	def update(self, key):
-		if self.mode in [Browser.BROWSE, Browser.BLOG]:
+		print time(), 'enter update'
+		if self.mode in [Browser.BROWSE, Browser.BLOG, Browser.POPULAR]:
 			self.display()
 		elif self.mode == Browser.SINGLE:
 			self.zoom(key)
+		print time(), 'return update'
 
 	def page_up(self, key):
 		if key is 81:
@@ -365,14 +386,29 @@ class Browser:
 				self.changes = True
 				self.update(key)
 
+	# suggest only images from same blog as current
 	def blog_mode(self, key):
 		if self.mode == Browser.BLOG:
 			self.mode = Browser.BROWSE
+			self.repool()
+			self.update(key)
 		else:
 			if self.img.origin:
 				self.pool = self.img.origin.proper_imgs
 				self.mode = Browser.BLOG
 				self.update(key)
+
+	# suggest only images with more than one source
+	def pop_mode(self, key):
+		if self.mode == Browser.POPULAR:
+			self.mode = Browser.BROWSE
+			self.repool()
+			self.update(key)
+		else:
+			self.pool = [p for p in picture.pictures() if len(p.sources)>1]
+			self.mode = Browser.POPULAR
+			self.update(key)
+
 
 	def quit(self, key):
 		if self.changes:
@@ -451,7 +487,8 @@ handlers={113:Browser.back,
 					119:Browser.delete,
 					39:Browser.compute_sim,
 					40:Browser.compute_scores,
-					56:Browser.blog_mode}
+					56:Browser.blog_mode,
+					33:Browser.pop_mode}
 
 def key(event):
   print "pressed", event.keycode

@@ -123,7 +123,7 @@ class Crawler:
 		temp = '{:4} < {:4} \t{:5} Img. \t {}: {:2.2f}'
 		n = sum([len(l) for l in self.images.values()])
 		return temp.format(len(self.visited), len(self.frontier),
-			n, self.latest.name, self.latest.score*100)
+			n, self.latest.name, self.latest.score)
 
 	def message(self):
 		return self.msg
@@ -287,6 +287,7 @@ def crawl(url, n=30):
 					else:
 						# image known. assign to current blog and f.o.
 						t.assign_img(pict)
+						pict.url = best
 						pict = None
 				# if downloading was succesful, append it to list of 
 				# retrieved images and assign it to the blog it appeared on
@@ -298,7 +299,7 @@ def crawl(url, n=30):
 					#print '   {} - {} {}'.format(pict.name, pict.dim, pict.size)
 					print pict
 					counter += 1
-					if counter > 5:
+					if counter > max(5,t.score):
 						break
 			else:
 				print 'Keine Id gefunden: {}. omitting.'.format(img)
