@@ -201,12 +201,13 @@ class Pict:
 			return None
 	@property
 	def set_location(self, loc):
-		if self.loc != None:
+		if loc != None:
 			#if re.match('_[1-9][0-9]{2,3}\.(jpg|png)$', loc):
-			if log.endswith('_{}.{}'.format(self.dim, self.ext)):
+			#FIXME: wtf is this shit???
+			if loc.endswith('_{}.{}'.format(self.dim, self.ext)):
 				self.path = os.sep.join(loc.split(os.sep)[:-1])
 		else:
-			self.path = loc
+			self.path = None
 
 	
 	@property
@@ -431,7 +432,8 @@ def delete(p):
 		if os.path.exists(p.location):
 			print 'delete image', p
 			os.remove(p.location)
-			p.location = None
+			p.path = None
+
 ##############################################################
 ##############         Image IO         ######################
 ##############################################################

@@ -7,6 +7,9 @@ import weave.picture as picture
 import weave.tumblr as tumblr
 import util
 
+# key: pict instance, value: (path, image)
+trash = {}
+
 class Browser:
 	BROWSE='browse'
 	SINGLE='single'
@@ -58,7 +61,7 @@ class Browser:
 			choices[p] = choices.get(p, 0)+boost
 		# calculate scores
 		for p, sim in choices.items():
-			score = (1+p.rating/2) * sim
+			score = (1+p.rating/3) * sim
 			for vote in self.new_votes:
 				adv = p.relates.get(vote)
 				if not adv:
@@ -124,6 +127,9 @@ class Browser:
 			if p == self.img:
 				self.cnv.create_rectangle((3,y+3,img.width()-3,y+img.height()-3),
 					outline='yellow', width='3')
+			if trash.get(p):
+				self.cnv.create_text(img.width()-4, y+4, anchor=tk.NE, 
+						font='Arial 14 bold', fill='red', text='X')
 			y += img.height()
 			#imgs.append((img, (0,y), p.rating))
 			self.cur_imgs.append(img)
@@ -135,6 +141,9 @@ class Browser:
 		img = self.load_img(self.img, size=(720, 740))
 		self.cur_imgs.append(img)
 		self.cnv.create_image((500,370), anchor=tk.CENTER, image=img) 
+		if trash.get(self.img):
+			self.cnv.create_text(500, 4, anchor=tk.CENTER, 
+					font='Arial 14 bold', fill='red', text='In Trash. Hit <Del> to Restore.')
 		# topleft= NW
 		# similars
 		posx = min([max([500+self.img.size[0]/2, 724]),784])
@@ -229,7 +238,7 @@ class Browser:
 			i = self.hist.index(self.img)
 			if i > 0:
 				self.choose(self.hist[i-1])
-				self.display()
+				self.update(key)
 			else:
 				self.forward(0)
 		else:
@@ -305,14 +314,26 @@ class Browser:
 		root.quit()
 
 	def delete(self, key):
-		index.picture.delete(self.img)
-		if self.img in self.hist:
-			i = self.hist.index(self.img)
-			self.hist = self.hist[i:]
-		self.replay(0)
-		self.mode = Browser.BROWSE
-		self.update(key)
-		self.changes = True
+		trashed = trash.get(self.img)
+		if trashed:
+			path, img = trashed
+			self.img.path = path
+			self.img.upgrade(img, self.img.url, save=True)
+			del trash[self.img]
+			self.update(key)
+		else:
+			# save copy to trash
+			trash[self.img] = (self.img.path, self.img.load())
+			# delete image from disk. TODO: not too smart, isn't it?
+			index.picture.delete(self.img)
+			# redo history
+			if self.img in self.hist:
+				i = self.hist.index(self.img)
+				self.hist = self.hist[i:]
+			self.replay(0)
+			#self.mode = Browser.BROWSE
+			self.update(key)
+			self.changes = True
 
 	# compute similarities for current image
 	def compute_sim(self, key):

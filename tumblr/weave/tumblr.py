@@ -148,7 +148,7 @@ class Blog:
 			ratings /= len(self.proper_imgs)
 		infos = [
 			self.name,
-			'Score: {}'.format(int(self.score*100)),
+			'Score: {:.2f}'.format(self.score*100),
 			'Last visit: {}'.format(util.time_span_str(self.seen)),
 			'Retrieved images: {}'.format(len(self.images)),
 			'Images kept on disk: {} ({}%)'.format(len(self.proper_imgs), 

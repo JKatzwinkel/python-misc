@@ -258,6 +258,7 @@ def crawl(url, n=30):
 	# now handle the collected image URLs
 	for t, imgs in crawler.images.items():
 		print t.name
+		counter = 0
 		for img in imgs:
 			# check if image is already known
 			# and if we can extract its Id
@@ -296,6 +297,9 @@ def crawl(url, n=30):
 					pict.url = best
 					#print '   {} - {} {}'.format(pict.name, pict.dim, pict.size)
 					print pict
+					counter += 1
+					if counter > 5:
+						break
 			else:
 				print 'Keine Id gefunden: {}. omitting.'.format(img)
 	# Puh endlich fertig!
