@@ -26,6 +26,7 @@ class Browser:
 		self.thmb_reg = {} # thumbnail registry to avoid resize
 		self.preview_reg = {} # preview registry to avoid resize
 		self.mode = Browser.BROWSE
+		self.redraw = False # set true to redraw gui
 		self.changes = False # changes to be saved?
 		self.new_votes = set() # keep track of new ratings
 		self.pool=[]
@@ -105,6 +106,18 @@ class Browser:
 		self.changes = True
 
 
+	# free some memory by deleting old imgs from registries
+	def free_mem(self):
+		for p in self.hist[10:]:
+			if self.img_reg.get(p):
+				del self.img_reg[p]
+			if self.preview_reg.get(p):
+				del self.preview_reg[p]
+			if self.thmb_reg.get(p):
+				del self.thmb_reg[p]
+			else:
+				return
+
 ################################################################
 ################################################################
 ##########                                           ###########
@@ -118,29 +131,42 @@ class Browser:
 	# ImageTk.PhotoImage object.
 	def load_img(self, pict, size=None):
 		w,h = pict.size
-		img = self.img_reg.get(pict)
-		if not img:
-			img = pict.load()
-			self.img_reg[pict] = img
 		if size:
-			mw,mh = size
-			ratio = min([float(mw)/w, float(mh)/h])
-			img = img.resize((int(w*ratio),int(h*ratio)), Image.ANTIALIAS)
-		img = ImageTk.PhotoImage(img)
+			img = self.preview_reg.get(pict)
+			if not img:
+				im = self.img_reg.get(pict)
+				if not im:
+					im = pict.load()
+					self.img_reg[pict] = im
+				mw,mh = size
+				ratio = min([float(mw)/w, float(mh)/h])
+				im = im.resize((int(w*ratio),int(h*ratio)), Image.ANTIALIAS)
+				img = ImageTk.PhotoImage(im)
+				del im
+				self.preview_reg[pict] = img
+		else:
+			im = self.img_reg.get(pict)
+			if not im:
+				im = pict.load()
+				self.img_reg[pict] = im
+			img = ImageTk.PhotoImage(im)
+			del im
 		return img
 
 	# retrieve thumbnail for Pict object
 	def load_thmb(self, pict):
-		img = self.img_reg.get(pict)
-		if not img:
-			img = pict.load()
-			self.img_reg[pict] = img
-		thmb = self.thmb_reg.get(img)
+		thmb = self.thmb_reg.get(pict)
 		if not thmb:
+			im = self.img_reg.get(pict)
+			if not im:
+				im = pict.load()
 			w,h = pict.size
 			ratio = min([140./w, 140./h])
-			thmb = img.resize((int(w*ratio),int(h*ratio)), Image.LINEAR)
-			thmb = ImageTk.PhotoImage(thmb)
+			img = im.resize((int(w*ratio),int(h*ratio)), Image.LINEAR)
+			del im
+			thmb = ImageTk.PhotoImage(img)
+			del img
+			self.thmb_reg[pict] = thmb
 		return thmb
 
 
@@ -316,15 +342,16 @@ class Browser:
 			# forward and paint
 			self.choose(self.choices[ix])
 			self.hist.insert(0,self.img)
-			self.display()
+			print 'imgs in history:', len(self.hist)
 		else:
-			self.pool = set(picture.favorites()[:50])
+			self.pool.extend(picture.favorites()[:50])
+		self.redraw=True
 
 
 	def back(self, key):
 		if self.img in self.hist:
 			i = self.hist.index(self.img)
-			if i < min([len(self.hist)-1, 15]):
+			if i < min([len(self.hist)-1, 7]):
 				self.choose(self.hist[i+1])
 		else:
 			self.choose(self.hist[0])
@@ -337,7 +364,7 @@ class Browser:
 			i = self.hist.index(self.img)
 			if i > 0:
 				self.choose(self.hist[i-1])
-				self.update(key)
+				self.redraw=True
 			else:
 				self.forward(0)
 		else:
@@ -364,11 +391,14 @@ class Browser:
 
 	def update(self, key):
 		print time(), 'enter update'
+		self.redraw=False
 		if self.mode in [Browser.BROWSE, Browser.BLOG, Browser.POPULAR]:
 			self.display()
 		elif self.mode == Browser.SINGLE:
 			self.zoom(key)
+		self.free_mem()
 		print time(), 'return update'
+
 
 	def page_up(self, key):
 		if key is 81:
@@ -376,7 +406,8 @@ class Browser:
 				self.img.rating += 1
 				self.changes = True
 				self.new_votes.add(self.img)
-				self.update(key)
+				self.redraw=True
+
 
 	def page_down(self, key):
 		if key is 89:
@@ -384,60 +415,67 @@ class Browser:
 				self.img.rating = self.img.rating-1
 				self.new_votes.add(self.img)
 				self.changes = True
-				self.update(key)
+				self.redraw=True
 
 	# suggest only images from same blog as current
 	def blog_mode(self, key):
 		if self.mode == Browser.BLOG:
 			self.mode = Browser.BROWSE
 			self.repool()
-			self.update(key)
+			self.redraw=True
 		else:
 			if self.img.origin:
 				self.pool = self.img.origin.proper_imgs
 				self.mode = Browser.BLOG
-				self.update(key)
+				self.redraw=True
 
 	# suggest only images with more than one source
 	def pop_mode(self, key):
 		if self.mode == Browser.POPULAR:
 			self.mode = Browser.BROWSE
 			self.repool()
-			self.update(key)
+			self.redraw=True
 		else:
 			self.pool = [p for p in picture.pictures() if len(p.sources)>1]
 			self.mode = Browser.POPULAR
-			self.update(key)
+			self.redraw=True
 
 
 	def quit(self, key):
+		if len(trash)>0:
+			print 'emptying trash: delete {} images'.format(len(trash))
+			for p, path in trash.items():
+				# delete image from disk.
+				index.picture.delete(p)
+			print 'trash empty'
 		if self.changes:
 			print "saving changes..."
 			index.save()
 		root.quit()
 
+
 	# delete image/trash it
 	def delete(self, key):
 		trashed = trash.get(self.img)
 		if trashed:
-			path, img = trashed
+			path = trashed
 			self.img.path = path
-			self.img.upgrade(img, self.img.url, save=True)
+			#self.img.upgrade(img, self.img.url, save=True)
 			del trash[self.img]
-			self.update(key)
+			self.redraw=True
 		else:
 			# save copy to trash
-			trash[self.img] = (self.img.path, self.img.load())
-			# delete image from disk. TODO: not too smart, isn't it?
-			index.picture.delete(self.img)
+			trash[self.img] = self.img.path#, self.img.load())
 			# redo history
 			if self.img in self.hist:
 				i = self.hist.index(self.img)
 				self.hist = self.hist[i:]
+				print 'imgs in history:', len(self.hist)
 			self.replay(0)
 			#self.mode = Browser.BROWSE
-			self.update(key)
+			self.redraw=True
 			self.changes = True
+
 
 	# compute similarities for current image
 	def compute_sim(self, key):
@@ -459,7 +497,8 @@ class Browser:
 						#self.cur_imgs.append(img)
 						#x += img.width()
 		print 'done. found {} images.'.format(len(res))
-		self.update(key)
+		self.redraw=True
+
 
 	# compute scores of blogs using page rank
 	def compute_scores(self, key):
@@ -470,7 +509,7 @@ class Browser:
 			'','This might take a while...']))
 		scores = index.scores(10)
 		scs = sorted(scores.items(), key=lambda t:t[1])
-		self.update(key)
+		self.redraw=True
 		print 'ok, got new blog scores. highest is {} with {}.'.format(
 			scs[-1][0], scs[-1][1])
 		self.changes=True
@@ -491,7 +530,7 @@ handlers={113:Browser.back,
 					33:Browser.pop_mode}
 
 def key(event):
-  print "pressed", event.keycode
+  print time(), "pressed", event.keycode
   if event.keycode in range(10,20):
   	browser.forward(event.keycode-10)
 
@@ -499,6 +538,9 @@ def key(event):
   f = handlers.get(event.keycode)
   if f:
   	f(browser, event.keycode)
+  if browser.redraw:
+  	browser.update(event.keycode)
+  print time(), 'leave keyhandler'
 
    #if len(browser.img.relates.keys()) > 0:
    	#browser.img = browser.img.relates.keys()[0]

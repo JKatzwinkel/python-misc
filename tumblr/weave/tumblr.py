@@ -52,7 +52,9 @@ class Blog:
 
 	
 	# interlinks a blog and an image
+	# returns true if link hadnt been there so far
 	def assign_img(self, img, time=None):
+		res = False
 		if img:
 			if isinstance(img, picture.Pict):
 				pict = img
@@ -65,15 +67,19 @@ class Blog:
 				if not pict in self.images:
 					self.images.add(pict)
 					self.images_times[pict] = time
+					res = True
 				# add blog ref to img obj
 				if not self in pict.sources:
 					pict.sources.append(self)
+					res = True
 				#print 'assigning {} to {}.'.format(pict.name, self.name)
 			else:
 				if not img in self.images:
 					self.images.add(img)
+					res = True
 		else:
 			print 'tumblr.assign_img: invalid img ref. wtf!!!'
+		return res
 
 	
 	# how many of the images that this blog featured did remain on disk
@@ -222,7 +228,6 @@ def opendump(slots):
 		t = create(name, time=last_seen)
 	t.seen = last_seen
 	t._score = float(slots.get('score',0))
-	t.url = slots.get('url')
 	# connect related image identifiers, whereever possible
 	# using reification as well
 	for p in slots.get('images', []):
@@ -247,18 +252,16 @@ def opendump(slots):
 #TODO rewrite!
 def queue(num=100):
 	seed = sorted(Blog.blogs.values(), key=lambda t:t.score, reverse=True)
-	seed = filter(lambda t:t.score > .05, seed)
-	seed = filter(lambda t:t.seen<time()-6*3600, seed)
 	res = []
 	for t in seed:
 		res.append(t)
 		#res.extend(t.links)
 		#res.extend(t.linked)
-		if len(t.links)>0:
-			res.append(choice(list(t.links)))
+		#if len(t.links)>0:
+			#res.append(choice(list(t.links)))
+		res.extend(list(t.links))
 		if len(t.linked)>0:
 			res.append(choice(list(t.linked)))
-	res = filter(lambda t:t.seen<time()-6*3600, res)
 	return res[:num]
 
 

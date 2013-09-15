@@ -358,7 +358,7 @@ class Pict:
 			self.dim = int(m.group(1))
 		else:
 			self.dim = image.size[0] # TODO: korrekt?
-		if save == True:
+		if save:
 			image.save(self.location)
 		self.url = url
 		self.size = image.size
@@ -370,7 +370,7 @@ class Pict:
 	def download(self, url=None, save=True):
 		if not url:
 			url = self.url
-		image = util.inout.open_img_url(self.url)
+		image = util.inout.open_img_url(url)
 		self.upgrade(image, url, save=save)
 		return image
 
@@ -487,7 +487,7 @@ def openurl(url, save=True):
 			#else:
 				#return pict
 		pict = Pict(name, image) #TODO
-		pict.url = url
+		pict.url = url #TODO: why not pict.upgrade(...)?
 		pict.ext = url.split('.')[-1]
 		m = re.search('_([1-9][0-9]{2,3})\.', url)
 		if m:

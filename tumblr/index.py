@@ -182,6 +182,23 @@ def load():
 		print '{} images are on disk, but are still to'.format(
 			len(newsies))
 		print 'be reviewed.'
+	popsies=[p for p in pictures() if len(p.sources)>1]
+	if len(popsies)>0:
+		popsies=sorted(popsies, key=lambda p:len(p.sources))
+		print '{} images have been found at more than one source;'.format(
+			len(popsies))
+		print 'the one of highest frequency is {} with {} sources.'.format(
+			popsies[-1].name, len(popsies[-1].sources))
+	orphies = [p for p in pictures() if len(p.sources)<1]
+	if len(orphies)>0:
+		print '{} images without information about any origin.'.format(
+			len(orphies))
+	offline=[p for p in pictures() if p.url==None]
+	if len(offline)>0:
+		print '{} images can\'t be assigned to their source url.'.format(
+			len(offline))
+
+
 
 
 # save imgs and blogs to default files

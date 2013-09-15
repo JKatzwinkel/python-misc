@@ -16,7 +16,7 @@ import util
 ##############################################################
 
 # blog score times days since last visit. (max 14 days)
-queue_score = lambda t: t.score * min(14,util.days_since(t.seen))
+queue_score = lambda t: t.score * min(32,.05+util.days_since(t.seen))
 
 class Crawler:
 	# optionally, give a list of blogs we should start with
@@ -70,6 +70,7 @@ class Crawler:
 		# weiter
 		t = self.next_blog()
 		if t:
+			self.msg = self.status(t)
 			now = time()
 			# get extracted stuff from parser
 			data = self.extract(t.url())
@@ -94,7 +95,6 @@ class Crawler:
 			t.seen = now
 			self.visited[t] = now
 			self.latest = t
-			self.msg = self.status()
 			return True
 		return False
 
@@ -119,11 +119,12 @@ class Crawler:
 			return {}
 
 
-	def status(self):
-		temp = '{:4} < {:4} \t{:5} Img. \t {}: {:2.2f}'
+	def status(self, t):
+		temp = '{:4} < {:4} \t{:5} Img. \t {}: {:2.2f} {:.2f}'
 		n = sum([len(l) for l in self.images.values()])
 		return temp.format(len(self.visited), len(self.frontier),
-			n, self.latest.name, self.latest.score)
+			n, t.name, t.score, 
+			queue_score(t))
 
 	def message(self):
 		return self.msg
@@ -225,7 +226,6 @@ imgdimex=re.compile('_([1-9][0-9]{2,3})\.')
 #tumblr_mpkl2n8aqK1r0fb8eo1_500.jpg
 #urlretrieve(best, 'images/{}.{}'.format(name,ext))
 
-images = []
 
 # go to the internets and browse through there!
 def crawl(url, n=30):
@@ -238,6 +238,8 @@ def crawl(url, n=30):
 		#reverse=True)
 	#query = tumblr.queue()
 	query = [p.origin for p in picture.favorites() if p.origin]
+	for t in query[:]:
+		query.extend(t.links)
 
 	# set up suff
 	#print 'Starting crawler at', url
@@ -246,8 +248,9 @@ def crawl(url, n=30):
 		seed = tumblr.create(url)
 	if not seed in query:
 		query = [seed] + query
+	query = sorted(query)
 	# create crawler
-	crawler = Crawler(n, query=query[:n])
+	crawler = Crawler(n, query=query[:n*20])
 	
 	# wait for the crawler to be done
 	while crawler.crawling():
@@ -255,6 +258,8 @@ def crawl(url, n=30):
 		
 	print 'Done.'
 
+	images = []
+	dis2 = []
 	# now handle the collected image URLs
 	for t, imgs in crawler.images.items():
 		print t
@@ -277,8 +282,9 @@ def crawl(url, n=30):
 				else:
 					if pict.dim < 1280:
 						best, dim = best_version(img)
+					# if we have local copy, but it is smaller than possible
 					# look for high resolutions
-					if pict.location and pict.dim < dim:
+					if pict.path and pict.dim < dim:
 						# better version of known image available
 						print 'upgradable image: {} from {} to {}'.format(
 							name, pict.dim, dim)
@@ -286,7 +292,13 @@ def crawl(url, n=30):
 						del upgrade_img
 					else:
 						# image known. assign to current blog and f.o.
-						t.assign_img(pict)
+						if t.assign_img(pict):
+							dis2.append(pict)
+							print ' Found img {},'.format(
+								pict.name, t.name),
+							if pict.origin:
+								print '(orig: {}),'.format(pict.origin.name),
+							print 'now having {} sources.'.format(len(pict.sources))
 						pict.url = best
 						pict = None
 				# if downloading was succesful, append it to list of 
@@ -299,12 +311,20 @@ def crawl(url, n=30):
 					#print '   {} - {} {}'.format(pict.name, pict.dim, pict.size)
 					print pict
 					counter += 1
-					if counter > max(5,t.score):
+					if counter >= max(5,t.score):
 						break
 			else:
 				print 'Keine Id gefunden: {}. omitting.'.format(img)
 	# Puh endlich fertig!
 	print 'Retrieved {} images from {} blogs.'.format(
 		len(images), len(crawler.images))
+	print '{} of those images come with proper url.'.format(
+		len([p for p in images if p.url]))
+	if len(dis2)>0:
+		print '{} images have been rediscovered at unexpected places.'.format(
+			len(dis2))
+		for p in dis2:
+			print p.name, [t.name for t in p.sources]
+
 	# thats it
 	return images
