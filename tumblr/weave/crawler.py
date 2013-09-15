@@ -316,11 +316,11 @@ def crawl(url, n=30):
 						if t.assign_img(pict):
 							if len(pict.sources)>1:
 								dis2.append(pict)
-								print '  Found img {},'.format(
+								print '  Known img {},'.format(
 									pict.name, t.name),
 								if pict.origin:
-									print '(orig: {}),'.format(pict.origin.name),
-								print 'now having {} sources.'.format(len(pict.sources))
+									print 'from {}'.format(pict.origin.name),
+								print 'up to {} refs'.format(len(pict.sources))
 						pict.url = best
 						pict = None
 				# if downloading was succesful, append it to list of 
@@ -344,7 +344,7 @@ def crawl(url, n=30):
 	print '{} of those images come with proper url.'.format(
 		len([p for p in images if p.url]))
 	if len(dis2)>0:
-		print '{} images have been rediscovered at unexpected places.'.format(
+		print 'Discovered {} references to images known from elsewhere:'.format(
 			len(dis2))
 		for p in dis2:
 			print p.name, [t.name for t in p.sources]

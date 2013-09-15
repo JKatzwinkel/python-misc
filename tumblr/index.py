@@ -3,7 +3,7 @@
 import re
 from PIL import Image as pil
 import os
-from random import choice
+from random import choice, randrange
 from math import sqrt as sqr
 
 import util.statistics as stat
@@ -79,6 +79,93 @@ def stumblr(seed, filename):
 		f.write(' <b>{}</b>\n'.format(e.message))
 	f.write('</body>\n</html>\n')
 	f.close()
+
+
+# search reasonable paths between selected images
+def chain(query=None):
+	stars = sorted(pictures(), key=lambda p:p.rating, reverse=True)
+	if not query:
+		query = stars[:6]
+	else:
+		query = query[:]
+	tolerance = 0
+	#print ', '.join([p.name for p in query])
+	# only very similar imgs are neighbours
+	neighbours = lambda p: [i for i in p.relates.items() if i[1]>.4]
+	# neighbour order: beginning with most similar
+	best = lambda p: sorted(neighbours(p), key=lambda tt:1-tt[1])
+	# putting nearest neighbours in straight row. nearest is left
+	front = lambda p: [k for (k,v) in best(p)]
+	# resulting path
+	res = []
+	# go!
+	p = stars[randrange(len(stars))]
+	# loop
+	while len(query)>0:
+		tolerance+=1
+		#if len(query)<tolerance+2:
+			#query.append(start)
+		steps = {p:(None, 0)} # node, predecessor, cost
+		frontier = [p] # way to go!
+		i = 0 # step in search
+		# alrighty
+		while i<len(frontier):
+			# make one step forward
+			p = frontier[i]
+			# checkpoint?
+			if p in query: 
+				# yay!
+				query.remove(p)
+				pb = p # walk backwards
+				path = []
+				while pb:
+					path.insert(0,pb)
+					pb = steps.get(pb)[0] # get predecessor
+				steps = {p:(None, 0)}
+				frontier = [p]
+				i = 0
+				if len(res)>0:
+					if res[-1] == path[0]:
+						path.pop(0)
+				res.extend(path) # ok. new search
+			# what will be appended to todo list next?
+			neigh = front(p)
+			if tolerance>5:
+				neigh.extend([stars.pop(0) for x in range(tolerance-5) 
+					if len(stars)>0])
+			# get current cost of having arrived at node p
+			_, cost = steps.get(p,(None,0))
+			# append neighbours to frontier and steps history
+			for n in neigh:
+				if n.location: # wichtig
+					ncost = cost+1-p.relates.get(n,0)
+					# check if way to n is known
+					best_way = steps.get(n)
+					# either no better way is known than the current one
+					if best_way == None or ncost < best_way[1]:
+						steps[n] = (p, ncost)
+						# if no way has been known at all, we append our n to front
+						if not best_way:
+							frontier.append(n)
+					# or there is a better way
+					# what if we have found a better way that the known one?
+					# we do nothing, obviously
+			i += 1
+		# nothing left in frontier list
+		if len(query)>0:
+			path=[]
+			pb=p
+			while pb:
+				path.insert(0,pb)
+				pb = steps.get(pb)[0]
+			if len(res)>0:
+				if res[-1] == path[0]:
+					path.pop(0)
+			res.extend(path)
+	return res
+				
+
+
 
 
 ##############################################################
@@ -266,3 +353,7 @@ def save():
 # craft html page for groups of images
 def savegroups(groups, filename):
 	inout.savegroups(groups, filename)
+
+# html export of image sequence
+def export_html(imgs, filename):
+	inout.export_html(imgs, filename)

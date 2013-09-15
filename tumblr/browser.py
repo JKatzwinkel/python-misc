@@ -36,7 +36,7 @@ class Browser:
 		# repopulate history
 		self.hist = []
 		for p in picture.last_reviewed()[:30]:
-			if util.days_since(p.reviewed)<.125:
+			if util.days_since(p.reviewed)<.5:
 				self.hist.append(p)
 				if p in self.pool:
 					self.pool.remove(p)

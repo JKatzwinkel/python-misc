@@ -299,6 +299,8 @@ class Pict:
 		orig = 'unknown'
 		if self.origin:
 			orig = self.origin.name
+			if len(orig)>15:
+				orig='{}...'.format(orig[:12])
 		return u'<{3} {0}, orig: {1} {2}src r{4}>'.format(
 			self.info, orig, len(self.sources),
 			self.name, '*'*self.rating)
@@ -326,7 +328,10 @@ class Pict:
 			notes.append('*'*self.rating)
 		days=util.days_since(self.date)
 		if days<7:
-			notes.append('new!\n({} days)'.format(int(days)))
+			if days<2:
+				notes.append('new! ({} hours)'.format(int(days*24)))
+			else:
+				notes.append('new! ({} days)'.format(int(days)))
 		days=int(util.days_since(self.reviewed))
 		if days > 31:
 			if days < 100:
@@ -352,6 +357,7 @@ class Pict:
 			image.save(self.location)
 		self.url = url
 		self.size = image.size
+		#self.histogram = Histogram(image)
 		
 	# download image at url and update metadata accordingly
 	# if save=True, local copy is saved to disk/overwritten if present

@@ -145,18 +145,25 @@ class Blog:
 	#@property
 	def avg_img_rating(self):
 		if len(self.proper_imgs) > 0:
-			stars = sum([p.rating for p in self.proper_imgs])
 			return float(stars)/len(self.proper_imgs)
 		return 0
+
+	# number of stars this blog has in total
+	def stars(self):
+		stars = sum([p.rating for p in self.proper_imgs])
+		return stars
+
 
 	# text representation
 	def __repr__(self):
 		return u'<{0}: {1}img, {2}/{3}io>'.format(
 			self.name, len(self.images), len(self.linked),len(self.links))
 
+
 	# url where this blog can be found
 	def url(self):
 		return 'http://{}.tumblr.com'.format(self.name)
+
 
 	# print detailed information
 	def details(self):

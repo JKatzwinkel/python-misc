@@ -254,6 +254,24 @@ def open_img_url(url):
 	return image
 
 
+# craft html page for sequence of images
+def export_html(imgs, filename):
+	f=open(os.sep.join(['html', filename]), 'w')
+	f.write('<html>\n<body>')
+	if None in imgs:
+		maxh = 200
+	for p in imgs:
+		if p:
+			height = min(maxh, p.size[1])
+			f.write('    <img src="../{}" height="{}"/>\n'.format(
+				p.location, height))
+		else:
+			f.write('<br/><hr/><br/>\n')
+			maxh = 500
+	f.write('</body>\n</html>\n')
+	f.close()
+
+
 
 # craft html page for groups of images
 def savegroups(groups, filename):
