@@ -173,6 +173,10 @@ class Browser:
 	# assemble displayal of main viewing mode
 	def display(self):
 		print time(), 'enter display'
+		ids = self.cnv.find_all()
+		for i in ids:
+			self.cnv.delete(i)
+		print time(), 'deleted prev canvas items'
 		self.cur_imgs = [] # keep ref for objects (garbage coll)
 		self.cnv.create_rectangle((0,0,1024,740), fill='black')
 		# history
@@ -316,11 +320,13 @@ class Browser:
 	def message(self, text):
 		w = 400
 		h = w/2**.5
-		x = 1024/2-400/2
-		y = 780/2-282/2
-		self.cnv.create_rectangle((3,y+3,x+w,y+h),
+		x = 1024/2-w/2
+		y = 780/2-h/2
+		self.cnv.create_rectangle((x,y,x+w,y+h),
 			fill='black', outline='red', width='5')
-		self.text(text, (x+10,y+10), font='Liberation Serif')
+		self.text(text, (x+10,y+10), font='Liberation Serif', 
+			anchor=tk.NW)
+		self.cnv.update_idletasks()
 
 
 
@@ -484,8 +490,9 @@ class Browser:
 	# compute similarities for current image
 	def compute_sim(self, key):
 		print 'compute similarities for', self.img
-		self.message('Compute similarities to {} imgs'.format(
-			picture.pictures()))
+		self.message('Compute similarities:\n{}\nx{} imgs'.format(
+			self.img,
+			len(picture.pictures())))
 		res = []
 		for p in picture.pictures():
 			if p != self.img:

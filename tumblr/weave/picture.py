@@ -347,6 +347,8 @@ class Pict:
 				notes.append('awaits review!')
 		if self.origin:
 			notes.append(self.origin.name)
+			if len(self.sources)>1:
+				notes.append('found {}x'.format(len(self.sources)))
 		return '\n'.join(notes)
 
 

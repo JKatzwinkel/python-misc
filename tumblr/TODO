@@ -1,3 +1,4 @@
 : dismiss entire blog: delete all images from current blog
 : browser zoom mode: arrow keys/navigation!
 : save timestamp of discovery of every blog-img link in blog/img objects
+: merge images at similarity > 96% or whatevs

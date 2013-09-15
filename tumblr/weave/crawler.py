@@ -47,6 +47,7 @@ class Crawler:
 		self.numblogs = n
 		self.images = {}
 
+
 	# choose next blog to visit
 	def next_blog(self):
 		if len(self.frontier)>0:
@@ -58,7 +59,7 @@ class Crawler:
 					blog = cand.pop()
 				else:
 					blog = None
-				self.frontier = set(cand)
+			self.frontier = set(cand)
 			return blog
 		else:
 			print 'List is empty. Nowhere to go.'
@@ -282,7 +283,7 @@ def crawl(url, n=30):
 	dis2 = []
 	# now handle the collected image URLs
 	for t, imgs in crawler.images.items():
-		print t
+		print t, '{:.2f}'.format(t.score)
 		counter = 0
 		for img in imgs:
 			# check if image is already known
