@@ -99,12 +99,10 @@ def chain(query=None):
 	# resulting path
 	res = []
 	# go!
-	p = stars[randrange(len(stars))]
+	p = query.pop(randrange(len(query))) #stars[randrange(len(stars))]
 	# loop
 	while len(query)>0:
 		tolerance+=1
-		#if len(query)<tolerance+2:
-			#query.append(start)
 		steps = {p:(None, 0)} # node, predecessor, cost
 		frontier = [p] # way to go!
 		i = 0 # step in search

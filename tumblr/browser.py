@@ -416,6 +416,12 @@ class Browser:
 				self.img.rating += 1
 				self.changes = True
 				self.new_votes.add(self.img)
+				if len(self.img.relates)<1:
+					for p in picture.starred():
+						if not p == self.img:
+							sim = self.img.similarity(p)
+							if sim > .5:
+								picture.connect(self.img,p,sim)
 				self.redraw=True
 
 
@@ -525,6 +531,21 @@ class Browser:
 			scs[-1][0], scs[-1][1])
 		self.changes=True
 
+	# generate path that connects all upvoted? images and export it
+	# to html
+	def export_votes(self, key):
+		print 'export votes;', len(self.new_votes)
+		query = [p for p in list(self.new_votes) if not p in trash]
+		self.message('\n'.join([
+			'Export assemblage of images with new votes. ({} imgs)'.format(
+				len(self.new_votes)),
+			'','This may take a while.']))
+		path = index.chain(query=query[:15])
+		index.export_html(path, 'votes.html')
+		self.redraw=True
+
+
+
 
 
 handlers={113:Browser.back,
@@ -536,6 +557,7 @@ handlers={113:Browser.back,
 					22:Browser.delete,
 					119:Browser.delete,
 					39:Browser.compute_sim,
+					38:Browser.export_votes,
 					40:Browser.compute_scores,
 					56:Browser.blog_mode,
 					33:Browser.pop_mode}

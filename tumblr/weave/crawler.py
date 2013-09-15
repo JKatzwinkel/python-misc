@@ -223,7 +223,7 @@ def best_version(imgurl):
 
 tumblrex=re.compile('(http://)?(\w*\.tumblr.com).*')
 imgex=re.compile('http://[0-9]{2}\.media\.tumblr\.com(/[0-9a-f]*)?/tumblr_\w*\.(jpg|png)')
-idex=re.compile('_(\w{19})_')
+idex=re.compile('_(\w{19,20})_')
 imgdimex=re.compile('_([1-9][0-9]{2,3})\.')
 #tumblr_mpkl2n8aqK1r0fb8eo1_500.jpg
 #urlretrieve(best, 'images/{}.{}'.format(name,ext))

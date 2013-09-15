@@ -459,11 +459,23 @@ def favorites():
 	fav = lambda p:p.rating * (.5+util.days_since(p.reviewed)/31)
 	return sorted(pictures(), key=fav, reverse=True)
 
+# at least one star, come on!
+def starred():
+	return [p for p in pictures() if p.rating>0]
+
+
 
 # establishes a link between two pictures
 def connect(p,q,sim):
 	p.relates[q]=sim
 	q.relates[p]=sim
+
+
+# combines two instances of an identical picture to one
+def merge(p,q):
+	parts = sorted([p,q], key=lambda i:i.size[0]*i.size[1])
+	pict = parts[-1]
+	delete(parts[0])
 
 
 # update collection. filter removed files, clean references

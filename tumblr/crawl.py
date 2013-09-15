@@ -7,7 +7,7 @@ import weave.picture as picture
 import weave.tumblr as tumblr
 import util.cluster as clustering
 
-index.load()
+index.load(recover=True)
 index.inout.save_log('load')
 print 'compute scores'
 scores = tumblr.dist_scores()
@@ -26,7 +26,14 @@ imgs = []
 
 n=9
 while proceed:
-	imgs.extend(index.crawl(seed.url(), num=n))
+	imgs_new = index.crawl(seed.url(), num=n)
+	imgs.extend(imgs_new)
+	#for i,p in enumerate(imgs_new):
+		#for q in imgs_new[i+1:]:
+			#if p.origin == q.origin:
+				#sim = p.similarity(q)
+				#if sim>.45:
+					#picture.connect(p,q,sim)
 	print 'images so far:', len(imgs)
 	proceed = raw_input('continue downloading? ').lower() in ['y', 'yes']
 	n=max(n-1,3)

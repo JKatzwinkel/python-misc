@@ -258,6 +258,7 @@ def open_img_url(url):
 def export_html(imgs, filename):
 	f=open(os.sep.join(['html', filename]), 'w')
 	f.write('<html>\n<body>')
+	maxh=500
 	if None in imgs:
 		maxh = 200
 	for p in imgs:
