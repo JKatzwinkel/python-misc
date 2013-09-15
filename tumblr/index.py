@@ -152,9 +152,58 @@ def clean_sources(p):
 				t = tumblr.create(s)
 			t.assign_img(p)
 
+# clean image ref lists of blog objs
+def clean_img_refs(t):
+	imgs = list(t.images)
+	t.images = set()
+	for i in imgs:
+		if i:
+			if isinstance(i, picture.Pict):
+				p = i
+			else:
+				p = picture.get(i)
+			#t.assign_img(p)
+			t.images.add(p)
+
+
+# recover img dir
+# tries to instantiate Pict obj for all img files that are not
+# represented yet
+def recover_imgs():
+	print 'starting img recovery attempt'
+	ff = os.listdir('images')
+	picts = pictures()
+	print 'local imgs: {}; fully initialized instances from db: {}'.format(
+		len(ff), len(picts))
+	pn = [('.'.join(f.split('.')[:-1]),f) for f in ff]
+	# orphan img files
+	orph = []
+	for n,f in pn:
+		p = picture.get(n)
+		if not p:
+			orph.append((n,f))
+		else:
+			if not p.path:
+				orph.append((n,f))
+	#orph = [(n,f) for n,f in pn if insuff(n)]
+	if len(orph)>0:
+		print 'Orphan img files in images/ dir: {}'.format(
+			len(orph))
+		res = []
+		for n,f in orph:
+			pict = picture.openfile('images', f, name=n)
+			if pict:
+				res.append(pict)
+		print 'returning {} recovered img objs.'.format(
+			len(res))
+		#print 'existing instances improved by recovered data: {}'.format(
+			#len([p for p in res if p in picts]))
+		return res
+	print 'no recovery needed.'
+
 
 # try to load images and blogs from default files
-def load():
+def load(recover=False):
 	print 'loading images.xml'
 	if os.path.exists('images.xml'):
 		loadImages('images.xml')
@@ -162,12 +211,19 @@ def load():
 	if os.path.exists('blogs.xml'):
 		loadBlogs('blogs.xml')
 	# Check if images are still on disk!!
-	print 'checking local image copies'
+	print 'checking local image copies, resolve inter img refs'
 	picture.sync() #TODO
+	if recover:
+		# untracked local img files recovery attempt
+		print 'try to recover img instances from local img files'
+		recover_imgs()
 	# clean image sources
-	print 'resolving blog-image links'
-	for p in pictures():
+	print 'resolving image source links'
+	for p in picture.Pict.imgs.values():
 		clean_sources(p)
+	print 'resolving blog image links'
+	for t in blogs():
+		clean_img_refs(t)
 	# yeah! done!
 	print 'ok'
 	print 'imported {} images, {} of which are locally present ({}%),'.format(

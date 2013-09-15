@@ -75,7 +75,7 @@ class Browser:
 		# prefer newest pictures
 		for p in self.pool:
 			boost = min(1.8,util.days_since(p.reviewed)/99)
-			boost += 1.5/(1+util.days_since(p.date))
+			boost += 1./(1+util.days_since(p.date))
 			choices[p] = choices.get(p, 0)+boost
 		# not enough candidates? fill up with favies!
 		# TODO: need we?
@@ -490,7 +490,7 @@ class Browser:
 	# compute similarities for current image
 	def compute_sim(self, key):
 		print 'compute similarities for', self.img
-		self.message('Compute similarities:\n{}\nx{} imgs'.format(
+		self.message('Compute similarities:\n\n{}\nx{} imgs'.format(
 			self.img,
 			len(picture.pictures())))
 		res = []

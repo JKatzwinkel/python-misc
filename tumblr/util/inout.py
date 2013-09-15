@@ -42,18 +42,21 @@ def saveImages(images, filename):
 		if p.path:
 			f.write('  <location time="{}" reviewed="{}">{}</location>\n'.format(
 				p.date, p.reviewed, p.location))
+			# img histogram
 			histo = p.histogram
 			f.write('  <histogram bands="{}">{}</histogram>\n'.format(
 						histo.bands, histo.hex()))
-			f.write('  <hosted times="{}">\n'.format(len(p.sources)))
-			for s in p.sources:
-				f.write('   <at when="{}">{}</at>\n'.format(
-					s.images_times.get(p,0),s.name))
-			f.write('  </hosted>\n')
+			# list of similar images
 			f.write('  <similar num="{}">\n'.format(len(p.relates)))
 			for s in p.relates.items():
 				f.write('   <img m="{:1.3}">{}</img>\n'.format(s[1],s[0].name))
 			f.write('  </similar>\n')
+		# list where this img has been found
+		f.write('  <hosted times="{}">\n'.format(len(p.sources)))
+		for s in p.sources:
+			f.write('   <at when="{}">{}</at>\n'.format(
+				s.images_times.get(p,0),s.name))
+		f.write('  </hosted>\n')			
 		f.write(' </image>\n')
 	f.write('</images>\n')
 	f.close()

@@ -3,6 +3,7 @@
 
 from PIL import Image as pil
 import os
+import os.path
 from random import choice
 from math import sqrt as sqr
 import re
@@ -141,6 +142,7 @@ class Pict:
 		self.mode = ''
 		self.size = (0,0)
 		self.dim = 0
+		self.histogram = None
 		self.ext = ''
 		self.date = 0 # date of retrieval (timestamp)
 		self.url = None #TODO: implementieren
@@ -150,12 +152,13 @@ class Pict:
 		if isinstance(image, pil.Image):
 			self.mode = image.mode
 			self.size = image.size
+			self.dim = self.size[0]
 			self.histogram = Histogram(image)
 			self.date = 0 # zusehen, dasz man das aus der datei holt
 			self.reviewed = 0
 		else:
 			# given data must be metadata dictionary
-			self.mode = image.get('mode','None')
+			self.mode = image.get('mode')
 			self.size = image.get('size',(0,0))
 			self.url = image.get('url')
 			histogram = image.get('histogram', [])
@@ -218,21 +221,6 @@ class Pict:
 			return self.sources[0]
 		return None
 
-
-	# remove string identifiers from link list, either by
-	# replacing them with their corresponding instance, or 
-	# by deleting them
-	def clean_links(self):
-		# generate objects for str keys
-		objects = [(k, get(k)) for k in self.relates.keys() ] 
-		# repopulate link list
-		links = {}
-		for k, obj in objects:
-			if obj:
-				links[obj] = self.relates.get(k)
-		#print ' reification impact: {} -> {}'.format(
-			#len(self.relates), len(links))
-		self.relates = links
 
 	
 	# calculates similarity measure between two images
@@ -342,7 +330,7 @@ class Pict:
 		days=int(util.days_since(self.reviewed))
 		if days > 31:
 			if days < 100:
-				notes.append('awaits review\n({} days)'.format(days))
+				notes.append('awaits review ({} days)'.format(days))
 			else:
 				notes.append('awaits review!')
 		if self.origin:
@@ -376,6 +364,20 @@ class Pict:
 		self.upgrade(image, url, save=save)
 		return image
 
+	# remove string identifiers from link list, either by
+	# replacing them with their corresponding instance, or 
+	# by deleting them
+	def clean_links(self):
+		# generate objects for str keys
+		objects = [(k, reify(k)) for k in self.relates.keys() ] 
+		# repopulate link list
+		links = {}
+		for k, obj in objects:
+			if obj:
+				links[obj] = self.relates.get(k)
+		#print ' reification impact: {} -> {}'.format(
+			#len(self.relates), len(links))
+		self.relates = links
 
 
 
@@ -405,11 +407,24 @@ def get(name):
 		if m:
 			p = Pict.imgs.get(m.group(1))
 		return p
-	print type(name)
-	if name in Pict.imgs.values():
-		return name
+	#print type(name)
+	#if name in Pict.imgs.values():
+		#return name
 	return None
 
+# get instance from registry or try to create one from local file,
+# or create a dummy
+def reify(name):
+	p = get(name)
+	if not p:
+		for ext in ['jpg', 'png']:
+			p = openfile('images', '.'.join([name, ext]), name=name)
+			if p:
+				return p
+	else:
+		return p
+	p = Pict(name, {}, path='images')
+	return p
 
 # return all image instances that are saved to a local file
 def pictures():
@@ -453,6 +468,7 @@ def sync():
 		if p.location:
 			if not os.path.exists(p.location):
 				p.location = None
+
 
 # delete picture from disk
 def delete(p):
@@ -506,16 +522,40 @@ def openurl(url, save=True):
 
 
 # load image from file
-def openfile(path, filename):
-	fn=os.sep.join([path, filename])
+def openfile(path, filename, name=None):
+	fn=os.path.join(path, filename)
 	try:
 		image = pil.open(fn)
 		if image:
-			name = idex.search(filename).group(1)
-			pict = Pict(name, image, path=path)
-			# TODO: use file metadata
-			# is this method even used??
+			if not name:
+				name = '.'.join(filename.split('.')[:-1])
+			# check if instance is present at key
+			pict = get(name)
+			# if not:
+			if not pict:
+				# create instance!
+				pict = Pict(name, image, path=path)
+			else:
+				# recover information from file and pil image
+				pict.mode = image.mode
+				pict.size = image.size
+				if pict.dim < pict.size[0]:
+					pict.dim = pict.size[0]
+				if not pict.path:
+					pict.path = path
+				pict.histogram = Histogram(image)
+			# recover file ext
+			ext = filename.split('.')[-1].lower()
+			if ext in ['jpg', 'png']:
+				pict.ext = ext
+			# recover modification date
+			if pict.date < 1:
+				date = os.stat(fn)
+				if date:
+					pict.date = date.st_mtime
+			# del pil img
 			del image
+			# return obj
 			return pict
 	except Exception, e:
 		print e.message

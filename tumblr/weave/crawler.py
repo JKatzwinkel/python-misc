@@ -16,7 +16,7 @@ import util
 ##############################################################
 
 # blog score times days since last visit. (max 14 days)
-queue_score = lambda t: t.score * min(31,(.25+util.days_since(t.seen))**2)
+queue_score = lambda t: t.score * min(31,(util.days_since(t.seen)**2))
 
 class Crawler:
 	# optionally, give a list of blogs we should start with
