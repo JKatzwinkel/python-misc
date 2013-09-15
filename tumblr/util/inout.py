@@ -201,11 +201,6 @@ def loadBlogs(filename):
 			if elem.tag == 'links':
 				data['in'] = []
 				data['out'] = []
-			if elem.tag in ['out', 'in']:
-				try:
-					data.get(elem.tag).append(elem.text)
-				except:
-					data[elem.tag] = [elem.text]
 		# CLOSING TAGS:
 		else:
 			# closing blog
@@ -222,7 +217,13 @@ def loadBlogs(filename):
 						data['images']=[elem.text]
 				else:
 					warnings.append('W: empty img element in {} record'.format(
-						data.get('name')))			
+						data.get('name')))
+			# links
+			if elem.tag in ['out', 'in']:
+				try:
+					data.get(elem.tag).append(elem.text)
+				except:
+					data[elem.tag] = [elem.text]
 	print '{} warnings.'.format(len(warnings))
 	log_msgs.extend(warnings)
 	print 'Read {} blog objects.'.format(len(records))

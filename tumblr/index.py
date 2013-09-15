@@ -180,7 +180,7 @@ def load():
 	newsies = [p for p in pictures() if p.reviewed < 1]
 	if len(newsies)>0:
 		print '{} images are on disk, but are still to'.format(
-			len(newsies))
+			len(newsies)),
 		print 'be reviewed.'
 	popsies=[p for p in pictures() if len(p.sources)>1]
 	if len(popsies)>0:

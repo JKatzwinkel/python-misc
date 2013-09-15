@@ -200,12 +200,15 @@ class Browser:
 			#self.cnv.create_rectangle((pos[0], pos[1],
 				#pos[0]+img.width(), pos[1]+img.height()), fill='black')
 		# current img
+		print time(), 'load curr img preview'
 		img = self.load_img(self.img, size=(720, 740))
 		self.cur_imgs.append(img)
+		print time(), 'place curr img preview'
 		self.cnv.create_image((500,370), anchor=tk.CENTER, image=img) 
-		self.mini_desc((504-img.width()/2,14),self.img)
+		print time(), 'place curr img decoration'
+		self.mini_desc((504-img.width()/2,374-img.height()/2),self.img)
 		if trash.get(self.img):
-			self.cnv.create_text(500, 14, anchor=tk.CENTER, 
+			self.cnv.create_text(500, 374-img.height()/2, anchor=tk.CENTER, 
 					font='Arial 14 bold', fill='red', 
 					text='In Trash. Hit <Del> to Restore.')
 		# topleft= NW
@@ -217,9 +220,10 @@ class Browser:
 		# retrieve
 		#sims = self.img.most_similar()
 		sims = self.get_choices()
+		print time(), 'assemble img suggestions'
 		while y<740 and len(sims)>0:
 			s = sims.pop(0)
-			if s.location and not s in self.hist:
+			if s.path and not s in self.hist:
 				img = self.load_thmb(s)
 				#self.cnv.create_rectangle((1024-img.width(),y,1024,y+img.height()),
 					#fill='black')

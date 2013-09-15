@@ -180,10 +180,18 @@ class Blog:
 			infos.append('Linked by {} blogs with an average score of {:.2f}'.format(
 				len(self.linked), 
 				sum([t.score for t in self.linked])/len(self.linked)))
+			ll=[t.name for t in list(self.linked)[:3]]
+			if len(self.linked)>3:
+				ll.append('...')
+			infos.append(' [{}]'.format(', '.join(ll)))
 		if len(self.links)>0:
 			infos.append('Links {} blogs with an average score of {:.2f}'.format(
 				len(self.links), 
 				sum([t.score for t in self.links])/len(self.links)))
+			ll=[t.name for t in list(self.links)[:3]]
+			if len(self.links)>3:
+				ll.append('...')
+			infos.append(' [{}]'.format(', '.join(ll)))
 		return '\n'.join(infos)
 
 
@@ -221,12 +229,11 @@ def create(url, time=0):
 # create from dictionary
 def opendump(slots):
 	name = slots.get('name')
-	last_seen = float(slots.get('seen', 0))
 	#reify data set
 	t = Blog.blogs.get(name)
 	if not t:
-		t = create(name, time=last_seen)
-	t.seen = last_seen
+		t = create(name)
+	t.seen = float(slots.get('seen', 0))
 	t._score = float(slots.get('score',0))
 	# connect related image identifiers, whereever possible
 	# using reification as well
@@ -267,7 +274,7 @@ def queue(num=100):
 
 
 # do some page rank-like stuff
-def dist_scores(n=5):
+def dist_scores(n=8):
 	print 'run page rank for {} steps.'.format(n)
 	# total amount of stars a blog's images archieved
 	stars = lambda t: sum([p.rating for p in t.proper_imgs])

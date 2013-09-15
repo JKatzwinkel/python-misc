@@ -16,7 +16,7 @@ import util
 ##############################################################
 
 # blog score times days since last visit. (max 14 days)
-queue_score = lambda t: t.score * min(32,.05+util.days_since(t.seen))
+queue_score = lambda t: t.score * min(31,(.25+util.days_since(t.seen))**2)
 
 class Crawler:
 	# optionally, give a list of blogs we should start with
@@ -37,24 +37,28 @@ class Crawler:
 		self.images = {}
 		self.msg = ''
 
+	# add blog to frontier
+	def add(self, t):
+		if not self.visited.get(t):
+			self.frontier.add(t)
+
+	# clear crawler state in preparation for continuing search
+	def rewind(self, n):
+		self.numblogs = n
+		self.images = {}
 
 	# choose next blog to visit
 	def next_blog(self):
 		if len(self.frontier)>0:
 			# pick highest score blog from frontier list
-			cand = sorted(self.frontier, key=queue_score, 
-				reverse=True)
-			blog = None
-			now = time()
-			# consider only blogs that haven't been visited in the last 6h
-			while not blog:
+			cand = sorted(self.frontier, key=queue_score)
+			blog = cand.pop()
+			while self.visited.get(blog):
 				if len(cand) > 0:
-					blog = cand.pop(0)
+					blog = cand.pop()
 				else:
-					return None
-			# move blog to visited list and save time
-			if blog in self.frontier:
-				self.frontier.remove(blog)
+					blog = None
+				self.frontier = set(cand)
 			return blog
 		else:
 			print 'List is empty. Nowhere to go.'
@@ -72,6 +76,8 @@ class Crawler:
 		if t:
 			self.msg = self.status(t)
 			now = time()
+			t.seen = now
+			self.visited[t] = now
 			# get extracted stuff from parser
 			data = self.extract(t.url())
 			if data:
@@ -81,10 +87,7 @@ class Crawler:
 				for href in data.get('links', []):
 					l = t.link(href)
 					if not self.visited.get(l):
-						if l.seen < now-3600*6:
-							self.frontier.add(l)
-						else:
-							self.visited[l] = l.seen
+						self.frontier.add(l)
 				# now: images! Store them aligned to their blogs for later
 				imgs = self.images.get(t, [])
 				imgs.extend(data.get('images', []))
@@ -92,8 +95,6 @@ class Crawler:
 				# done with this blog/url
 				# TODO: unless we want to check additional pages, but later
 			# done. mark blog as visited
-			t.seen = now
-			self.visited[t] = now
 			self.latest = t
 			return True
 		return False
@@ -226,6 +227,18 @@ imgdimex=re.compile('_([1-9][0-9]{2,3})\.')
 #tumblr_mpkl2n8aqK1r0fb8eo1_500.jpg
 #urlretrieve(best, 'images/{}.{}'.format(name,ext))
 
+# central module crawler instance
+inst = None
+# returns instance. no init
+def instance():
+	return inst
+
+# initialize
+def init(n, query):
+	global inst
+	inst = Crawler(n, query=query)
+	return inst
+
 
 # go to the internets and browse through there!
 def crawl(url, n=30):
@@ -237,21 +250,28 @@ def crawl(url, n=30):
 		#key = lambda t: t.score*len(t.links),
 		#reverse=True)
 	#query = tumblr.queue()
-	query = [p.origin for p in picture.favorites() if p.origin]
-	for t in query[:]:
-		query.extend(t.links)
-
-	# set up suff
-	#print 'Starting crawler at', url
+	#query = [p.origin for p in picture.favorites() if p.origin]
+	# possibly single seeding url to blog
 	seed = tumblr.get(url)
 	if not seed:
 		seed = tumblr.create(url)
-	if not seed in query:
-		query = [seed] + query
-	query = sorted(query)
-	# create crawler
-	crawler = Crawler(n, query=query[:n*20])
+
+	if instance():
+		crawler = instance()
+	else:
+		# populate crawler frontier
+		query = []
+		for p in picture.favorites():
+			query.extend(p.sources)
+		query = sorted(set(query), key=queue_score)[::-1]
+		# create crawler
+		crawler = init(n, query)
+	# add single seed point, in case we cant build query
+	crawler.add(seed)
 	
+	# clean retrieval buffer
+	crawler.rewind(n)
+
 	# wait for the crawler to be done
 	while crawler.crawling():
 		print crawler.message()
@@ -293,12 +313,13 @@ def crawl(url, n=30):
 					else:
 						# image known. assign to current blog and f.o.
 						if t.assign_img(pict):
-							dis2.append(pict)
-							print ' Found img {},'.format(
-								pict.name, t.name),
-							if pict.origin:
-								print '(orig: {}),'.format(pict.origin.name),
-							print 'now having {} sources.'.format(len(pict.sources))
+							if len(pict.sources)>1:
+								dis2.append(pict)
+								print '  Found img {},'.format(
+									pict.name, t.name),
+								if pict.origin:
+									print '(orig: {}),'.format(pict.origin.name),
+								print 'now having {} sources.'.format(len(pict.sources))
 						pict.url = best
 						pict = None
 				# if downloading was succesful, append it to list of 
@@ -309,12 +330,13 @@ def crawl(url, n=30):
 					t.assign_img(pict)
 					pict.url = best
 					#print '   {} - {} {}'.format(pict.name, pict.dim, pict.size)
-					print pict
+					print '', pict
 					counter += 1
 					if counter >= max(5,t.score):
 						break
 			else:
 				print 'Keine Id gefunden: {}. omitting.'.format(img)
+		print ''
 	# Puh endlich fertig!
 	print 'Retrieved {} images from {} blogs.'.format(
 		len(images), len(crawler.images))
