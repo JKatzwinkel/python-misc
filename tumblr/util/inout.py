@@ -11,10 +11,22 @@ import os
 from time import time
 
 log_msgs=[]
+# save logs to file
+def save_log(filename):
+	global log_msgs
+	if not filename.endswith('.log'):
+		filename = '{}.log'.format(filename)
+	f=open(os.sep.join(['logs', filename]), 'w')
+	f.write('\n\nIO LOG MSGS {}\n'.format(time()))
+	for m in log_msgs:
+		f.write('{}\n'.format(m))
+	f.close()
+	log_msgs=[]
 
 
 # saves a list of images to an XML file
 def saveImages(images, filename):
+	print 'saving imgs.',
 	f=open(filename, 'w')
 	f.write('<?xml version="1.0" standalone="yes"?>\n')
 	f.write('<images num="{}">\n'.format(len(images)))
@@ -45,6 +57,7 @@ def saveImages(images, filename):
 		f.write(' </image>\n')
 	f.write('</images>\n')
 	f.close()
+	print 'ok.'
 
 ##############################################################
 ##############################################################
@@ -65,31 +78,14 @@ def loadImages(filename):
 			if elem.tag == 'size':
 				data['size'] = (int(elem.attrib.get('width',0)), 
 												int(elem.attrib.get('height',0)))
-			if elem.tag == 'url':
-				data['url'] = elem.text
 			if elem.tag == 'location':
 				data['location'] = elem.text
 				data['time'] = float(elem.attrib.get('time', 0))
 				data['reviewed'] = float(elem.attrib.get('reviewed', 0))
 			if elem.tag == 'hosted':
 				data['hosts']=[]
-			if elem.tag == 'at':
-				#TODO: date of retrieval
-				try:
-					data.get('hosts').append(elem.text)
-				except:
-					data['hosts'] = [elem.text]
 			if elem.tag == 'similar':
 				data['similar']={}
-			if elem.tag == 'img':
-				if elem.text:
-					try:
-						data['similar'][elem.text] = float(elem.attrib.get('m',0))
-					except:
-						data['similar']={elem.text:elem.attrib.get('m',0)}
-				else:
-					warnings.append('damn! invalid elem.text in {} img element'.format(
-						data.get('id')))
 		# REACT ON END TAG
 		else:
 			if elem.tag == 'histogram':
@@ -110,6 +106,33 @@ def loadImages(filename):
 					print 'double: {} !'.format(data['id'])
 				known[data['id']]=True
 				data={}
+			# url tag closed
+			if elem.tag == 'url':
+				if elem.text:
+					data['url'] = elem.text
+				else:
+					warnings.append('error: couldnt read URL in {} record! (closing tag)'.format(data.get('id')))
+			# similar img closing tag
+			if elem.tag == 'img':
+				if elem.text:
+					try:
+						data['similar'][elem.text] = float(elem.attrib.get('m',0))
+					except:
+						data['similar']={elem.text:elem.attrib.get('m',0)}
+				else:
+					warnings.append('W: unreadable img element @ {} similarity record'.format(
+						data.get('id')))
+			# source blogs
+			if elem.tag == 'at':
+				#TODO: date of retrieval
+				if elem.text:
+					try:
+						data.get('hosts').append(elem.text)
+					except:
+						data['hosts'] = [elem.text]
+				else:
+					warnings.append('W: unreadable blog ref at sources sec of {} record'.format(
+						data.get('id')))
 	print '{} warnings.'.format(len(warnings))
 	log_msgs.extend(warnings)
 	print 'Read {} images into memory.'.format(len(imgs))
@@ -128,6 +151,7 @@ def loadImages(filename):
 
 # saves a list of images to an XML file
 def saveBlogs(blogs, filename):
+	print 'saving blogs.',
 	f=open(filename, 'w')
 	f.write('<?xml version="1.0" standalone="yes"?>\n')
 	f.write('<blogs num="{}">\n'.format(len(blogs)))
@@ -157,6 +181,7 @@ def saveBlogs(blogs, filename):
 		f.write(' </blog>\n')
 	f.write('</blogs>\n')
 	f.close()
+	print 'ok.'
 
 # loads image container records from XML file
 def loadBlogs(filename):
@@ -172,16 +197,6 @@ def loadBlogs(filename):
 			# read image list
 			if elem.tag == 'images':
 				data['images'] = []
-			if elem.tag == 'img':
-				#TODO: date of retrieval
-				if elem.text:
-					try:
-						data.get('images').append(elem.text)
-					except:
-						data['images']=[elem.text]
-				else:
-					warnings.append('wtf! empty img element in {} record'.format(
-						data.get('name')))
 			# ream link lists
 			if elem.tag == 'links':
 				data['in'] = []
@@ -193,9 +208,21 @@ def loadBlogs(filename):
 					data[elem.tag] = [elem.text]
 		# CLOSING TAGS:
 		else:
+			# closing blog
 			if elem.tag == 'blog':
 				records.append(data)
 				data = {}
+			# closing img
+			if elem.tag == 'img':
+				#TODO: date of retrieval
+				if elem.text:
+					try:
+						data.get('images').append(elem.text)
+					except:
+						data['images']=[elem.text]
+				else:
+					warnings.append('W: empty img element in {} record'.format(
+						data.get('name')))			
 	print '{} warnings.'.format(len(warnings))
 	log_msgs.extend(warnings)
 	print 'Read {} blog objects.'.format(len(records))

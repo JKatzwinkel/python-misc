@@ -6,6 +6,7 @@ import weave.tumblr as tumblr
 import util.cluster as clustering
 
 index.load()
+index.inout.save_log('load')
 print 'compute scores'
 scores = tumblr.dist_scores()
 hi=sorted(scores.items(), key=lambda t:t[1])
@@ -26,4 +27,4 @@ while proceed:
 	proceed = raw_input('continue downloading? ').lower() in ['y', 'yes']
 
 index.save()
-
+index.inout.save_log('save')
