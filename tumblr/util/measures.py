@@ -10,6 +10,7 @@ hist_distances = {}
 hist_correlations = {}
 
 def lookup(registry, p, q):
+	p,q = sorted([p,q])
 	record = registry.get(p, {})
 	v = record.get(q)
 	if v:
@@ -17,6 +18,7 @@ def lookup(registry, p, q):
 	registry[p] = record
 
 def register(registry, p, q, value):
+	p,q = sorted([p,q])
 	record = registry.get(p, {})
 	record[q] = value
 	registry[p] = record

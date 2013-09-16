@@ -27,6 +27,9 @@ class Cluster:
 		dist = self.distances.get('single').get(other)
 		if dist:
 			return dist
+		dist = other.distances.get('single').get(self)
+		if dist:
+			return dist
 		# TODO: or maximum, or minimum/single linkage
 		distances = self.get_distances(other)
 		single = min(distances)
@@ -79,14 +82,11 @@ LINK_NORM='norm'
 
 def linkage(images, goal, mode=LINK_AVG):
 	Cluster.reg = []
-	clusters = []
-	for p in images:
-		clusters.append(Cluster([p]))
+	clusters = [Cluster([p]) for p in images]
 	# continue until number is reached
 	while len(clusters) > goal:
 		best = (None, None, 10000)
-		for i in range(len(clusters)):
-			a=clusters[i]
+		for i,a in enumerate(clusters):
 			for b in clusters[i+1:]:
 				if mode == LINK_AVG:
 					dist = a.avg_distance(b)
@@ -100,4 +100,61 @@ def linkage(images, goal, mode=LINK_AVG):
 		clusters = Cluster.reg
 	return clusters
 
+
+sims = lambda p,o: [0]+[p.relates.get(q) for q in o if q in p.relates]
+msim = lambda l,o: max([max(sims(p,o)) for p in l])
+
+class Clust:
+	reg=[]
+	def __init__(self, p):
+		self.imgs = [p]
+		self.sim = {}
+		Clust.reg.append(self)
+	
+	def similarity(self, other):
+		if other == self:
+			return 1
+		s = self.sim.get(other)
+		if s:
+			return s
+		s = msim(self.imgs, other.imgs)
+		self.sim[other] = s
+		#other.sim[self] = s
+		return s
+	
+	@staticmethod
+	def verkuppel():
+		best=(None,None,-1)
+		cands = Clust.reg[:]
+		while len(cands)>0 and best[2]<1:
+			a = cands.pop()
+			for b in cands:
+				s = b.similarity(a)
+				if s > best[2]*.95:
+					if s > best[2] or len(b.imgs)<len(best[0].imgs):
+						best = (b,a,s)
+		b,a,s=best
+		Clust.reg.remove(a)
+		b.marry(a)
+
+
+	def marry(self, other):
+		noobs=other.imgs
+		self.imgs.extend(noobs)
+		i = Clust.reg.index(self)
+		left = Clust.reg[:i]
+		right = Clust.reg[i+1:]
+		#self.sim = {k:max([self.sim.get(k,0),msim(noobs,k.imgs)]) for k in right}
+		self.sim = {k:max([self.sim.get(k,0),other.sim.get(k,0)]) for k in right}
+		for k in left:
+			k.sim[self] = max([k.sim.get(self,0),k.sim.get(other,0)])
+
+
+def cluster(imgs, num):
+	if len(Clust.reg)<1:
+		cc = [Clust(p) for p in imgs]
+	if len(Clust.reg)>num:
+		for i in range(2):
+			Clust.verkuppel()
+	return Clust.reg
 

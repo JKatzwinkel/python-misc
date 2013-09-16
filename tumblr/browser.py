@@ -30,6 +30,8 @@ class Browser:
 		self.changes = False # changes to be saved?
 		self.new_votes = set() # keep track of new ratings
 		self.pool=[]
+		# img clusters
+		self.clusters=[]
 		# init img tracking
 		self.repool()
 		#pics = sorted(pics, key=lambda p:p.rating)
@@ -402,7 +404,8 @@ class Browser:
 	def update(self, key):
 		print time(), 'enter update'
 		self.redraw=False
-		if self.mode in [Browser.BROWSE, Browser.BLOG, Browser.POPULAR]:
+		if self.mode in [Browser.BROWSE, Browser.BLOG, Browser.POPULAR,
+			'cluster']:
 			self.display()
 		elif self.mode == Browser.SINGLE:
 			self.zoom(key)
@@ -545,6 +548,26 @@ class Browser:
 		self.redraw=True
 
 
+	# compute clusters
+	def cluster_mode(self, key):
+		if self.mode in [Browser.BROWSE, Browser.BLOG, Browser.POPULAR]:
+			#if len(self.clusters)<1:
+			self.message('Clustering...')
+			self.clusters = index.clustering(picture.pictures(), 
+				len(picture.pictures())-100)
+			self.mode='cluster'
+			for c in self.clusters:
+				if self.img in c:
+					self.pool = c
+			self.redraw=True
+		else:
+			self.mode = Browser.BROWSE
+			self.repool()
+			self.redraw=True
+
+
+
+
 
 
 
@@ -559,6 +582,7 @@ handlers={113:Browser.back,
 					39:Browser.compute_sim,
 					38:Browser.export_votes,
 					40:Browser.compute_scores,
+					54:Browser.cluster_mode,
 					56:Browser.blog_mode,
 					33:Browser.pop_mode}
 

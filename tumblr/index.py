@@ -9,6 +9,7 @@ from math import sqrt as sqr
 import util.statistics as stat
 import util.measures as measure
 import util.inout as inout
+import util.cluster as cluster
 import weave.picture as picture
 import weave.tumblr as tumblr
 import weave.crawler as crawler
@@ -184,6 +185,10 @@ def blogs():
 def crawl(seed, num=10):
 	return crawler.crawl(seed, n=num)
 
+# clusterin
+def clustering(imgs, num):
+	clusters = cluster.cluster(imgs, num)
+	return [c.imgs for c in clusters]
 
 # run page rank thingie
 def scores(n):
