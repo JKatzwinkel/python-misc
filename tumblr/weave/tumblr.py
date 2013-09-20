@@ -292,12 +292,12 @@ def dist_scores(n=10, reset=True):
 	if reset:
 		reg = {t:0. for t in blogs()}
 	else:
-		reg = {t:t._score for t in blogs()}
+		reg = {t:t._score for t in blogs() if t._score}
 	# spawned score. total stars plus # of imgs times review ratio.
 	img_score = lambda t: float(stars(t)*2+len(t.proper_imgs)) * t.reviewed_imgs()
 	# blog score per round: half of last score plus score spawned by images
 	# slightly damped by huge numbers of downloaded images
-	score = lambda t: reg.get(t,0)/2 + img_score(t) / (1+len(t.images)/100)
+	score = lambda t: reg.get(t,0)/2. + img_score(t) / (1+len(t.images)/100.)
 	# distribution func: score shares from incoming links added up
 	dist = lambda t: sum([reg.get(l,0)/len(l.links) for l in t.linked])
 	# start
