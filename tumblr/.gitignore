@@ -1,0 +1,6 @@
+*.xml
+*.bck
+*.png
+*.jpg
+images/
+logs/
