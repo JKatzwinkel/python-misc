@@ -321,7 +321,7 @@ class Browser:
 
 
 	# places a warning sign
-	def message(self, text):
+	def message(self, text, confirm=False):
 		w = 400
 		h = w/2**.5
 		x = 1024/2-w/2
@@ -330,6 +330,11 @@ class Browser:
 			fill='black', outline='red', width='5')
 		self.text(text, (x+10,y+10), font='Liberation Serif', 
 			anchor=tk.NW)
+		if confirm:
+			self.mode = 'message'
+			self.text('Hit any key to continue', 
+				(x+w-10,y+h-20), font='Liberation Serif', 
+				anchor=tk.NE)
 		self.cnv.update_idletasks()
 
 
@@ -402,10 +407,11 @@ class Browser:
 				self.display_single()
 
 
-
+	# re-generate GUI contents based on mode and action
 	def update(self, key):
 		print time(), 'enter update'
 		self.redraw=False
+		#if self.mode != 'message':
 		if self.mode in [Browser.BROWSE, Browser.BLOG, Browser.POPULAR,
 			'cluster']:
 			self.display()
@@ -461,7 +467,7 @@ class Browser:
 			self.mode = Browser.POPULAR
 			self.redraw=True
 
-
+	# empty trash. delete image files, change image object to light instance
 	def empty_trash(self, key):
 		if len(self.trash)>0:
 			self.message('Empty Trash ({} images)...'.format(len(self.trash)))
@@ -479,10 +485,13 @@ class Browser:
 		else:
 			print 'Nothing in Trash'
 
+
+	# empty trash, save data to xml and f.o.
 	def quit(self, key):
 		self.empty_trash(key)
 		if self.changes:
 			print "saving changes..."
+			self.message('Saving image/blog data to XML...')
 			index.save()
 		root.quit()
 
@@ -550,6 +559,11 @@ class Browser:
 		#print 'ok, got new blog scores. highest is {} with {}.'.format(
 			#scs[-1][0], scs[-1][1])
 		self.changes=True
+		hi=sorted(scores.items(), key=lambda t:t[1])
+		prompt=['', 'Top 10 blogs:', '']
+		for i,t in enumerate(hi[-10:][::-1]):
+			prompt.append('\t{}.  {} - {}'.format(i+1, t[0].name, t[0].score))
+		self.message('\n'.join(prompt), confirm=True)
 
 
 	# generate path that connects all upvoted? images and export it
@@ -601,7 +615,14 @@ class Browser:
 				'{} images (+{})'.format(len(self.pool), len(imgs))]))
 			imgs = index.crawl(seed, num=1)
 			self.pool.extend(imgs)
-		# done. redraw
+		# done. prompt status. redraw?
+		# redraw GUI -> show new imgs
+		self.display()
+		# prompt status
+		msg += [index.get_crawler().message()]
+		self.message('\n'.join(['Done.',
+			'Crawler returned {} new images.'.format(len(self.pool)),'']+
+			msg), confirm=True)
 		self.redraw = True
 
 
@@ -628,20 +649,27 @@ handlers={113:Browser.back,
 					33:Browser.pop_mode}
 
 def key(event):
-  print time(), "pressed", event.keycode
-  if event.keycode in range(10,20):
-		browser.forward(event.keycode-10)
-
-  # handlers implemented by browser
-  f = handlers.get(event.keycode)
-  if f:
-		f(browser, event.keycode)
-  if browser.redraw:
-		browser.update(event.keycode)
-  print time(), 'leave keyhandler'
+	print time(), "pressed", event.keycode
+	# message prompt to be confirmed?
+	if browser.mode == 'message':
+		browser.mode = Browser.BROWSE
+		browser.update(0)
+	else:
+		# no message, do as expected:
+		# number key choice?
+		if event.keycode in range(10,20):
+			browser.forward(event.keycode-10)
+		# keys we know functions for?
+	  # handlers implemented by browser
+		f = handlers.get(event.keycode)
+		if f:
+			f(browser, event.keycode)
+		if browser.redraw:
+			browser.update(event.keycode)
+	print time(), 'leave keyhandler'
 
    #if len(browser.img.relates.keys()) > 0:
-   	#browser.img = browser.img.relates.keys()[0]
+		#browser.img = browser.img.relates.keys()[0]
    #print browser.img.location
 
 
