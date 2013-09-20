@@ -305,7 +305,7 @@ def dist_scores(n=10, reset=True):
 	blgs = blogs()
 	# iterate n steps
 	for i in range(n):
-		reg = {t:score(t)+dist(t) for t in blgs}
+		reg = {t:score(t)+dist(t)/(1+int(len(t.linked)<2)) for t in blgs}
 	# save new scores to blogs objects, normalize to max. 1000 if nec.
 	maxs = max(reg.values())
 	norm = max(maxs, 1000.)/1000.
