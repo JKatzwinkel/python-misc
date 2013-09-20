@@ -624,7 +624,7 @@ handlers={113:Browser.back,
 					54:Browser.cluster_mode,
 					56:Browser.blog_mode,
 					25:Browser.crawl,
-					26:Browser.empty_self.trash,
+					26:Browser.empty_trash,
 					33:Browser.pop_mode}
 
 def key(event):
