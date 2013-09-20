@@ -68,7 +68,7 @@ class Browser:
 
 	# make collection to choose from given current image
 	def get_choices(self):
-		print time(), 'enter get_choices'
+		# print time(), 'enter get_choices'
 		# suggest pictures with similiarity link to current
 		if self.mode != Browser.BLOG:
 			choices = dict(self.img.relates)
@@ -98,7 +98,7 @@ class Browser:
 			choices[p] = score
 		# return candidates ordered by highest score desc.
 		choices = sorted(choices.items(), key=lambda t:t[1])
-		print time(), 'return get_choices'
+		# print time(), 'return get_choices'
 		return [t[0] for t in choices[::-1]]
 
 
@@ -176,11 +176,11 @@ class Browser:
 
 	# assemble displayal of main viewing mode
 	def display(self):
-		print time(), 'enter display'
+		# print time(), 'enter display'
 		ids = self.cnv.find_all()
 		for i in ids:
 			self.cnv.delete(i)
-		print time(), 'deleted prev canvas items'
+		# print time(), 'deleted prev canvas items'
 		self.cur_imgs = [] # keep ref for objects (garbage coll)
 		self.cnv.create_rectangle((0,0,1024,740), fill='black')
 		# history
@@ -208,12 +208,12 @@ class Browser:
 			#self.cnv.create_rectangle((pos[0], pos[1],
 				#pos[0]+img.width(), pos[1]+img.height()), fill='black')
 		# current img
-		print time(), 'load curr img preview'
+		# print time(), 'load curr img preview'
 		img = self.load_img(self.img, size=(720, 740))
 		self.cur_imgs.append(img)
-		print time(), 'place curr img preview'
+		# print time(), 'place curr img preview'
 		self.cnv.create_image((500,370), anchor=tk.CENTER, image=img) 
-		print time(), 'place curr img decoration'
+		# print time(), 'place curr img decoration'
 		self.mini_desc((504-img.width()/2,374-img.height()/2),self.img)
 		if self.trash.get(self.img):
 			self.cnv.create_text(500, 374-img.height()/2, anchor=tk.CENTER, 
@@ -228,7 +228,7 @@ class Browser:
 		# retrieve
 		#sims = self.img.most_similar()
 		sims = self.get_choices()
-		print time(), 'assemble img suggestions'
+		# print time(), 'assemble img suggestions'
 		while y<740 and len(sims)>0:
 			s = sims.pop(0)
 			if s.path and not s in self.hist:
@@ -247,7 +247,7 @@ class Browser:
 				y += img.height()
 				self.cur_imgs.append(img)
 				self.choices.append(s)
-		print time(), 'return from display'
+		# print time(), 'return from display'
 
 
 
@@ -409,7 +409,7 @@ class Browser:
 
 	# re-generate GUI contents based on mode and action
 	def update(self, key):
-		print time(), 'enter update'
+		# print time(), 'enter update'
 		self.redraw=False
 		#if self.mode != 'message':
 		if self.mode in [Browser.BROWSE, Browser.BLOG, Browser.POPULAR,
@@ -418,7 +418,7 @@ class Browser:
 		elif self.mode == Browser.SINGLE:
 			self.zoom(key)
 		self.free_mem()
-		print time(), 'return update'
+		# print time(), 'return update'
 
 
 	def page_up(self, key):
@@ -649,7 +649,7 @@ handlers={113:Browser.back,
 					33:Browser.pop_mode}
 
 def key(event):
-	print time(), "pressed", event.keycode
+	# print time(), "pressed", event.keycode
 	# message prompt to be confirmed?
 	if browser.mode == 'message':
 		browser.mode = Browser.BROWSE
@@ -666,7 +666,7 @@ def key(event):
 			f(browser, event.keycode)
 		if browser.redraw:
 			browser.update(event.keycode)
-	print time(), 'leave keyhandler'
+	# print time(), 'leave keyhandler'
 
    #if len(browser.img.relates.keys()) > 0:
 		#browser.img = browser.img.relates.keys()[0]
