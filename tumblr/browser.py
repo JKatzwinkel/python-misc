@@ -9,8 +9,6 @@ import weave.picture as picture
 import weave.tumblr as tumblr
 import util
 
-# key: pict instance, value: (path, image)
-trash = {}
 # font registry for repeated use
 fonts = {}
 
@@ -48,6 +46,9 @@ class Browser:
 			self.hist = [self.img] # history of recent images
 		else:
 			self.img = self.hist[0]
+		# self.trash
+		# key: pict instance, value: (path, image)
+		self.trash = {}
 		# canvas
 		self.cnv = tk.Canvas(root, bg="black")
 		self.cnv.pack(side='top', fill='both', expand='yes')
@@ -196,7 +197,7 @@ class Browser:
 			if p == self.img:
 				self.cnv.create_rectangle((3,y+3,img.width()-3,y+img.height()-3),
 					outline='yellow', width='3')
-			if trash.get(p):
+			if self.trash.get(p):
 				self.cnv.create_text(img.width()-4, y+4, anchor=tk.NE, 
 						font='Arial 14 bold', fill='red', text='X')
 			y += img.height()
@@ -214,7 +215,7 @@ class Browser:
 		self.cnv.create_image((500,370), anchor=tk.CENTER, image=img) 
 		print time(), 'place curr img decoration'
 		self.mini_desc((504-img.width()/2,374-img.height()/2),self.img)
-		if trash.get(self.img):
+		if self.trash.get(self.img):
 			self.cnv.create_text(500, 374-img.height()/2, anchor=tk.CENTER, 
 					font='Arial 14 bold', fill='red', 
 					text='In Trash. Hit <Del> to Restore.')
@@ -386,7 +387,7 @@ class Browser:
 
 
 	def zoom(self, key):
-		# determine whether to change state		
+		# determine whether to change state
 		if self.mode in [Browser.BROWSE, Browser.BLOG, Browser.POPULAR]:
 			self.cnv.create_rectangle((0,0,1024,740), fill='black')
 			self.display_single()
@@ -462,20 +463,21 @@ class Browser:
 
 
 	def empty_trash(self, key):
-		if len(trash)>0:
-			self.message('Empty Trash ({} images)...'.format(len(trash))
-			print 'emptying trash: delete {} images'.format(len(trash))
-			for p, path in trash.items():
+		if len(self.trash)>0:
+			self.message('Empty Trash ({} images)...'.format(len(self.trash)))
+			print 'emptying Browser.trash: delete {} images'.format(len(self.trash))
+			if self.trash.get(self.img):
+				self.forward(0)
+			for p, path in self.trash.items():
 				# delete image from disk.
 				index.picture.delete(p)
 				if p in self.hist:
 					self.hist.remove(p)
-				if self.img == p:
-					self.forward(0)
-			global trash
-			trash = []
-			print 'trash empty'
+			self.trash = {}
+			print 'Browser.trash empty'
 			self.redraw=True
+		else:
+			print 'Nothing in Trash'
 
 	def quit(self, key):
 		self.empty_trash(key)
@@ -485,18 +487,18 @@ class Browser:
 		root.quit()
 
 
-	# delete image/trash it
+	# delete image/self.trash it
 	def delete(self, key):
-		trashed = trash.get(self.img)
-		if trashed:
-			path = trashed
+		self.trashed = self.trash.get(self.img)
+		if self.trashed:
+			path = self.trashed
 			self.img.path = path
 			#self.img.upgrade(img, self.img.url, save=True)
-			del trash[self.img]
+			del self.trash[self.img]
 			self.redraw=True
 		else:
-			# save copy to trash
-			trash[self.img] = self.img.path#, self.img.load())
+			# save copy to self.trash
+			self.trash[self.img] = self.img.path #, self.img.load())
 			# redo history
 			if self.img in self.hist:
 				i = self.hist.index(self.img)
@@ -539,7 +541,7 @@ class Browser:
 		for i in range(steps):
 			self.message('\n'.join([
 				'Computing blog scores using page rank:',
-				'{} iteration step{}'.format(steps, 's'*int(steps)),
+				'{} iteration step{}'.format(steps, 's'*int(steps>1)),
 				'','This might take a while...','',
 				'Step {}/{}'.format(i+1,steps)]))
 			scores = index.scores(1, reset=False)
@@ -554,7 +556,7 @@ class Browser:
 	# to html
 	def export_votes(self, key):
 		print 'export votes;', len(self.new_votes)
-		query = [p for p in list(self.new_votes) if not p in trash]
+		query = [p for p in list(self.new_votes) if not p in self.trash]
 		self.message('\n'.join([
 			'Export assemblage of images with new votes. ({} imgs)'.format(
 				len(self.new_votes)),
@@ -622,7 +624,7 @@ handlers={113:Browser.back,
 					54:Browser.cluster_mode,
 					56:Browser.blog_mode,
 					25:Browser.crawl,
-					26:Browser.empty_trash,
+					26:Browser.empty_self.trash,
 					33:Browser.pop_mode}
 
 def key(event):

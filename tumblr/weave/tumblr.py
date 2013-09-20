@@ -122,7 +122,7 @@ class Blog:
 	def dead_imgs(self):
 		return [i for i in self.images 
 			if not isinstance(i, picture.Pict) or i.path == None]
-		
+
 	# returns hosted images ordered by popularity
 	@property
 	def popular(self):
@@ -137,7 +137,7 @@ class Blog:
 			return sum([1/(1+util.days_since(p.reviewed)/31) for 
 				p in self.proper_imgs 
 				if p.reviewed > 0]) / len(self.proper_imgs)
-		return 0
+		return 0.
 
 
 
