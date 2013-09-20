@@ -299,13 +299,13 @@ def dist_scores(n=10, reset=True):
 	# slightly damped by huge numbers of downloaded images
 	score = lambda t: reg.get(t,0)/2. + img_score(t) / (1+len(t.images)/100.)
 	# distribution func: score shares from incoming links added up
-	dist = lambda t: sum([reg.get(l,0)/len(l.links)/(1+int(len(l.links)<2)) for l in t.linked])
+	dist = lambda t: sum([reg.get(l,0)/(len(l.links)+1) for l in t.linked])
 	# start
 	# copy blogs to list
 	blgs = blogs()
 	# iterate n steps
 	for i in range(n):
-		reg = {t:score(t)+dist(t)/(1+int(len(t.linked)<2)) for t in blgs}
+		reg = {t:score(t)+dist(t) for t in blgs}
 	# save new scores to blogs objects, normalize to max. 1000 if nec.
 	maxs = max(reg.values())
 	norm = max(maxs, 1000.)/1000.
