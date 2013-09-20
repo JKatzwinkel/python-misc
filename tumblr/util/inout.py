@@ -136,7 +136,8 @@ def loadImages(filename):
 				else:
 					warnings.append('W: unreadable blog ref at sources sec of {} record'.format(
 						data.get('id')))
-	print '{} warnings.'.format(len(warnings))
+	if len(warnings)>0:
+		print '{} warnings.'.format(len(warnings))
 	log_msgs.extend(warnings)
 	print 'Read {} images into memory.'.format(len(imgs))
 	return imgs
@@ -227,7 +228,8 @@ def loadBlogs(filename):
 					data.get(elem.tag).append(elem.text)
 				except:
 					data[elem.tag] = [elem.text]
-	print '{} warnings.'.format(len(warnings))
+	if len(warnings)>0:
+		print '{} warnings.'.format(len(warnings))
 	log_msgs.extend(warnings)
 	print 'Read {} blog objects.'.format(len(records))
 	return records
