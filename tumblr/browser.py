@@ -463,12 +463,19 @@ class Browser:
 
 	def empty_trash(self, key):
 		if len(trash)>0:
+			self.message('Empty Trash ({} images)...'.format(len(trash))
 			print 'emptying trash: delete {} images'.format(len(trash))
 			for p, path in trash.items():
 				# delete image from disk.
 				index.picture.delete(p)
+				if p in self.hist:
+					self.hist.remove(p)
+				if self.img == p:
+					self.forward(0)
+			global trash
+			trash = []
 			print 'trash empty'
-	
+			self.redraw=True
 
 	def quit(self, key):
 		self.empty_trash(key)
@@ -582,13 +589,14 @@ class Browser:
 			seed = self.img.origin.url()
 		msg = []
 		imgs = []
+		self.pool = []
 		# crawl 3 blogs
 		for i in range(2):
 			msg += [index.get_crawler().message()]
 			self.message('\n'.join(['Wait for crawler...','',
 				'Seed URL: {}'.format(seed),''] + msg + 
 				['','{}/2'.format(i+1),
-				'{} images'.format(len(imgs))]))
+				'{} images (+{})'.format(len(self.pool), len(imgs))]))
 			imgs = index.crawl(seed, num=1)
 			self.pool.extend(imgs)
 		# done. redraw
