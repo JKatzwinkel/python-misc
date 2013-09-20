@@ -185,14 +185,21 @@ def blogs():
 def crawl(seed, num=10):
 	return crawler.crawl(seed, n=num)
 
+# return crawler instance
+def get_crawler():
+	crawly = crawler.instance()
+	if not crawly:
+		crawly = crawler.init(10, [])
+	return crawly
+
 # clusterin
 def clustering(imgs, num):
 	clusters = cluster.cluster(imgs, num)
 	return [c.imgs for c in clusters]
 
 # run page rank thingie
-def scores(n):
-	return tumblr.dist_scores(n=n)
+def scores(n, reset=True):
+	return tumblr.dist_scores(n=n, reset=reset)
 
 ##############################################################
 ####             Images / Blog IO                      #######

@@ -281,22 +281,37 @@ def queue(num=100):
 
 
 # do some page rank-like stuff
-def dist_scores(n=10):
+def dist_scores(n=10, reset=True):
 	print 'run page rank for {} steps.'.format(n)
 	# total amount of stars a blog's images archieved
 	stars = lambda t: sum([p.rating for p in t.proper_imgs])
-	# spawn score. total stars times review ratio
-	score = lambda t: float(stars(t)*2 * t.reviewed_imgs())
-	# blog score directory
-	reg = {t:score(t) for t in blogs()}
+	# blog score directory:
+	# start scores for all blogs 0 on default, or whatever
+	# score is saved to xml dump in case no reset is desired.
+	# no reset option might be more interesting due to its 'memory'
+	if reset:
+		reg = {t:0. for t in blogs()}
+	else:
+		reg = {t:t._score for t in blogs()}
+	# spawned score. total stars plus # of imgs times review ratio.
+	img_score = lambda t: float(stars(t)*2+len(t.proper_imgs)) * t.reviewed_imgs()
+	# blog score per round: half of last score plus score spawned by images
+	# slightly damped by huge numbers of downloaded images
+	score = lambda t: reg.get(t,0)/2 + img_score(t) / (1+len(t.images)/100)
 	# distribution func: score shares from incoming links added up
 	dist = lambda t: sum([reg.get(l,0)/len(l.links) for l in t.linked])
+	# start
+	# copy blogs to list
+	blgs = blogs()
 	# iterate n steps
 	for i in range(n):
-		reg = {t:score(t)+dist(t) for t in blogs()}
-	# save new scores to blogs objects
-	for t in blogs():
-		t._score = reg.get(t)
+		reg = {t:score(t)+dist(t) for t in blgs}
+	# save new scores to blogs objects, normalize to max. 1000 if nec.
+	maxs = max(reg.values())
+	norm = max(maxs, 1000.)/1000.
+	for t in blgs:
+		t._score = reg.get(t)/norm
 	print 'ok'
 	return reg
+
 

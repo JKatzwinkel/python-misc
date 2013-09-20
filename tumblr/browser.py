@@ -76,7 +76,7 @@ class Browser:
 		# prefer pictures in pool,
 		# prefer newest pictures
 		for p in self.pool:
-			boost = min(1.5,util.days_since(p.reviewed)/99)
+			boost = min(1.6,util.days_since(p.reviewed)/99)
 			boost *= 1./(1+util.days_since(p.date))
 			choices[p] = choices.get(p, 0)+boost
 		# not enough candidates? fill up with favies!
@@ -154,6 +154,7 @@ class Browser:
 			img = ImageTk.PhotoImage(im)
 			del im
 		return img
+
 
 	# retrieve thumbnail for Pict object
 	def load_thmb(self, pict):
@@ -460,13 +461,17 @@ class Browser:
 			self.redraw=True
 
 
-	def quit(self, key):
+	def empty_trash(self, key):
 		if len(trash)>0:
 			print 'emptying trash: delete {} images'.format(len(trash))
 			for p, path in trash.items():
 				# delete image from disk.
 				index.picture.delete(p)
 			print 'trash empty'
+	
+
+	def quit(self, key):
+		self.empty_trash(key)
 		if self.changes:
 			print "saving changes..."
 			index.save()
@@ -522,17 +527,21 @@ class Browser:
 
 	# compute scores of blogs using page rank
 	def compute_scores(self, key):
-		print 'running page rank. yay!'
-		self.message('\n'.join([
-			'Computing blog scores using page rank:',
-			'Iteration steps: 10',
-			'','This might take a while...']))
-		scores = index.scores(10)
+		steps = 2
+		print 'running page rank {} times. yay!'.format(steps)
+		for i in range(steps):
+			self.message('\n'.join([
+				'Computing blog scores using page rank:',
+				'{} iteration step{}'.format(steps, 's'*int(steps)),
+				'','This might take a while...','',
+				'Step {}/{}'.format(i+1,steps)]))
+			scores = index.scores(1, reset=False)
 		scs = sorted(scores.items(), key=lambda t:t[1])
 		self.redraw=True
-		print 'ok, got new blog scores. highest is {} with {}.'.format(
-			scs[-1][0], scs[-1][1])
+		#print 'ok, got new blog scores. highest is {} with {}.'.format(
+			#scs[-1][0], scs[-1][1])
 		self.changes=True
+
 
 	# generate path that connects all upvoted? images and export it
 	# to html
@@ -566,6 +575,26 @@ class Browser:
 			self.redraw=True
 
 
+	# go to the interweb!
+	def crawl(self, key):
+		seed = None
+		if self.img.origin:
+			seed = self.img.origin.url()
+		msg = []
+		imgs = []
+		# crawl 3 blogs
+		for i in range(2):
+			msg += [index.get_crawler().message()]
+			self.message('\n'.join(['Wait for crawler...','',
+				'Seed URL: {}'.format(seed),''] + msg + 
+				['','{}/2'.format(i+1),
+				'{} images'.format(len(imgs))]))
+			imgs = index.crawl(seed, num=1)
+			self.pool.extend(imgs)
+		# done. redraw
+		self.redraw = True
+
+
 
 
 
@@ -584,19 +613,21 @@ handlers={113:Browser.back,
 					40:Browser.compute_scores,
 					54:Browser.cluster_mode,
 					56:Browser.blog_mode,
+					25:Browser.crawl,
+					26:Browser.empty_trash,
 					33:Browser.pop_mode}
 
 def key(event):
   print time(), "pressed", event.keycode
   if event.keycode in range(10,20):
-  	browser.forward(event.keycode-10)
+		browser.forward(event.keycode-10)
 
   # handlers implemented by browser
   f = handlers.get(event.keycode)
   if f:
-  	f(browser, event.keycode)
+		f(browser, event.keycode)
   if browser.redraw:
-  	browser.update(event.keycode)
+		browser.update(event.keycode)
   print time(), 'leave keyhandler'
 
    #if len(browser.img.relates.keys()) > 0:
@@ -613,7 +644,7 @@ root = tk.Tk()
 root.title('tumblr img browser')
 # make the root window the size of the image
 root.geometry("%dx%d+%d+%d" % (1024, 740, 0, 0))
-root.bind("<Key>", key)	
+root.bind("<Key>", key)
 # instantiate browser class
 browser = Browser(root)
 

@@ -276,7 +276,7 @@ def crawl(url, n=30):
 	# wait for the crawler to be done
 	while crawler.crawling():
 		print crawler.message()
-		
+	
 	print 'Done.'
 
 	images = []

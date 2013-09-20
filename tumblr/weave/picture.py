@@ -401,7 +401,7 @@ class Pict:
 ##############################################################
 
 
-idex=re.compile('_(\w{19})_')
+idex=re.compile('_(\w{19,20})_')
 
 # find image by name
 def get(name):

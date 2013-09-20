@@ -10,7 +10,7 @@ import util.cluster as clustering
 index.load(recover=True)
 index.inout.save_log('load')
 print 'compute scores'
-scores = tumblr.dist_scores()
+scores = tumblr.dist_scores(n=1,reset=False)
 hi=sorted(scores.items(), key=lambda t:t[1])
 
 print 'top 10:'
