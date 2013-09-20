@@ -606,12 +606,13 @@ class Browser:
 		msg = []
 		imgs = []
 		self.pool = []
+		dur = time()
 		# crawl 3 blogs
 		for i in range(2):
 			msg += [index.get_crawler().message()]
 			self.message('\n'.join(['Wait for crawler...','',
 				'Seed URL: {}'.format(seed),''] + msg + 
-				['','{}/2'.format(i+1),
+				['','{}/2'.format(i),
 				'{} images (+{})'.format(len(self.pool), len(imgs))]))
 			imgs = index.crawl(seed, num=1)
 			self.pool.extend(imgs)
@@ -619,10 +620,18 @@ class Browser:
 		# redraw GUI -> show new imgs
 		self.display()
 		# prompt status
+		dur = time()-dur
 		msg += [index.get_crawler().message()]
+		crl = index.get_crawler()
 		self.message('\n'.join(['Done.',
-			'Crawler returned {} new images.'.format(len(self.pool)),'']+
-			msg), confirm=True)
+			'Crawler returned {} new images in {:.1f} seconds'.format(
+				len(self.pool), dur),
+			'({:.2f} img/sec avg.).'.format(len(self.pool)/dur),
+			'']+
+			msg+['', 'Crawler status:', 
+			' {} visited,'.format(len(crl.visited)),
+			' {} in queue.'.format(len(crl.frontier))]), 
+			confirm=True)
 		self.redraw = True
 
 
