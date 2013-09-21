@@ -569,7 +569,7 @@ class Browser:
 		n = 14
 		prompt=['Top {} blogs:'.format(n), '']
 		for i,t in enumerate(hi[:n]):
-			prompt.append('\t\t{}.  {} - {:.3f}  {}'.format(i+1, t.name, t._score,
+			prompt.append('\t\t{}.  {} - {:.2f}  {}'.format(i+1, t.name, t._score,
 				news(t)))
 		prompt.extend(['', '(Processed {} blogs in {:.1f} seconds)'.format(
 			len(index.blogs()), time()-dur)])
@@ -620,12 +620,13 @@ class Browser:
 		pool = []
 		dur = time()
 		# crawl 3 blogs
-		for i in range(2):
+		for i in range(3):
 			msg += [index.get_crawler().message()]
 			self.message('\n'.join(['Wait for crawler...','',
 				'Seed URL: {} {}'.format(seed, score),''] + msg + 
-				['','{}/2'.format(i),
-				'{} images (+{})'.format(len(pool), len(imgs))]))
+				['','{}/3'.format(i),
+				'{} images (+{})'.format(len(pool), len(imgs)),
+				'time: {:.1f}'.format(time()-dur)]))
 			imgs = index.crawl(seed, num=1)
 			pool.extend(imgs)
 		self.pool.extend(pool)
