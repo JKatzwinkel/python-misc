@@ -304,7 +304,7 @@ def dist_scores(n=10, reset=True):
 	img_score = lambda t: float(stars(t)*2+len(t.proper_imgs)) * t.reviewed_imgs()
 	# blog score per round: half of last score plus score spawned by images
 	# slightly damped by huge numbers of downloaded images
-	score = lambda t: reg.get(t,0)/2. + img_score(t) / (1+len(t.images)/100.)
+	score = lambda t: reg.get(t,0)/1. + img_score(t) / (1+len(t.images)/100.)
 	# distribution func: score shares from incoming links added up
 	dist = lambda t: sum([reg.get(l,0)/(len(l.links)+1) for l in t.linked])
 	# start
