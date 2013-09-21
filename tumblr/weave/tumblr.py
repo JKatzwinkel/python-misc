@@ -223,7 +223,7 @@ def blogs():
 def get(url):
 	if url:
 		url = re.sub('http://', '', url)
-		name = url.split('.')[0]
+		name = url.split('.')[0].lower()
 		return Blog.blogs.get(name)
 	return None
 
@@ -231,7 +231,7 @@ def get(url):
 def create(url, time=0):
 	if url:
 		name = re.sub('http://', '', url)
-		t = Blog(name)
+		t = Blog(name.lower())
 		t.seen = time
 		return t
 	return None
@@ -240,6 +240,8 @@ def create(url, time=0):
 # create from dictionary
 def opendump(slots):
 	name = slots.get('name')
+	if name:
+		name = name.lower()
 	#reify data set
 	t = Blog.blogs.get(name)
 	if not t:
