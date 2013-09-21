@@ -547,6 +547,10 @@ class Browser:
 	def compute_scores(self, key):
 		steps = 2
 		print 'running page rank {} times. yay!'.format(steps)
+		dur = time()
+		# original score ranks
+		hi_=sorted(index.blogs(), key=lambda t:t._score, reverse=True)
+		# compute...
 		for i in range(steps):
 			self.message('\n'.join([
 				'Computing blog scores using page rank:',
@@ -556,13 +560,17 @@ class Browser:
 			scores = index.scores(1, reset=False)
 		scs = sorted(scores.items(), key=lambda t:t[1])
 		self.redraw=True
-		#print 'ok, got new blog scores. highest is {} with {}.'.format(
-			#scs[-1][0], scs[-1][1])
 		self.changes=True
-		hi=sorted(scores.items(), key=lambda t:t[1])
-		prompt=['', 'Top 10 blogs:', '']
-		for i,t in enumerate(hi[-10:][::-1]):
-			prompt.append('\t{}.  {} - {}'.format(i+1, t[0].name, t[0].score))
+		# display result on GUI
+		hi=sorted(index.blogs(), key=lambda t:t._score, reverse=True)
+		prom = lambda t: hi_.index(t) - hi.index(t)
+		news = lambda t: ['','({}{})'.format('-+'[prom(t)>0], prom(t))][
+			prom(t) != 0]
+		n = 14
+		prompt=['Top {} blogs:'.format(n), '']
+		for i,t in enumerate(hi[:n]):
+			prompt.append('\t{}.  {} - {:.3f}  {}'.format(i+1, t.name, t._score,
+				news(t)))
 		self.message('\n'.join(prompt), confirm=True)
 
 
