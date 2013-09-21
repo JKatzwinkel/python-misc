@@ -252,13 +252,14 @@ def crawl(url, n=30):
 		#reverse=True)
 	#query = tumblr.queue()
 	#query = [p.origin for p in picture.favorites() if p.origin]
-	# possibly single seeding url to blog
-	seed = tumblr.get(url)
-	if not seed:
-		seed = tumblr.create(url)
 
 	if instance():
 		crawler = instance()
+		favs = picture.favorites()
+		while len(crawler.frontier)<2:
+			p = favs.pop(0)
+			for t in p.sources:
+				crawler.add(t)
 	else:
 		# populate crawler frontier
 		query = []
@@ -267,8 +268,14 @@ def crawl(url, n=30):
 		query = sorted(set(query), key=queue_score)[::-1]
 		# create crawler
 		crawler = init(n, query)
-	# add single seed point, in case we cant build query
-	crawler.add(seed)
+
+	# possibly single seeding url to blog
+	if url:
+		seed = tumblr.get(url)
+		if not seed:
+			seed = tumblr.create(url)
+		# add single seed point, in case we cant build query
+		crawler.add(seed)
 	
 	# clean retrieval buffer
 	crawler.rewind(n)

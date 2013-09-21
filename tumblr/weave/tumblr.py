@@ -221,16 +221,20 @@ def blogs():
 
 # find blog by name/url
 def get(url):
-	url = re.sub('http://', '', url)
-	name = url.split('.')[0]
-	return Blog.blogs.get(name)
+	if url:
+		url = re.sub('http://', '', url)
+		name = url.split('.')[0]
+		return Blog.blogs.get(name)
+	return None
 
 # creates a container instance for the blog at the given URL
 def create(url, time=0):
-	name = re.sub('http://', '', url)
-	t = Blog(name)
-	t.seen = time
-	return t
+	if url:
+		name = re.sub('http://', '', url)
+		t = Blog(name)
+		t.seen = time
+		return t
+	return None
 
 
 # create from dictionary
@@ -240,24 +244,25 @@ def opendump(slots):
 	t = Blog.blogs.get(name)
 	if not t:
 		t = create(name)
-	t.seen = float(slots.get('seen', 0))
-	t._score = float(slots.get('score',0))
-	# connect related image identifiers, whereever possible
-	# using reification as well
-	for p in slots.get('images', []):
-		if not p:
-			print "invalid img ref! very weird.. {}".format(t.name)
-		else:
-			t.assign_img(p)
-	# reify hyperlink identifiers
-	for l in slots.get('out', []):
-		if l:
-			t.link(l)
-	for l in slots.get('in', []):
-		if l:
-			ln = get(l)
-			if ln:
-				ln.link(t)
+	if t:
+		t.seen = float(slots.get('seen', 0))
+		t._score = float(slots.get('score',0))
+		# connect related image identifiers, whereever possible
+		# using reification as well
+		for p in slots.get('images', []):
+			if not p:
+				print "invalid img ref! very weird.. {}".format(t.name)
+			else:
+				t.assign_img(p)
+		# reify hyperlink identifiers
+		for l in slots.get('out', []):
+			if l:
+				t.link(l)
+		for l in slots.get('in', []):
+			if l:
+				ln = get(l)
+				if ln:
+					ln.link(t)
 	return t
 
 

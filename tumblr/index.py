@@ -323,13 +323,13 @@ def load(recover=False):
 		clean_img_refs(t)
 	# yeah! done!
 	print 'ok'
-	print 'imported {} images, {} of which are locally present ({}%),'.format(
+	print 'imported {} images, {} of which are locally present ({:.1f}%),'.format(
 		len(picture.Pict.imgs), len(pictures()), 
-		100*len(pictures())/len(picture.Pict.imgs))
+		100.*len(pictures())/len(picture.Pict.imgs))
 	known = [t for t in blogs() if t.seen > 0]
-	print 'and {} blogs, {} of which we have actually been at ({}%).'.format(
+	print 'and {} blogs, {} of which we have actually been at ({:.1f}%).'.format(
 		len(blogs()), len(known),
-		100*len(known)/len(blogs()))
+		100.*len(known)/len(blogs()))
 	newsies = [p for p in pictures() if p.reviewed < 1]
 	if len(newsies)>0:
 		print '{} images are on disk, but are still to'.format(

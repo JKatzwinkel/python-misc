@@ -35,8 +35,8 @@ class Browser:
 		#pics = sorted(pics, key=lambda p:p.rating)
 		# repopulate history
 		self.hist = []
-		for p in picture.last_reviewed()[:30]:
-			if util.days_since(p.reviewed)<.5:
+		for p in picture.last_reviewed()[:150]:
+			if util.days_since(p.reviewed)<1.5:
 				self.hist.append(p)
 				if p in self.pool:
 					self.pool.remove(p)
@@ -77,7 +77,7 @@ class Browser:
 		# prefer pictures in pool,
 		# prefer newest pictures
 		for p in self.pool:
-			boost = min(1.6,util.days_since(p.reviewed)/99)
+			boost = min(3,util.days_since(p.reviewed)/99)
 			boost *= 1./(1+util.days_since(p.date))
 			choices[p] = choices.get(p, 0)+boost
 		# not enough candidates? fill up with favies!
@@ -545,7 +545,7 @@ class Browser:
 
 	# compute scores of blogs using page rank
 	def compute_scores(self, key):
-		steps = 2
+		steps = 3
 		print 'running page rank {} times. yay!'.format(steps)
 		dur = time()
 		# original score ranks
@@ -564,13 +564,15 @@ class Browser:
 		# display result on GUI
 		hi=sorted(index.blogs(), key=lambda t:t._score, reverse=True)
 		prom = lambda t: hi_.index(t) - hi.index(t)
-		news = lambda t: ['','({}{})'.format('-+'[prom(t)>0], prom(t))][
+		news = lambda t: ['','({}{})'.format('-+'[prom(t)>0], abs(prom(t)))][
 			prom(t) != 0]
 		n = 14
 		prompt=['Top {} blogs:'.format(n), '']
 		for i,t in enumerate(hi[:n]):
-			prompt.append('\t{}.  {} - {:.3f}  {}'.format(i+1, t.name, t._score,
+			prompt.append('\t\t{}.  {} - {:.3f}  {}'.format(i+1, t.name, t._score,
 				news(t)))
+		prompt.extend(['', '(Processed {} blogs in {:.1f} seconds)'.format(
+			len(index.blogs()), time()-dur)])
 		self.message('\n'.join(prompt), confirm=True)
 
 
@@ -609,21 +611,24 @@ class Browser:
 	# go to the interweb!
 	def crawl(self, key):
 		seed = None
+		score = ''
 		if self.img.origin:
 			seed = self.img.origin.url()
+			score = '({:.2f})'.format(self.img.origin._score)
 		msg = []
 		imgs = []
-		self.pool = []
+		pool = []
 		dur = time()
 		# crawl 3 blogs
 		for i in range(2):
 			msg += [index.get_crawler().message()]
 			self.message('\n'.join(['Wait for crawler...','',
-				'Seed URL: {}'.format(seed),''] + msg + 
+				'Seed URL: {} {}'.format(seed, score),''] + msg + 
 				['','{}/2'.format(i),
-				'{} images (+{})'.format(len(self.pool), len(imgs))]))
+				'{} images (+{})'.format(len(pool), len(imgs))]))
 			imgs = index.crawl(seed, num=1)
-			self.pool.extend(imgs)
+			pool.extend(imgs)
+		self.pool.extend(pool)
 		# done. prompt status. redraw?
 		# redraw GUI -> show new imgs
 		self.display()
@@ -633,8 +638,8 @@ class Browser:
 		crl = index.get_crawler()
 		self.message('\n'.join(['Done.',
 			'Crawler returned {} new images in {:.1f} seconds'.format(
-				len(self.pool), dur),
-			'({:.2f} img/sec avg.).'.format(len(self.pool)/dur),
+				len(pool), dur),
+			'({:.2f} img/sec avg.).'.format(len(pool)/dur),
 			'']+
 			msg+['', 'Crawler status:', 
 			' {} visited,'.format(len(crl.visited)),
