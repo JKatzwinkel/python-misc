@@ -306,3 +306,28 @@ def savegroups(groups, filename):
 	f.write('</body>\n</html>\n')
 	f.close()
 
+# graphviz
+def dot_render(blogs, filename):
+	try:
+		import pygraphviz as dot
+	except ImportError:
+		print 'PyGraphviz not installed.'
+		return
+	graph = dot.AGraph(directed=True, overlap=False, splines=True, sep=.1)
+	#for t in blogs:
+		#size = min(.3+t._score/20,2)
+		#graph.add_node(t.name, color='black', width=size, 
+			#height=size, fontsize=11)
+	# outgoing:
+	#for t in blogs:
+		#for l in [l for l in t.links if l in blogs]:
+			#graph.add_edge(t.name,l.name, color='blue', 
+				#len=.5+min(len(t.links)/50,2.))
+	# incoming:
+	for t in blogs:
+		for l in [l for l in t.linked if l in blogs]:
+			graph.add_edge(l.name,t.name, color='grey',
+				len=2./(1+len(t.linked)/50))
+	graph.layout()
+	graph.draw(filename)
+

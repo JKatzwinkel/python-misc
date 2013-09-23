@@ -220,31 +220,6 @@ class Blog:
 ##############################################################
 ##############################################################
 ##############################################################
-##############################################################
-
-# return known blogs
-def blogs():
-	if len(Blog.blogs)<1:
-		load()
-	return Blog.blogs.values()
-
-# find blog by name/url
-def get(url):
-	if url:
-		url = re.sub('http://', '', url)
-		name = url.split('.')[0].lower()
-		return Blog.blogs.get(name)
-	return None
-
-# creates a container instance for the blog at the given URL
-def create(url, time=0):
-	if url:
-		name = re.sub('http://', '', url)
-		t = Blog(name.lower())
-		t.seen = time
-		return t
-	return None
-
 
 # create from dictionary. instantiate images by default
 def opendump(slots, images=True):
@@ -286,6 +261,36 @@ def load(filename='blogs.xml', images=False):
 	print 'Blog instances:', len(Blog.blogs)
 	#return blgs
 
+##############################################################
+##############################################################
+##############################################################
+
+# return known blogs
+def blogs():
+	if len(Blog.blogs)<1:
+		load()
+	return Blog.blogs.values()
+
+# find blog by name/url
+def get(url):
+	if url:
+		url = re.sub('http://', '', url)
+		name = url.split('.')[0].lower()
+		return Blog.blogs.get(name)
+	return None
+
+# creates a container instance for the blog at the given URL
+def create(url, time=0):
+	if url:
+		name = re.sub('http://', '', url)
+		t = Blog(name.lower())
+		t.seen = time
+		return t
+	return None
+
+
+################################################################
+################################################################
 
 # high score blogs first
 def favs():
@@ -320,7 +325,38 @@ def remove(tid, links=True):
 		if links:
 			print 'Removed {} references from adjacent instances.'.format(ll)
 
+
+# export nodes set to graphviz .dot file
+def save_dot(blogs, filename):
+	if not filename.endswith('.dot'):
+		filename='{}.dot'.format(filename)
+	f = open(filename, 'w')
+	f.write('digraph {\n')
+	edges = []
+	# outgoing:
+	for t in blogs:
+		for l in [l for l in t.links if l in blogs]:
+			if not (t,l) in edges:
+				edges.append((t,l))
+	# incoming:
+	for t in blogs:
+		for l in [l for l in t.linked if l in blogs]:
+			if not (l,t) in edges:
+				edges.append((l,t))
+	for a,b in edges:
+		f.write('\t{} -> {}\n'.format(a.name, b.name))
+	f.write('}\n')
+	f.close()
+
+
+# export graph
+def dot_render(blogs, filename):
+	inout.dot_render(blogs, filename)
+
 ###############################################################
+##############################################################
+##############################################################
+##############################################################
 
 #TODO rewrite!
 def queue(num=100):
