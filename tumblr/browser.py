@@ -1,3 +1,4 @@
+#!/usr/bin/python
 # -*- coding: utf-8 -*- 
 import Tkinter as tk
 from tkFont import Font, families

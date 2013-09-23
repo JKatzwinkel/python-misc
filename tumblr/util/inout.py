@@ -39,13 +39,13 @@ def saveImages(images, filename):
 		f.write('  <size width="{}" height="{}"/>\n'.format(attr[0], attr[1]))
 		if p.url:
 			f.write('  <url>{}</url>\n'.format(p.url))
+		# img histogram
+		histo = p.histogram
+		f.write('  <histogram bands="{}">{}</histogram>\n'.format(
+					histo.bands, histo.hex()))
 		if p.path:
 			f.write('  <location time="{}" reviewed="{}">{}</location>\n'.format(
 				p.date, p.reviewed, p.location))
-			# img histogram
-			histo = p.histogram
-			f.write('  <histogram bands="{}">{}</histogram>\n'.format(
-						histo.bands, histo.hex()))
 			# list of similar images
 			f.write('  <similar num="{}">\n'.format(len(p.relates)))
 			for s in p.relates.items():

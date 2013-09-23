@@ -288,7 +288,7 @@ def queue(num=100):
 
 
 # do some page rank-like stuff
-def dist_scores(n=10, reset=True):
+def dist_scores(n=10, reset=False):
 	print 'run page rank for {} steps.'.format(n)
 	# total amount of stars a blog's images archieved
 	stars = lambda t: sum([p.rating for p in t.proper_imgs])
