@@ -28,7 +28,11 @@ class Blog:
 		self.seen = 0
 		self._score = None
 		#register
-		Blog.blogs[self.name]=self
+		if Blog.blogs.get(self.name) == None:
+			Blog.blogs[self.name]=self
+		else:
+			print 'Blog id "{}" already assigned! Omitting instance!'.format(
+				self.name)
 	
 	# interlinks this blog with another one
 	def link(self, blogname):
@@ -156,8 +160,11 @@ class Blog:
 
 	# text representation
 	def __repr__(self):
-		return u'<{0}: {1}img, {2}/{3}io>'.format(
-			self.name, len(self.images), len(self.linked),len(self.links))
+		stars = self.stars()
+		stars = ['', ' {}*'.format(stars)][stars>0]
+		return u'<{}: {}img, {}/{}io {:.2f}sc {}*>'.format(
+			self.name, len(self.images), len(self.linked),len(self.links),
+			self._score, stars)
 
 
 	# url where this blog can be found
@@ -217,6 +224,8 @@ class Blog:
 
 # return known blogs
 def blogs():
+	if len(Blog.blogs)<1:
+		load()
 	return Blog.blogs.values()
 
 # find blog by name/url
@@ -237,8 +246,8 @@ def create(url, time=0):
 	return None
 
 
-# create from dictionary
-def opendump(slots):
+# create from dictionary. instantiate images by default
+def opendump(slots, images=True):
 	name = slots.get('name')
 	if name:
 		name = name.lower()
@@ -267,6 +276,49 @@ def opendump(slots):
 					ln.link(t)
 	return t
 
+
+# load blogs. ignore images by default
+def load(filename='blogs.xml', images=False):
+	records = inout.loadBlogs(filename)
+	print 'instantiate blog objects from imported records...'
+	print ['Ignore', 'Instantiate'][images], 'image references'
+	blgs = [opendump(rec,images=images) for rec in records]
+	print 'Blog instances:', len(Blog.blogs)
+	#return blgs
+
+
+# high score blogs first
+def favs():
+	return sorted(blogs(), key=lambda t:t._score)[::-1]
+
+# return blog with score rank i
+def rank(i):
+	if i-1 in range(len(blogs())):
+		return favs()[i-1]
+	return None
+
+# delete blog under given id (or given instance)
+def remove(tid, links=True):
+	if isinstance(tid, Blog):
+		name = tid.name
+	else:
+		name = tid
+		tid = Blog.blogs.get(name)
+	if tid and name:
+		del Blog.blogs[name]
+		ll = 0
+		for t in Blog.blogs.values():
+			if links:
+				if tid in t.links:
+					t.links.discard(tid)
+					ll += 1
+				if tid in t.linked:
+					t.linked.discard(tid)
+					ll += 1
+		print 'Removed blog at "{}". {} instances remaining.'.format(
+			name, len(Blog.blogs))
+		if links:
+			print 'Removed {} references from adjacent instances.'.format(ll)
 
 ###############################################################
 
@@ -322,3 +374,42 @@ def dist_scores(n=10, reset=False):
 	return reg
 
 
+# find shortest link path between blog a and blog b
+# follow directions: way=1: outgoing, way=2: incoming, way=3: both
+def link_path(a, b, way=1, steps=0):
+	if steps<1:
+		steps = len(Blog.blogs)/2
+	visited = {a:(None,0)}
+	frontier = [a]
+	i = 0
+	while i < min(len(frontier), steps):
+		t = frontier[i]
+		neighbours = []
+		if way & 1:
+			neighbours.extend(sorted(list(t.links),key=lambda x:len(x.links)))
+		if way & 2:
+			neighbours.extend(sorted(list(t.linked),key=lambda x:len(x.linked)))
+		_, cost = visited.get(t, (None,0))
+		# look at neighbours = in/out links
+		for n in neighbours:
+			# arrived? traverse path end return!
+			if n == b:
+				path = [n]
+				while t:
+					path.append(t)
+					t = visited.get(t, (None, None))[0]
+				#print 'ran depth search for blogs for {} iterations;'.format(i+1),
+				#print 'pool length:', len(frontier)
+				return path[::-1]
+			# if not arrived at b, check in/out links
+			_, best = visited.get(n, (t, None))
+			if best==None or cost+1 < best:
+				visited[n] = (t, cost+1)
+				#print n.name, t.name, cost+1
+				if best==None:
+					frontier.append(n)
+		i += 1
+	print 'no path found between {} and {}.'.format(a.name, b.name)
+	# print 'iteration steps:', i,
+	#print 'pool length:', len(frontier)
+	return []
