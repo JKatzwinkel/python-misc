@@ -138,6 +138,7 @@ class Pict:
 		self.name=name
 		self.sources=[]
 		self.relates={} # TODO
+		self.alias = [] # img ids this instance has to be referenced by
 		self.info="<unknown>"
 		self.mode = ''
 		self.size = (0,0)
@@ -167,12 +168,18 @@ class Pict:
 			self.ext = image.get('extension', 'jpg')
 			self.date = float(image.get('time', 0))
 			self.relates = image.get('similar', {})
+			self.alias = image.get('alias', [])
 			self.sources = image.get('hosts', [])
 			self.rating = int(image.get('stars', 0))
 			self.reviewed = float(image.get('reviewed', 0))
 		# register
 		self.info='{0} {1}'.format(self.size, self.mode)#TODO we need?
 		Pict.imgs[name]=self
+		for a in self.alias:
+			if not Pict.imgs.get(a):
+				Pict.imgs[a]=self
+			else:
+				print 'Can\'t register alias id {} for image {}!'.format(a,name)
 		#print '\r{0}'.format(len(Pict.imgs)),
 
 	# load and show picture
@@ -473,9 +480,13 @@ def connect(p,q,sim):
 
 # combines two instances of an identical picture to one
 def merge(p,q):
-	parts = sorted([p,q], key=lambda i:i.size[0]*i.size[1])
-	pict = parts[-1]
-	delete(parts[0])
+	# TODO: or keep order? just merge q into p? 
+	q,p = sorted([p,q], key=lambda i:i.size[0]*i.size[1])
+	#TODO: do all the actual merging stuff
+	delete(q)
+	p.alias.append(q.name)
+	Pict.imgs[q.name] = p
+	
 
 
 # update collection. filter removed files, clean references

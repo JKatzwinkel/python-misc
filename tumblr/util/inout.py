@@ -43,6 +43,11 @@ def saveImages(images, filename):
 		histo = p.histogram
 		f.write('  <histogram bands="{}">{}</histogram>\n'.format(
 					histo.bands, histo.hex()))
+		if len(p.alias)>0:
+			f.write('  <alias>\n')
+			for a in p.alias:
+				f.write('   <aka>{}</aka>\n'.format(a))
+			f.write('  </alias>\n')
 		if p.path:
 			f.write('  <location time="{}" reviewed="{}">{}</location>\n'.format(
 				p.date, p.reviewed, p.location))
@@ -56,7 +61,7 @@ def saveImages(images, filename):
 		for s in p.sources:
 			f.write('   <at when="{}">{}</at>\n'.format(
 				s.images_times.get(p,0),s.name))
-		f.write('  </hosted>\n')			
+		f.write('  </hosted>\n')
 		f.write(' </image>\n')
 	f.write('</images>\n')
 	f.close()
@@ -85,6 +90,8 @@ def loadImages(filename):
 				data['location'] = elem.text
 				data['time'] = float(elem.attrib.get('time', 0))
 				data['reviewed'] = float(elem.attrib.get('reviewed', 0))
+			if elem.tag == 'alias':
+				data['alias'] = []
 			if elem.tag == 'hosted':
 				data['hosts']=[]
 			if elem.tag == 'similar':
@@ -137,6 +144,10 @@ def loadImages(filename):
 				else:
 					warnings.append('W: unreadable blog ref at sources sec of {} record'.format(
 						data.get('id')))
+			# other known ids (merge results)
+			if elem.tag == 'aka':
+				if elem.text:
+					data['alias'] = data.get('alias',[])+[elem.text]
 	if len(warnings)>0:
 		print '{} warnings.'.format(len(warnings))
 	log_msgs.extend(warnings)
@@ -349,6 +360,8 @@ def dot_render_paths(down, up, filename):
 	graph = dot.AGraph(directed=True, overlap=False, splines=True, sep=.1)
 	for dir, col in [(down,'blue'), (up,'green')]:
 		for path in [p[:] for p in dir if len(p)>0]:
+			if dir == down:
+				path = path[::-1]
 			l = path.pop()
 			while len(path)>0:
 				t = path.pop()
