@@ -4,6 +4,8 @@ import Tkinter as tk
 from tkFont import Font, families
 from PIL import Image, ImageTk
 from time import time
+from math import sqrt as sqr
+from random import choice, randrange as rnd
 
 import index
 import weave.picture as picture
@@ -323,10 +325,10 @@ class Browser:
 
 	# places a warning sign
 	def message(self, text, confirm=False):
-		w = 400
-		h = w/2**.5
+		w = 400.
+		h = w/((sqr(5)+1)/2) # goldener schnitt, yay!
 		x = 1024/2-w/2
-		y = 780/2-h/2
+		y = 780/((sqr(5)+1)/2)-h/((sqr(5)+1)/2)
 		self.cnv.create_rectangle((x,y,x+w,y+h),
 			fill='black', outline='red', width='5')
 		self.text(text, (x+10,y+10), font='Liberation Serif', 
@@ -568,7 +570,7 @@ class Browser:
 		news = lambda t: ['','({}{})'.format('-+'[prom(t)>0], abs(prom(t)))][
 			prom(t) != 0]
 		n = 14
-		prompt=['Top {} blogs:'.format(n), '']
+		prompt=[] #['Top {} blogs:'.format(n), '']
 		for i,t in enumerate(hi[:n]):
 			prompt.append('\t\t{}.  {} - {:.2f}  {}'.format(i+1, t.name, t._score,
 				news(t)))
@@ -649,7 +651,13 @@ class Browser:
 			confirm=True)
 		self.redraw = True
 
-
+	# just pick random image
+	def rnd_img(self, key):
+		p = choice([p for p in index.pictures() 
+			if not p in self.hist and not p == self.img])
+		self.choose(p)
+		self.hist.insert(0,self.img)
+		self.redraw = True
 
 
 
@@ -670,6 +678,7 @@ handlers={113:Browser.back,
 					56:Browser.blog_mode,
 					25:Browser.crawl,
 					26:Browser.empty_trash,
+					27:Browser.rnd_img,
 					33:Browser.pop_mode}
 
 def key(event):
