@@ -160,8 +160,8 @@ class Blog:
 
 	# text representation
 	def __repr__(self):
-		stars = self.stars()
-		stars = ['', ' {}*'.format(stars)][stars>0]
+		strs = self.stars()
+		stars = ['', ' {}*'.format(strs)][strs>0]
 		return u'<{}: {}img, {}/{}io {:.2f}sc {}*>'.format(
 			self.name, len(self.images), len(self.linked),len(self.links),
 			self._score, stars)

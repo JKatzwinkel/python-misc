@@ -99,7 +99,8 @@ def loadImages(filename):
 					for i in range(0,len(dump),2):
 						histogram.append(int(dump[i:i+2], 16))
 				else:
-					print 'No histogram dump:', data.get('id')
+					warnings.append('No histogram dump for {}.'.format(
+						data.get('id')))
 				data['histogram'] = histogram
 			# image tag closed:
 			if elem.tag == 'image':
@@ -314,10 +315,12 @@ def dot_render(blogs, filename):
 		print 'PyGraphviz not installed.'
 		return
 	graph = dot.AGraph(directed=True, overlap=False, splines=True, sep=.1)
-	#for t in blogs:
-		#size = min(.3+t._score/20,2)
-		#graph.add_node(t.name, color='black', width=size, 
-			#height=size, fontsize=11)
+	#for i,t in enumerate(blogs):
+		#size = min(.01+t._score/20,.9)
+		#graph.add_node('n{}'.format(i), label=t.name, color='black', 
+			#width=size, 
+			#height=size, 
+			#fontsize=11)
 	# outgoing:
 	#for t in blogs:
 		#for l in [l for l in t.links if l in blogs]:
@@ -325,9 +328,33 @@ def dot_render(blogs, filename):
 				#len=.5+min(len(t.links)/50,2.))
 	# incoming:
 	for t in blogs:
+		ti = 'n{}'.format(blogs.index(t))
 		for l in [l for l in t.linked if l in blogs]:
+			li = 'n{}'.format(blogs.index(l))
 			graph.add_edge(l.name,t.name, color='grey',
-				len=2./(1+len(t.linked)/50))
+				weight=.01+l._score**2,
+				len=.01+len(l.links)/100.,
+				label='{:.2f}'.format(l._score/(1+len(l.links))))
 	graph.layout()
 	graph.draw(filename)
 
+
+# graphviz for link paths
+def dot_render_paths(down, up, filename):
+	try:
+		import pygraphviz as dot
+	except ImportError:
+		print 'PyGraphviz not installed.'
+		return
+	graph = dot.AGraph(directed=True, overlap=False, splines=True, sep=.1)
+	for dir, col in [(down,'blue'), (up,'green')]:
+		for path in [p[:] for p in dir if len(p)>0]:
+			l = path.pop()
+			while len(path)>0:
+				t = path.pop()
+				graph.add_edge(l.name, t.name, color=col,
+					weight=.01+l._score**2/(1+len(l.links)/200.),
+					len=.01+len(l.links)/100.)
+				l = t
+	graph.layout()
+	graph.draw(filename)
