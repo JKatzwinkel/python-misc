@@ -414,7 +414,7 @@ def dist_scores(n=10, reset=False):
 # follow directions: way=1: outgoing, way=2: incoming, way=3: both
 def link_path(a, b, way=1, steps=0):
 	if steps<1:
-		steps = len(Blog.blogs)/2
+		steps = len(Blog.blogs)-1
 	visited = {a:(None,0)}
 	frontier = [a]
 	i = 0

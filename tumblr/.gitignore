@@ -1,6 +1,9 @@
 *.xml
-*.bck
+*.bck*
 *.png
 *.jpg
+*.dot
+*.pdf
+
 images/
 logs/
