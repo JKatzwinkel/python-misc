@@ -162,7 +162,7 @@ class Blog:
 	def __repr__(self):
 		strs = self.stars()
 		stars = ['', ' {}*'.format(strs)][strs>0]
-		return u'<{}: {}img, {}/{}io {:.2f}sc {}*>'.format(
+		return u'<{}: {}img, {}/{}io {:.2f}sc{}>'.format(
 			self.name, len(self.images), len(self.linked),len(self.links),
 			self._score, stars)
 
