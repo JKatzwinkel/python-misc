@@ -432,6 +432,10 @@ def reify(name):
 	p = Pict(name, {}, path='images')
 	return p
 
+# get random picture
+def any():
+	return choice(pictures())
+
 # return all image instances that are saved to a local file
 def pictures():
 	return filter(lambda p:p.location != None, Pict.imgs.values())
