@@ -142,6 +142,14 @@ class Blog:
 				p in self.proper_imgs 
 				if p.reviewed > 0]) / len(self.proper_imgs)
 		return 0.
+	
+	# ratio of images kept on disk and reviewed
+	def imgs_ratio(self):
+		if len(self.images)>0:
+			return 1.*len([p for p in self.proper_imgs
+			if p.reviewed > 0])/len(self.images)
+		return 0.
+
 
 
 
@@ -405,7 +413,7 @@ def dist_scores(n=10, reset=False):
 	blgs = blogs()
 	# iterate n steps
 	for i in range(n):
-		reg = {t:score(t)+dist(t) for t in blgs}
+		reg = {t:score(t)+dist(t)*(.5+t.imgs_ratio()) for t in blgs}
 	# save new scores to blogs objects, normalize to max. 1000 if nec.
 	maxs = max(reg.values())
 	norm = max(maxs, 1000.)/1000.

@@ -15,7 +15,7 @@ def pearson(X, Y):
 		r=sum([(x-meanX)/sDevX*(y-meanY)/sDevY for (x,y) in zip(X,Y)])/N
 		return r
 	else:
-		return 0
+		return None
 	
 
 def median_histogram(H):

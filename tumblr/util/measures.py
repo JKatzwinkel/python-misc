@@ -55,8 +55,8 @@ def image_histograms(p, q):
 # zurueck
 def image_histmediandist(p,q):
 	mediane=[p.histogram.mediane, q.histogram.mediane]
-	dists=map(lambda (x,y):sqr((x-y)**2), zip(mediane[0], mediane[1]))
-	dist=sum(dists)/32.
+	dists=map(lambda (x,y):(x-y)**2, zip(mediane[0], mediane[1]))
+	dist=sqr(sum(dists))/32.
 	return dist
 
 # wie bunt?

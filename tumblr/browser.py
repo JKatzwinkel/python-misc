@@ -532,7 +532,7 @@ class Browser:
 		for p in picture.pictures():
 			if p != self.img:
 				sim = self.img.similarity(p)
-				if sim > .5:
+				if sim > .3:
 					picture.connect(self.img,p,sim)
 					res.append(p)
 					#x=0

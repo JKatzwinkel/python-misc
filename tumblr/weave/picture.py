@@ -230,20 +230,31 @@ class Pict:
 		#dim=sum(map(lambda (x,y):(x-y)**2, zip(self.size, pict.size)))
 		#dim/=self.size[0]**2+self.size[1]**2
 		msr=[]
-		dimensions=zip(self.size, pict.size)
-		widths=sorted(dimensions[0])
-		heights=sorted(dimensions[1])
-		msr.append(sqr(1.*widths[0]/widths[1]*heights[0]/heights[1]))
+		#dimensions=zip(self.size, pict.size)
+		#widths=sorted(dimensions[0])
+		#heights=sorted(dimensions[1])
+		#msr.append(sqr(1.*widths[0]/widths[1]*heights[0]/heights[1]))
+		dimcor = stats.pearson(self.size, pict.size)
+		if dimcor:
+			msr.append(dimcor)
 		#hst=sum(map(lambda (x,y):(x-y)**2, zip(self.histogram, pict.histogram)))
 		hstcor=measure.image_histograms(self, pict)
-		msr.extend(hstcor)
+		if hstcor:
+			msr.extend(hstcor)
 		mood=measure.image_histmediandist(self, pict)
-		msr.append(1-mood)
-		colorful=measure.image_histrelcor(self, pict)
-		msr.extend(colorful)
-		dist = measure.image_hist_dist(self, pict)
-		msr.append(1-dist/255)
+		if mood:
+			msr.append(1.-mood)
+		#colorful=measure.image_histrelcor(self, pict)
+		#if colorful:
+			#msr.extend(colorful)
+		#dist = measure.image_hist_dist(self, pict)
+		#if dist:
+			#msr.append(1.-dist/255.)
+		res = 1.
+		#while len(msr)>0:
+			#res *= msr.pop()
 		return sum(msr)/len(msr)
+		#return res
 	
 	# finds related images
 	def similar(self, n=10):
