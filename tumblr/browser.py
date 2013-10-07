@@ -31,6 +31,18 @@ class Browser:
 		self.changes = False # changes to be saved?
 		self.new_votes = set() # keep track of new ratings
 		self.pool=[]
+		# compare new pictures with favorites
+		favs = picture.starred()[:10]
+		newsies = [p for p in picture.pictures() if p.reviewed < 1]
+		if len(newsies)>0 and len(favs)>0:
+			print 'calculating similarities between {} new images and highest rated'.format(
+				len(newsies))
+			self.new_votes = set(favs)
+			for n in newsies:
+				for p in favs:
+					sim = p.similarity(n)
+					if sim > .5:
+						picture.connect(n, p, sim)
 		# img clusters
 		self.clusters=[]
 		# init img tracking

@@ -178,8 +178,8 @@ class Pict:
 	# load and show picture
 	def show(self):
 		print self.sources
-		if self.path:
-			self.pict=pil.open(self.location)
+		self.pict=self.load()
+		if self.pict:
 			self.pict.show()
 			del self.pict
 			return True
@@ -192,6 +192,61 @@ class Pict:
 		if self.path:
 			return pil.open(self.location)
 		print 'no copy.'
+	
+	# do fancy stuff with img pixel values
+	#TODO make fancier
+	def palette(self, n=10):
+		img = self.load()
+		if img:
+			px = img.load()
+			cols = {}
+			w,h = img.size
+			for x in range(0,w,10):
+				for y in range(0,h,10):
+					i = tuple([c/32*32 for c in px[x,y]])
+					cols[i] = cols.get(i, 0)+1
+			print 'colors: {}'.format(len(cols))
+			# clustering
+			while len(cols)>n:
+				clst = cols.items()
+				# step
+				best=(None,None,255**2)
+				for i, col1 in enumerate(clst):
+					for col2 in clst[i+1:]:
+						dist = sum([(t[0]-t[1])**2 for t in zip(col1[0], col2[0])])
+						if dist<best[2]:
+							best = (col1, col2, dist)
+				# merge clostest
+				col1, col2, dist = best
+				#TODO: merge color components proportional to color frequencies
+				col = tuple([(t[0]+t[1])/2 for t in zip(col1[0], col2[0])])
+				scr = col1[1]+col2[1]
+				del cols[col1[0]]
+				del cols[col2[0]]
+				cols[col] = scr
+		ss = img.size[0]*img.size[1]/100
+		del img
+		return [(t[0], t[1]*100/ss) for t in cols.items()]
+
+	
+	# show siginificant colors
+	def show_pal(self, n=5):
+		pal = self.palette(n=n)
+		hr = sum([t[1] for t in pal])
+		print hr
+		img = pil.new('RGB', (200,600), 'black')
+		pix = img.load()
+		pal = sorted(pal, key=lambda t:t[1])
+		i = 0
+		yy = 0
+		for y in range(600):
+			for x in range(200):
+				pix[x,y]=pal[i][0]
+			if y>yy+pal[i][1]*6 and i<n-1:
+				yy+=pal[i][1]*6
+				i+=1
+				print yy,i,pal[i]
+		img.show()
 
 
 	@property
@@ -369,7 +424,8 @@ class Pict:
 		self.url = url
 		self.size = image.size
 		#self.histogram = Histogram(image)
-		
+
+
 	# download image at url and update metadata accordingly
 	# if save=True, local copy is saved to disk/overwritten if present
 	# returns upgraded pil image instance, so make sure to del image
@@ -476,7 +532,7 @@ def favorites():
 
 # at least one star, come on!
 def starred():
-	return [p for p in pictures() if p.rating>0]
+	return sorted([p for p in pictures() if p.rating>0], key=lambda p:p.rating)[::-1]
 
 
 
@@ -489,6 +545,7 @@ def connect(p,q,sim):
 # combines two instances of an identical picture to one
 def merge(p,q):
 	parts = sorted([p,q], key=lambda i:i.size[0]*i.size[1])
+	#TODO: todo!
 	pict = parts[-1]
 	delete(parts[0])
 
@@ -594,6 +651,18 @@ def openfile(path, filename, name=None):
 		print e.message
 		print 'Could not load {}.'.format(fn)
 	return None
+
+
+# open file
+def open(fn):
+	if os.sep in fn:
+		comp = fn.split(os.sep)
+		path = os.sep.join(comp[:-1])
+		fn = comp[-1]
+	else:
+		path = 'images'
+	pict = openfile(path, fn)
+	return pict
 
 
 # create pict cntainer from single record
