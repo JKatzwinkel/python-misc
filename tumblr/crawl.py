@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 from random import choice
+import sys
 
 import index
 import weave.picture as picture
@@ -17,16 +18,24 @@ print 'top 10:'
 for i,t in enumerate(hi[-10:][::-1]):
 	print i+1, t[0].name, t[0].score
 
-#seed = sorted(index.blogs(), key=lambda t:len(t.proper_imgs))[-1]
-#seed = sorted(index.blogs(), key=lambda t:t.score)[-1]
-seed = choice(index.blogs())
+seed = None
+if len(sys.argv) > 1:
+	#TODO: all params!
+	url = sys.argv[-1]
+	if tumblr.proper_url(url) or url.count('.')<1:
+		seed = url
+if not seed:
+	#seed = sorted(index.blogs(), key=lambda t:len(t.proper_imgs))[-1]
+	#seed = sorted(index.blogs(), key=lambda t:t.score)[-1]
+	if len(index.blogs())>0:
+		seed = choice(index.blogs()).url()
 
 proceed=True
 imgs = []
 
 n=9
 while proceed:
-	imgs_new = index.crawl(seed.url(), num=n)
+	imgs_new = index.crawl(seed, num=n)
 	imgs.extend(imgs_new)
 	#for i,p in enumerate(imgs_new):
 		#for q in imgs_new[i+1:]:
@@ -35,6 +44,7 @@ while proceed:
 				#if sim>.45:
 					#picture.connect(p,q,sim)
 	print 'images so far:', len(imgs)
+	seed = None
 	proceed = raw_input('continue downloading? ').lower() in ['y', 'yes']
 	n=max(n-1,3)
 

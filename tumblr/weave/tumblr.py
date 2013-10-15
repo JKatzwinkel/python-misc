@@ -302,6 +302,15 @@ def any():
 	return choice(blogs())
 
 
+urlex=re.compile('(http://)?(\w*)(\.tumblr\.com).?')
+# test url for validity
+def proper_url(url):
+	mm = urlex.findall(url)
+	if len(mm) > 0:
+		return True
+	return False
+	
+
 ################################################################
 ################################################################
 

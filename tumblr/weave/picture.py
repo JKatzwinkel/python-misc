@@ -219,7 +219,10 @@ class Pict:
 				# merge clostest
 				col1, col2, dist = best
 				#TODO: merge color components proportional to color frequencies
-				col = tuple([(t[0]+t[1])/2 for t in zip(col1[0], col2[0])])
+				i = (col1[1], col2[2])
+				cmb = i[0]+i[1]
+				col = tuple([(t[0]*i[0]+t[1]*i[1])/cmb for 
+					t in zip(col1[0], col2[0])])
 				scr = col1[1]+col2[1]
 				del cols[col1[0]]
 				del cols[col2[0]]

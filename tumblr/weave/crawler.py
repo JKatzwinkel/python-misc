@@ -275,7 +275,9 @@ def crawl(url, n=30):
 		if not seed:
 			seed = tumblr.create(url)
 		# add single seed point, in case we cant build query
-		crawler.add(seed)
+		print 'starting at blog:', seed.name
+		#crawler.add(seed)
+		crawler = init(n, [seed])
 	
 	# clean retrieval buffer
 	crawler.rewind(n)
