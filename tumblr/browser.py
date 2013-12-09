@@ -50,7 +50,7 @@ class Browser:
 		#pics = sorted(pics, key=lambda p:p.rating)
 		# repopulate history
 		self.hist = []
-		for p in picture.last_reviewed()[:150]:
+		for p in picture.last_reviewed()[:50]:
 			if util.days_since(p.reviewed)<1.5:
 				self.hist.append(p)
 				if p in self.pool:
@@ -437,7 +437,7 @@ class Browser:
 
 
 	def page_up(self, key):
-		if key is 81:
+		if key in [81,112]:
 			if self.img.rating < 6:
 				self.img.rating += 1
 				self.changes = True
@@ -452,7 +452,7 @@ class Browser:
 
 
 	def page_down(self, key):
-		if key is 89:
+		if key in [89,117]:
 			if self.img.rating > 0:
 				self.img.rating = self.img.rating-1
 				self.new_votes.add(self.img)
@@ -679,7 +679,9 @@ handlers={113:Browser.back,
 					114:Browser.replay,
 					36:Browser.zoom,
 					81:Browser.page_up,
+					112:Browser.page_up,
 					89:Browser.page_down,
+					117:Browser.page_down,
 					9:Browser.quit,
 					22:Browser.delete,
 					119:Browser.delete,
@@ -694,7 +696,7 @@ handlers={113:Browser.back,
 					33:Browser.pop_mode}
 
 def key(event):
-	# print time(), "pressed", event.keycode
+	print time(), "pressed", event.keycode
 	# message prompt to be confirmed?
 	if browser.mode == 'message':
 		browser.mode = Browser.BROWSE

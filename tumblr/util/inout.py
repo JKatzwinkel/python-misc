@@ -16,7 +16,7 @@ def save_log(filename):
 	global log_msgs
 	if not filename.endswith('.log'):
 		filename = '{}.log'.format(filename)
-	f=open(os.sep.join(['logs', filename]), 'w')
+	f=open(os.sep.join(['logs', filename]), 'w+')
 	f.write('\n\nIO LOG MSGS {}\n'.format(time()))
 	for m in log_msgs:
 		f.write('{}\n'.format(m))
@@ -68,6 +68,9 @@ def saveImages(images, filename):
 
 # loads image container records from XML file
 def loadImages(filename):
+	if not os.path.exists(filename):
+		print filename, "not found."
+		return []
 	print 'Reading images metadata from', filename
 	imgs=[]
 	data={}
@@ -190,6 +193,9 @@ def saveBlogs(blogs, filename):
 
 # loads image container records from XML file
 def loadBlogs(filename):
+	if not os.path.exists(filename):
+		print filename, "not found."
+		return []
 	print 'Reading blog metadata from', filename
 	records=[]
 	data={}
