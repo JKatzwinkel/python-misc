@@ -553,13 +553,19 @@ class Browser:
 		self.message('Compute similarities:\n\n{}\nx{} imgs'.format(
 			self.img,
 			len(picture.pictures())))
-		res = []
+		sims = {}
 		for p in picture.pictures():
 			if p != self.img:
 				sim = self.img.similarity(p)
-				if sim > .3:
-					picture.connect(self.img,p,sim)
-					res.append(p)
+				sims[p] = sim
+		minsim = min(sims.values())
+		maxsim = max(sims.values())
+		thresh = minsim + (maxsim-minsim)/2.
+		res = []
+		for p,s in sims.items():
+			if s > thresh:
+				picture.connect(self.img,p,sim)
+				res.append(p)
 					#x=0
 					#for q in res[:10]:
 						#img = self.load_thmb(q)
@@ -569,6 +575,7 @@ class Browser:
 						#x += img.width()
 		print 'done. found {} images.'.format(len(res))
 		self.redraw=True
+		return res
 
 
 	# compute scores of blogs using page rank
@@ -616,10 +623,10 @@ class Browser:
 		query = [p for p in list(explst) if not p in self.trash]
 		self.message('\n'.join([
 			'Export assemblage of selected images. ({} imgs)'.format(
-				len(self.exolst)),
+				len(query[:20])),
 			'','This may take a while.']))
-		# FIXME: this is limited to 15 images???
-		path = index.chain(query=query[:15])
+		# FIXME: this is limited to 20 images???
+		path = index.chain(query=query[:20])
 		index.export_html(path, 'votes.html')
 		self.redraw=True
 
@@ -691,32 +698,41 @@ class Browser:
 		self.redraw = True
 
 
+	# show palette
+	def palette(self, key):
+		img = self.img.show_pal()
+		img.show()
+		self.message("displaying image most significant colors..", confirm=True)
+		del img
+	
 
 
 
-handlers={113:Browser.back,
-					114:Browser.replay,
-					36:Browser.zoom,
-					81:Browser.page_up,
-					112:Browser.page_up,
-					89:Browser.page_down,
+handlers={113:Browser.back, # lkey
+					114:Browser.replay, # rkey
+					36:Browser.zoom, # enter
+					81:Browser.page_up, # page up
+					112:Browser.page_up, # pg up
+					89:Browser.page_down, # pg down
 					117:Browser.page_down,
-					65:Browser.select,
-					9:Browser.quit,
-					22:Browser.delete,
+					65:Browser.select, # space
+					9:Browser.quit, # esc
+					22:Browser.delete, # del, backsp
 					119:Browser.delete,
-					39:Browser.compute_sim,
-					38:Browser.export_path_html,
-					40:Browser.compute_scores,
-					54:Browser.cluster_mode,
-					56:Browser.blog_mode,
-					25:Browser.crawl,
-					26:Browser.empty_trash,
-					27:Browser.rnd_img,
-					33:Browser.pop_mode}
+					39:Browser.compute_sim, # s
+					38:Browser.export_path_html, # a
+					40:Browser.compute_scores, # d
+					54:Browser.cluster_mode, # 
+					56:Browser.blog_mode, # b
+					25:Browser.crawl, # w
+					26:Browser.empty_trash, # e
+					27:Browser.rnd_img, # r
+					32:Browser.pop_mode, # o
+					33:Browser.palette # p
+					}
 
 def key(event):
-	# print time(), "pressed", event.keycode
+	print time(), "pressed", event.keycode
 	# message prompt to be confirmed?
 	if browser.mode == 'message':
 		browser.mode = Browser.BROWSE

@@ -48,7 +48,8 @@ def saveImages(images, filename):
 				p.date, p.reviewed, p.location))
 			# list of similar images
 			f.write('  <similar num="{}">\n'.format(len(p.relates)))
-			for s in p.relates.items():
+			# TODO: is this ok? we just cut off similarities as of egde nr. 75...
+			for s in sorted(p.relates.items(), key=lambda s:s[1], reverse=True)[:75]:
 				f.write('   <img m="{:1.3}">{}</img>\n'.format(s[1],s[0].name))
 			f.write('  </similar>\n')
 		# list where this img has been found

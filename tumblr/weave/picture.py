@@ -201,34 +201,46 @@ class Pict:
 			px = img.load()
 			cols = {}
 			w,h = img.size
+			# populate color directory:
+			# {(R,G,B): count, (r,g,b):..., ...}
 			for x in range(0,w,10):
 				for y in range(0,h,10):
 					i = tuple([c/32*32 for c in px[x,y]])
-					cols[i] = cols.get(i, 0)+1
+					cols[i] = cols.get(i,0) + 1
 			print 'colors: {}'.format(len(cols))
 			# clustering
 			while len(cols)>n:
+				# merge entries of color directory into clusters of close colors:
+				# [((R,G,B),count), (R2,G2,B2),count), (col,n)...]
+				# NOTE: may also be grayscale!!
 				clst = cols.items()
 				# step
 				best=(None,None,255**2)
 				for i, col1 in enumerate(clst):
-					for col2 in clst[i+1:]:
+					for col2 in clst[i+1:]: #col2 = ((r,g,b), count)
+						# calc cluster distance as pairwise square dist in
+						# [(r1,r2), (g1,g2), (b1,b2)]
 						dist = sum([(t[0]-t[1])**2 for t in zip(col1[0], col2[0])])
 						if dist<best[2]:
+							# maintain merge candidate best=(((r1,g1,b1),cnt),((r2,g2,b2),n),distance)
 							best = (col1, col2, dist)
-				# merge clostest
+				# merge closest
 				col1, col2, dist = best
 				#TODO: merge color components proportional to color frequencies
-				i = (col1[1], col2[2])
-				cmb = i[0]+i[1]
+				i = (col1[1], col2[1]) # extract frequency count from color entries
+				cmb = sum(i) # calc combined frequency
+				# compute color resulting in merge of closest colors:
+				# value per color channel times color frequency in ratio to other color freq
+				# ((r1*cnt1+r2*cnt2)/(cnt1+cnt2), (g1*...
 				col = tuple([(t[0]*i[0]+t[1]*i[1])/cmb for 
 					t in zip(col1[0], col2[0])])
-				scr = col1[1]+col2[1]
+				# delete distinct colors, store merge product
 				del cols[col1[0]]
 				del cols[col2[0]]
-				cols[col] = scr
+				cols[col] = cmb
 		ss = img.size[0]*img.size[1]/100
 		del img
+		#TODO: save primary colors as object fields!!
 		return [(t[0], t[1]*100/ss) for t in cols.items()]
 
 	
@@ -249,7 +261,8 @@ class Pict:
 				yy+=pal[i][1]*6
 				i+=1
 				print yy,i,pal[i]
-		img.show()
+		# img.show()
+		return img
 
 
 	@property
