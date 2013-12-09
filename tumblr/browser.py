@@ -31,6 +31,10 @@ class Browser:
 		self.changes = False # changes to be saved?
 		self.new_votes = set() # keep track of new ratings
 		self.pool=[]
+		# TODO: selection: GUI indicator must be present for selection state,
+		# selection must be viewable in its entirety in dedicated view mode,
+		# selection should probably be of type set.
+		self.selection=[] # selection for exports or queries
 		# compare new pictures with favorites
 		favs = picture.starred()[:10]
 		newsies = [p for p in picture.pictures() if p.reviewed < 1]
@@ -534,6 +538,14 @@ class Browser:
 			self.redraw=True
 			self.changes = True
 
+	
+	# select/deselect images for whatever, probably export
+	def select(self, key):
+		if self.img in self.selection:
+			self.selection.remove(self.img)
+		else:
+			self.selection.append(self.img)
+	
 
 	# compute similarities for current image
 	def compute_sim(self, key):
@@ -592,15 +604,21 @@ class Browser:
 		self.message('\n'.join(prompt), confirm=True)
 
 
-	# generate path that connects all upvoted? images and export it
+	# generate path that connects all selected or upvoted? images and export it
 	# to html
-	def export_votes(self, key):
-		print 'export votes;', len(self.new_votes)
-		query = [p for p in list(self.new_votes) if not p in self.trash]
+	def export_path_html(self, key):
+		if len(self.selection)>0:
+			explst = self.selection
+			print 'export selection;', len(self.selection)
+		else:
+			explst = self.new_votes
+			print 'export votes;', len(self.new_votes)
+		query = [p for p in list(explst) if not p in self.trash]
 		self.message('\n'.join([
-			'Export assemblage of images with new votes. ({} imgs)'.format(
-				len(self.new_votes)),
+			'Export assemblage of selected images. ({} imgs)'.format(
+				len(self.exolst)),
 			'','This may take a while.']))
+		# FIXME: this is limited to 15 images???
 		path = index.chain(query=query[:15])
 		index.export_html(path, 'votes.html')
 		self.redraw=True
@@ -683,11 +701,12 @@ handlers={113:Browser.back,
 					112:Browser.page_up,
 					89:Browser.page_down,
 					117:Browser.page_down,
+					65:Browser.select,
 					9:Browser.quit,
 					22:Browser.delete,
 					119:Browser.delete,
 					39:Browser.compute_sim,
-					38:Browser.export_votes,
+					38:Browser.export_path_html,
 					40:Browser.compute_scores,
 					54:Browser.cluster_mode,
 					56:Browser.blog_mode,
@@ -697,7 +716,7 @@ handlers={113:Browser.back,
 					33:Browser.pop_mode}
 
 def key(event):
-	print time(), "pressed", event.keycode
+	# print time(), "pressed", event.keycode
 	# message prompt to be confirmed?
 	if browser.mode == 'message':
 		browser.mode = Browser.BROWSE
