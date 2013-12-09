@@ -3,3 +3,8 @@
 : save timestamp of discovery of every blog-img link in blog/img objects
 : merge images at similarity > 96% or whatevs
 : keep crawler messages
+: similarity mesaure is incredibly discriminative against image orientation - impossible to browse from portrait to landscape format
+: consider image similarities in distributive blog score calculation
+: implement export function; maintain list of export images of which an xml dump is created on request, both for images and for blogs to 'export' folder
+: implement import functionality; check 'import' folder for images.xml/blogs.xml
+

@@ -46,6 +46,11 @@ class Crawler:
 	def rewind(self, n):
 		self.numblogs = n
 		self.images = {}
+	
+	# have I been at this particular url?
+	def been_at(self, url):
+		t = tumblr.get(url)
+		return t in self.visited
 
 
 	# choose next blog to visit
@@ -270,13 +275,14 @@ def crawl(url, n=30):
 		crawler = init(n, query)
 
 	# possibly single seeding url to blog
-	if url:
+	if url and not crawler.been_at(url):
 		seed = tumblr.get(url)
 		if not seed:
 			seed = tumblr.create(url)
 		# add single seed point, in case we cant build query
 		print 'starting at blog:', seed.name
 		#crawler.add(seed)
+		#query = list(crawler.frontier)[:n] + [seed]
 		crawler = init(n, [seed])
 	
 	# clean retrieval buffer
