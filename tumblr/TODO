@@ -10,4 +10,4 @@
 : calculation of path between selected images takes like forever for great numbers of selected images [like, say, 94]. find a way to take shortcuts more daringly or whatevs
 : similarity measurement: more influence by color[s]
 : show most significant colors in image in detail view in browser
-
+: equip images with tag keywords for indexing and retrieval!
