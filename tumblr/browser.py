@@ -81,6 +81,7 @@ class Browser:
 		self.pool.extend(pics)
 		return pics
 
+
 	# make collection to choose from given current image
 	def get_choices(self):
 		# print time(), 'enter get_choices'
@@ -93,7 +94,7 @@ class Browser:
 		# prefer newest pictures
 		for p in self.pool:
 			boost = min(3,util.days_since(p.reviewed)/99)
-			boost *= 1./(1+util.days_since(p.date))
+			boost *= 1./(1+util.days_since(p.date)/5)
 			choices[p] = choices.get(p, 0)+boost
 		# not enough candidates? fill up with favies!
 		# TODO: need we?
@@ -104,12 +105,12 @@ class Browser:
 				#choices[p] = p.relates.get(self.img,0)
 		# calculate scores
 		for p, sim in choices.items():
-			score = (1+p.rating/6) * sim
+			score = (1+p.rating/6.) * sim
 			for vote in self.new_votes:
 				adv = p.relates.get(vote)
 				if not adv:
 					adv = vote.relates.get(p,0)
-				score += vote.rating*adv/len(self.new_votes)
+				score += vote.rating * (1+adv/len(self.new_votes)/10.)
 			choices[p] = score
 		# return candidates ordered by highest score desc.
 		choices = sorted(choices.items(), key=lambda t:t[1])

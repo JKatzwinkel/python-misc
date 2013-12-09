@@ -22,13 +22,15 @@ seed = None
 if len(sys.argv) > 1:
 	#TODO: all params!
 	url = sys.argv[-1]
-	if tumblr.proper_url(url) or url.count('.')<1:
+	if url in ['-r', '-rnd']:
+		seed = tumblr.any().url()
+	elif tumblr.proper_url(url) or url.count('.')<1:
 		seed = url
-if not seed:
+#if not seed:
 	#seed = sorted(index.blogs(), key=lambda t:len(t.proper_imgs))[-1]
 	#seed = sorted(index.blogs(), key=lambda t:t.score)[-1]
-	if len(index.blogs())>0:
-		seed = choice(index.blogs()).url()
+	#if len(index.blogs())>0:
+		#seed = choice(index.blogs()).url()
 
 proceed=True
 imgs = []
