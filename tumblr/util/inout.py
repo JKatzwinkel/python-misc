@@ -281,7 +281,9 @@ def open_img_url(url):
 
 # craft html page for sequence of images
 def export_html(imgs, filename):
-	f=open(os.sep.join(['html', filename]), 'w')
+	if not os.path.exists('html'):
+		os.mkdir('html')
+	f=open(os.sep.join(['html', filename]), 'w+')
 	f.write('<html>\n<body>')
 	maxh=500
 	if None in imgs:

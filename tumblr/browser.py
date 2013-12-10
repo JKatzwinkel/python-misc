@@ -66,8 +66,6 @@ class Browser:
 			self.hist = [self.img] # history of recent images
 		elif len(self.hist)>0:
 			self.img = self.hist[0]
-		else:
-			self.img = picture.Pict('placeholder', {})
 		# self.trash
 		# key: pict instance, value: (path, image)
 		self.trash = {}
@@ -642,28 +640,37 @@ class Browser:
 	def import_dump(self, key):
 		if not os.path.exists('exports'):
 			os.mkdir('exports')
+		imgs=[]
+		srcimgs=[]
+		blgs=[]
 		#TODO: find all xml files in folder
 		if os.path.exists('exports/images.xml'):
 			#TODO: download image from original location
 			imgrec = util.inout.loadImages('exports/images.xml')
-			imgs = [picture.opendump(rec) for rec in imgrec]
-			# FIXME: workaround wegen offline: bilder werden komplett mitkopiert		
-			for p in imgs:
+			srcimgs = [picture.opendump(rec) for rec in imgrec]
+			# FIXME: workaround wegen offline: bilder werden komplett mitkopiert
+			for p in srcimgs:
 				if not os.path.exists('images/{}'.format(p.filename)):
 					os.rename('exports/{}'.format(p.filename), 'images/{}'.format(p.filename))
 					# TODO: reification of source blogs, interblog references, interimg links!!
 					index.clean_sources(p)
 					p.clean_links()
+					imgs.append(p)
+			# remove images xml records so that missing images cannot be imported again
+			os.remove('exports/images.xml')
 		if os.path.exists('exports/blogs.xml'):
 			blgrec = util.inout.loadBlogs('exports/blogs.xml')
 			blgs = [tumblr.opendump(rec) for rec in blgrec]
 			# reify image references made by blogs
 			for t in blgs:
 				index.clean_img_refs(t)
+			# remove xml file because import is successful
+			os.remove('exports/blogs.xml')		
 		self.message('imported {} images and {} blogs.'.format(
-			len(imgs), len(blgs)))
+			len(srcimgs), len(blgs)))
  		# compute similarities with present images
  		self.message('compute similarities with present images..')
+		bestsim=0 # sim stat
  		for p in imgs:
 			sims = {}
 			for q in picture.pictures():
@@ -672,7 +679,18 @@ class Browser:
 			minsim,maxsim = (min(sims.values()), max(sims.values()))
 			p.relates.update({q:s for q,s in sims.items() 
 				if s > maxsim-(maxsim-minsim)/3})
+			# keep track of best match
+			bestsim = max(bestsim, maxsim)
+		# remove xml files (now left without their actual images...)
+		# and repool
+		self.pool = imgs
 		self.redraw = True
+ 		self.message('\n'.join(['Imported {} image records with {} new images'.format(
+			len(srcimgs), len(imgs)),
+			'featured by {} blogs.'.format(len(blgs)),
+			'Highest similarity between old and new image was {:.2f}'.format(bestsim)]),
+			confirm=True)
+
 		
 
 
@@ -692,7 +710,7 @@ class Browser:
 			'','This may take a while.']))
 		# FIXME: this is limited to 20 images???
 		path = index.chain(query=query[:20])
-		index.export_html(path, 'votes.html')
+		index.export_html(path, 'selection.html')
 		self.redraw=True
 
 
