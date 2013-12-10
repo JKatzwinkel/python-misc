@@ -90,7 +90,7 @@ class Browser:
 	def get_choices(self):
 		# print time(), 'enter get_choices'
 		# suggest pictures with similiarity link to current
-		if self.mode != Browser.BLOG:
+		if not self.mode in [Browser.BLOG,Browser.POPULAR]:
 			choices = dict(self.img.relates)
 		else:
 			choices = {}
@@ -476,14 +476,16 @@ class Browser:
 				self.mode = Browser.BLOG
 				self.redraw=True
 
-	# suggest only images with more than one source
+	# suggest only images with more than zero stars
 	def pop_mode(self, key):
 		if self.mode == Browser.POPULAR:
 			self.mode = Browser.BROWSE
 			self.repool()
 			self.redraw=True
 		else:
-			self.pool = [p for p in picture.pictures() if len(p.sources)>1]
+			self.pool = [p for p in picture.favorites() 
+				if not p in self.hist and p.rating>0]
+			self.pool = sorted(self.pool, key=lambda p:p.rating, reverse=True)[:50]
 			self.mode = Browser.POPULAR
 			self.redraw=True
 
