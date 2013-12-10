@@ -625,12 +625,17 @@ class Browser:
 					blgs.update(p.sources)
 			self.message('exporting selection of {} images and {} blogs to xml.'.format(
 				len(self.selection), len(blgs)))
-			util.inout.saveImages(self.selection, 'exports/images.xml')
+			imgs = self.selection[:]
+			# remove references not being exported
+			for p in imgs:
+				p.relates = {q:s for q,s in p.relates.items() if q in imgs}
+			util.inout.saveImages(imgs, 'exports/images.xml')
 			util.inout.saveBlogs(list(blgs), 'exports/blogs.xml')
 			self.redraw=True
 
+
 	# import xml dumps located in /exports/
-	def import(self, key):
+	def import_dump(self, key):
 		if not os.path.exists('exports'):
 			os.mkdir('exports')
 		#TODO: find all xml files in folder
@@ -763,7 +768,7 @@ handlers={113:Browser.back, # lkey
 					25:Browser.crawl, # w
 					26:Browser.empty_trash, # e
 					27:Browser.rnd_img, # r
-					31:Browser.import, # i
+					31:Browser.import_dump, # i
 					32:Browser.pop_mode, # o
 					33:Browser.palette # p
 					}
