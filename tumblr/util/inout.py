@@ -43,6 +43,14 @@ def saveImages(images, filename):
 		histo = p.histogram
 		f.write('  <histogram bands="{}">{}</histogram>\n'.format(
 					histo.bands, histo.hex()))
+		# save primary colors
+		if p.primcol:
+			f.write('  <palette>\n')
+			for col, cnt in p.primcol:
+				if len(col) < 3: # force rgb triple for grayscale
+					col = col*3
+				f.write('   <col r="{}" g="{}" b="{}" freq="{}"/>\n'.format(*(col+(cnt,))))
+			f.write('  </palette>\n')
 		if p.path:
 			f.write('  <location time="{}" reviewed="{}">{}</location>\n'.format(
 				p.date, p.reviewed, p.location))
@@ -85,6 +93,8 @@ def loadImages(filename):
 			if elem.tag == 'size':
 				data['size'] = (int(elem.attrib.get('width',0)), 
 												int(elem.attrib.get('height',0)))
+			if elem.tag == 'palette':
+				data['palette'] = []
 			if elem.tag == 'location':
 				data['location'] = elem.text
 				data['time'] = float(elem.attrib.get('time', 0))
@@ -106,6 +116,11 @@ def loadImages(filename):
 					warnings.append('No histogram dump for {}.'.format(
 						data.get('id')))
 				data['histogram'] = histogram
+			# primary palette
+			if elem.tag == 'col':
+				color = tuple([int(elem.attrib.get(ch, 0)) for ch in 'rgb'])
+				data['palette'] = data.get('palette', []) + [(color, 
+					int(elem.attrib.get('freq',0)))]
 			# image tag closed:
 			if elem.tag == 'image':
 				# instantiate a picture

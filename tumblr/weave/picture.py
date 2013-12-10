@@ -139,14 +139,15 @@ class Pict:
 		self.sources=[]
 		self.relates={} # TODO
 		self.info="<unknown>"
-		self.mode = ''
+		self.mode = '' # rgb, monochrome, ...
 		self.size = (0,0)
-		self.dim = 0
+		self.dim = 0 # img size class
 		self.histogram = None
-		self.ext = ''
+		self.primcol = None # list of significant color clusters and their freq
+		self.ext = '' # file format extension
 		self.date = 0 # date of retrieval (timestamp)
 		self.url = None #TODO: implementieren
-		self.rating = 0
+		self.rating = 0 # user rating
 		self.reviewed = 0 # timestamp of last appearance in browser
 		# if pil image is given, analyze that
 		if isinstance(image, pil.Image):
@@ -163,6 +164,7 @@ class Pict:
 			self.url = image.get('url')
 			histogram = image.get('histogram', [])
 			self.histogram = Histogram(histogram, bands=image.get('bands'))
+			self.primcol = image.get('palette', None)
 			self.dim = int(image.get('format', 500))
 			self.ext = image.get('extension', 'jpg')
 			self.date = float(image.get('time', 0))
@@ -193,6 +195,14 @@ class Pict:
 			return pil.open(self.location)
 		print 'no copy.'
 	
+
+	# get 6 most significant color clusters
+	def get_prim_col(self, n=6):
+		if self.primcol is None:
+			self.primcol = self.palette(n=n)
+		return self.primcol[:]
+
+	
 	# do fancy stuff with img pixel values
 	#TODO make fancier
 	def palette(self, n=10):
@@ -205,7 +215,10 @@ class Pict:
 			# {(R,G,B): count, (r,g,b):..., ...}
 			for x in range(0,w,10):
 				for y in range(0,h,10):
-					i = tuple([c/32*32 for c in px[x,y]])
+					col = px[x,y]
+					if not(hasattr(col, '__len__')): # force grayscale pixel info into rgb
+						col = [col]*3
+					i = tuple([c/32*32 for c in col])
 					cols[i] = cols.get(i,0) + 1
 			print 'colors: {}'.format(len(cols))
 			# clustering
@@ -241,17 +254,18 @@ class Pict:
 		ss = img.size[0]*img.size[1]/100
 		del img
 		#TODO: save primary colors as object fields!!
-		return [(t[0], t[1]*100/ss) for t in cols.items()]
+		return sorted([(t[0], t[1]*100/ss) for t in cols.items()], 
+			key=lambda t:t[1], reverse=True)
 
 	
-	# show siginificant colors
-	def show_pal(self, n=5):
-		pal = self.palette(n=n)
+	# show siginificant colors [returns PIL image. delete after usage!]
+	def show_pal(self, n=6):
+		pal = self.get_prim_col(n=n)
 		hr = sum([t[1] for t in pal])
 		print hr
 		img = pil.new('RGB', (200,600), 'black')
 		pix = img.load()
-		pal = sorted(pal, key=lambda t:t[1])
+		# pal = sorted(pal, key=lambda t:t[1])
 		i = 0
 		yy = 0
 		for y in range(600):
