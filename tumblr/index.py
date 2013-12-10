@@ -268,6 +268,8 @@ def clean_img_refs(t):
 # represented yet
 def recover_imgs():
 	print 'starting img recovery attempt'
+	if not os.path.exists('images'):
+		os.mkdir('images')
 	ff = os.listdir('images')
 	picts = pictures()
 	print 'local imgs: {}; fully initialized instances from db: {}'.format(

@@ -61,11 +61,13 @@ class Browser:
 				if p in self.pool:
 					self.pool.remove(p)
 		# choose image to displ
-		if len(self.hist)<1:
+		if len(self.hist)<1 and len(self.pool)>0:
 			self.choose(self.pool.pop()) # current image as Pict object
 			self.hist = [self.img] # history of recent images
-		else:
+		elif len(self.hist)>0:
 			self.img = self.hist[0]
+		else:
+			self.img = picture.Pict('placeholder', {})
 		# self.trash
 		# key: pict instance, value: (path, image)
 		self.trash = {}
@@ -648,7 +650,7 @@ class Browser:
 			# FIXME: workaround wegen offline: bilder werden komplett mitkopiert		
 			for p in imgs:
 				os.rename('exports/{}'.format(p.filename), 'images/{}'.format(p.filename))
-				# TODO: reification of source blogs, interblog references, interimg links!!
+				# reification of source blogs, interblog references, interimg links!!
 				index.clean_sources(p)
 				p.clean_links()
 		if os.path.exists('exports/blogs.xml'):
@@ -658,7 +660,17 @@ class Browser:
 			for t in blgs:
 				index.clean_img_refs(t)
 		self.message('imported {} images and {} blogs.'.format(
-			len(imgs), len(blgs)), confirm=True)
+			len(imgs), len(blgs)))
+ 		# compute similarities with present images
+ 		self.message('compute similarities with present images..')
+ 		for p in imgs:
+			sims = {}
+			for q in picture.pictures():
+				if not q in imgs:
+					sims[q] = p.similarity(q)
+			minsim,maxsim = (min(sims.values()), max(sims.values()))
+			p.relates.update({q:s for q,s in sims.items() 
+				if s > maxsim-(maxsim-minsim)/3})
 		self.redraw = True
 		
 
