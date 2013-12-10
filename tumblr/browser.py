@@ -574,7 +574,7 @@ class Browser:
 				sims[p] = sim
 		minsim = min(sims.values())
 		maxsim = max(sims.values())
-		thresh = maxsim - (maxsim-minsim)/4.
+		thresh = maxsim - (maxsim-minsim)/3.
 		res = []
 		for p,s in sims.items():
 			if s > thresh:
@@ -689,8 +689,7 @@ class Browser:
  		for p in imgs:
 			sims = {}
 			for q in picture.pictures():
-				if not q in imgs:
-					sims[q] = p.similarity(q)
+				sims[q] = p.similarity(q)
 			minsim,maxsim = (min(sims.values()), max(sims.values()))
 			p.relates.update({q:s for q,s in sims.items() 
 				if s > maxsim-(maxsim-minsim)/3})
