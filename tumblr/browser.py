@@ -6,6 +6,7 @@ from PIL import Image, ImageTk
 from time import time
 from math import sqrt as sqr
 from random import choice, randrange as rnd
+import os
 
 import index
 import weave.picture as picture
@@ -613,6 +614,38 @@ class Browser:
 		self.message('\n'.join(prompt), confirm=True)
 
 
+	# export selection to xml
+	def export(self, key):
+		if not os.path.exists('exports'):
+			os.mkdir('exports')
+		if len(self.selection) > 0:
+			blgs = set()
+			for p in self.selection:
+				if len(p.sources) > 0:
+					blgs.update(p.sources)
+			self.message('exporting selection of {} images and {} blogs to xml.'.format(
+				len(self.selection), len(blgs)))
+			util.inout.saveImages(self.selection, 'exports/images.xml')
+			util.inout.saveBlogs(list(blgs), 'exports/blogs.xml')
+			self.redraw=True
+
+	# import xml dumps located in /exports/
+	def import(self, key):
+		if not os.path.exists('exports'):
+			os.mkdir('exports')
+		#TODO: find all xml files in folder
+		if os.path.exists('exports/images.xml'):
+			imgrec = util.inout.loadImages('exports/images.xml')
+			imgs = [picture.opendump(rec) for rec in imgrec]
+		if os.path.exists('exports/blogs.xml'):
+			blgrec = util.inout.loadBlogs('exports/blogs.xml')
+			blgs = [tumblr.opendump(rec) for rec in blgrec]
+		self.message('imported {} images and {} blogs.'.format(
+			len(imgs), len(blgs)), confirm=True)
+		self.redraw = True
+		
+
+
 	# generate path that connects all selected or upvoted? images and export it
 	# to html
 	def export_path_html(self, key):
@@ -724,11 +757,13 @@ handlers={113:Browser.back, # lkey
 					39:Browser.compute_sim, # s
 					38:Browser.export_path_html, # a
 					40:Browser.compute_scores, # d
-					54:Browser.cluster_mode, # 
+					54:Browser.cluster_mode, # c
+					53:Browser.export, # x
 					56:Browser.blog_mode, # b
 					25:Browser.crawl, # w
 					26:Browser.empty_trash, # e
 					27:Browser.rnd_img, # r
+					31:Browser.import, # i
 					32:Browser.pop_mode, # o
 					33:Browser.palette # p
 					}
