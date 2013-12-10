@@ -97,8 +97,8 @@ class Browser:
 		# prefer pictures in pool,
 		# prefer newest pictures
 		for p in self.pool:
-			boost = min(2,util.days_since(p.reviewed)/99)
-			boost *= 1./(1+util.days_since(p.date)/10)
+			boost = min(1,util.days_since(p.reviewed)/99)
+			boost *= 1./(1+util.days_since(p.date)/5)
 			choices[p] = choices.get(p, 0)+boost
 		# not enough candidates? fill up with favies!
 		# TODO: need we?
@@ -109,12 +109,12 @@ class Browser:
 				#choices[p] = p.relates.get(self.img,0)
 		# calculate scores
 		for p, sim in choices.items():
-			score = (1+p.rating/6./5) * sim
+			score = (1+p.rating/6./10.) * sim
 			for vote in self.new_votes:
 				adv = p.relates.get(vote)
 				if not adv:
 					adv = vote.relates.get(p,0)
-				score += vote.rating * (.1+adv/len(self.new_votes)/10.)
+				score += vote.rating * (.1+adv/len(self.new_votes)/6./10.)
 			choices[p] = score
 		# return candidates ordered by highest score desc.
 		choices = sorted(choices.items(), key=lambda t:t[1])
