@@ -629,6 +629,8 @@ class Browser:
 			# remove references not being exported
 			for p in imgs:
 				p.relates = {q:s for q,s in p.relates.items() if q in imgs}
+				#FIXME: offline workaround: copy images instead of downloading them
+				os.link('images/{}'.format(p.filename), 'exports/{}'.format(p.filename))
 			util.inout.saveImages(imgs, 'exports/images.xml')
 			util.inout.saveBlogs(list(blgs), 'exports/blogs.xml')
 			self.redraw=True
@@ -640,8 +642,12 @@ class Browser:
 			os.mkdir('exports')
 		#TODO: find all xml files in folder
 		if os.path.exists('exports/images.xml'):
+			#TODO: download image from original location
 			imgrec = util.inout.loadImages('exports/images.xml')
 			imgs = [picture.opendump(rec) for rec in imgrec]
+			# FIXME: workaround wegen offline: bilder werden komplett mitkopiert		
+			for p in imgs:
+				os.rename('exports/{}'.format(p.filename), 'images/{}'.format(p.filename))
 		if os.path.exists('exports/blogs.xml'):
 			blgrec = util.inout.loadBlogs('exports/blogs.xml')
 			blgs = [tumblr.opendump(rec) for rec in blgrec]
