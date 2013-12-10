@@ -678,7 +678,7 @@ class Browser:
 		# now that we have our blogs imported, we can reify blog/img references 
 		# in img instances
 		# TODO: reification of source blogs, interblog references, interimg links!!
-		for p in srcmgs:
+		for p in srcimgs:
 			index.clean_sources(p)
 			p.clean_links()
 		self.message('imported {} images and {} blogs.'.format(
