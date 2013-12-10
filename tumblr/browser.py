@@ -221,6 +221,9 @@ class Browser:
 			if self.trash.get(p):
 				self.cnv.create_text(img.width()-4, y+4, anchor=tk.NE, 
 						font='Arial 14 bold', fill='red', text='X')
+			if p in self.selection:
+				self.cnv.create_text(img.width()-4, y+4, anchor=tk.NE, 
+						font='Arial 10 bold', fill='green', text='[In Selection]')
 			y += img.height()
 			#imgs.append((img, (0,y), p.rating))
 			self.cur_imgs.append(img)
@@ -240,6 +243,10 @@ class Browser:
 			self.cnv.create_text(500, 374-img.height()/2, anchor=tk.CENTER, 
 					font='Arial 14 bold', fill='red', 
 					text='In Trash. Hit <Del> to Restore.')
+		if self.img in self.selection:
+			self.cnv.create_text(500, 392-img.height()/2, anchor=tk.CENTER, 
+					font='Arial 12 bold', fill='green', 
+					text='[In Selection. Hit <space> to deselect]')
 		# topleft= NW
 		# similars
 		posx = min([max([500+self.img.size[0]/2, 724]),784])
@@ -278,8 +285,11 @@ class Browser:
 		#if w>760 or h>740:
 		img = self.load_img(self.img)
 		self.cnv.create_image((500,370), anchor=tk.CENTER, image=img)
+		self.text('[{}] [{}]'.format(
+			'S'*int(self.img in self.selection),
+			'X'*int(self.trash.get(self.img) != None)), (4,4))
 		imgtxt=self.img.details()
-		x,y = self.text(imgtxt, (4,4))
+		x,y = self.text(imgtxt, (4,24))
 		medians = map(lambda b:b*8, self.img.histogram.mediane)
 		if len(medians)<3:
 			medians *= 3
@@ -548,6 +558,7 @@ class Browser:
 			self.selection.remove(self.img)
 		else:
 			self.selection.append(self.img)
+		self.redraw=True
 	
 
 	# compute similarities for current image
@@ -630,7 +641,8 @@ class Browser:
 			for p in imgs:
 				p.relates = {q:s for q,s in p.relates.items() if q in imgs}
 				#FIXME: offline workaround: copy images instead of downloading them
-				os.link('images/{}'.format(p.filename), 'exports/{}'.format(p.filename))
+				if not os.path.exists('exports/{}'.format(p.filename)):
+					os.link('images/{}'.format(p.filename), 'exports/{}'.format(p.filename))
 			util.inout.saveImages(imgs, 'exports/images.xml')
 			util.inout.saveBlogs(list(blgs), 'exports/blogs.xml')
 			self.redraw=True
@@ -652,10 +664,7 @@ class Browser:
 			for p in srcimgs:
 				if not os.path.exists('images/{}'.format(p.filename)):
 					os.rename('exports/{}'.format(p.filename), 'images/{}'.format(p.filename))
-					# TODO: reification of source blogs, interblog references, interimg links!!
-					index.clean_sources(p)
-					p.clean_links()
-					imgs.append(p)
+					imgs.append(p)			
 			# remove images xml records so that missing images cannot be imported again
 			os.remove('exports/images.xml')
 		if os.path.exists('exports/blogs.xml'):
@@ -665,7 +674,13 @@ class Browser:
 			for t in blgs:
 				index.clean_img_refs(t)
 			# remove xml file because import is successful
-			os.remove('exports/blogs.xml')		
+			os.remove('exports/blogs.xml')
+		# now that we have our blogs imported, we can reify blog/img references 
+		# in img instances
+		# TODO: reification of source blogs, interblog references, interimg links!!
+		for p in imgs:
+			index.clean_sources(p)
+			p.clean_links()
 		self.message('imported {} images and {} blogs.'.format(
 			len(srcimgs), len(blgs)))
  		# compute similarities with present images
@@ -683,7 +698,8 @@ class Browser:
 			bestsim = max(bestsim, maxsim)
 		# remove xml files (now left without their actual images...)
 		# and repool
-		self.pool = imgs
+		if len(imgs)>0:
+			self.pool = imgs
 		self.redraw = True
  		self.message('\n'.join(['Imported {} image records with {} new images'.format(
 			len(srcimgs), len(imgs)),
