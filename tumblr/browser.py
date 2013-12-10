@@ -648,9 +648,15 @@ class Browser:
 			# FIXME: workaround wegen offline: bilder werden komplett mitkopiert		
 			for p in imgs:
 				os.rename('exports/{}'.format(p.filename), 'images/{}'.format(p.filename))
+				# TODO: reification of source blogs, interblog references, interimg links!!
+				index.clean_sources(p)
+				p.clean_links()
 		if os.path.exists('exports/blogs.xml'):
 			blgrec = util.inout.loadBlogs('exports/blogs.xml')
 			blgs = [tumblr.opendump(rec) for rec in blgrec]
+			# reify image references made by blogs
+			for t in blgs:
+				index.clean_img_refs(t)
 		self.message('imported {} images and {} blogs.'.format(
 			len(imgs), len(blgs)), confirm=True)
 		self.redraw = True
