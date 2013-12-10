@@ -678,7 +678,7 @@ class Browser:
 		# now that we have our blogs imported, we can reify blog/img references 
 		# in img instances
 		# TODO: reification of source blogs, interblog references, interimg links!!
-		for p in imgs:
+		for p in srcmgs:
 			index.clean_sources(p)
 			p.clean_links()
 		self.message('imported {} images and {} blogs.'.format(
@@ -689,7 +689,8 @@ class Browser:
  		for p in imgs:
 			sims = {}
 			for q in picture.pictures():
-				sims[q] = p.similarity(q)
+				if q != p:
+					sims[q] = p.similarity(q)
 			minsim,maxsim = (min(sims.values()), max(sims.values()))
 			p.relates.update({q:s for q,s in sims.items() 
 				if s > maxsim-(maxsim-minsim)/3})
