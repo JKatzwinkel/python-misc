@@ -493,11 +493,13 @@ class Browser:
 			self.redraw = True
 		elif self.mode == Browser.MERGE:
 			if len(self.merge_candidates)>0:
-				self.img = picture.merge(self.img, self.merge_candidates[0])
+				q = self.merge_candidates.pop(0)
+				self.img = picture.merge(self.img, q)
 				self.message('merged', confirm=True)
 			self.cnv.create_rectangle((0,0,780,740), fill='black')
 			self.cnv.create_rectangle((0,724,780,740), fill='black')
 			# TODO: not as long as more merge cands are coming up
+			self.merge_candidates = self.merge_cand()
 			self.display()
 			self.mode = Browser.BROWSE
 		# TODO: ojemine...
