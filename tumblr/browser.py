@@ -500,6 +500,7 @@ class Browser:
 			self.cnv.create_rectangle((0,724,780,740), fill='black')
 			# TODO: not as long as more merge cands are coming up
 			self.merge_candidates = self.merge_cand()
+			self.repool()
 			self.display()
 			self.mode = Browser.BROWSE
 		# TODO: ojemine...
