@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# -*- coding: utf-8 -*- 
+# -*- coding: utf-8 -*-
 
 from PIL import Image as pil
 import os
@@ -60,7 +60,7 @@ class Histogram:
 		for b in range(0,len(data), size):
 			self.data.append(data[b:b+size])
 		# prepare median values
-		self.mediane = [stats.median_histogram(band) 
+		self.mediane = [stats.median_histogram(band)
 											for band in self.data]
 		self._hex=''
 
@@ -124,13 +124,13 @@ class Histogram:
 class Pict:
 	# registry
 	imgs={}
-	# initialize for given 
+	# initialize for given
 	def __init__(self, name, image, path='images'):
 		# TODO: eigentlich ist der pfad hier ueberfluessig. der indexer
 		# sollte ein default projektverzeichnise fuehren, wo er
 		# alle bilder reinschmeiszt und rausholt. fuer abweichende
 		# verzeichnisse koennte der parameter optional gemacht werden
-		# TODO> dann haette man auch eine einfache moeglichkeit, 
+		# TODO> dann haette man auch eine einfache moeglichkeit,
 		# geloeschte von vorhandenen bildern zu unterscheiden ohne
 		# unterschiedliche klassen verwenden oder die metadaten
 		# wegschmeiszen zu muessen.
@@ -194,7 +194,7 @@ class Pict:
 		if self.path:
 			return pil.open(self.location)
 		print 'no copy.'
-	
+
 
 	# get 6 most significant color clusters
 	def get_prim_col(self, n=6):
@@ -202,7 +202,7 @@ class Pict:
 			self.primcol = self.palette(n=n)
 		return self.primcol[:]
 
-	
+
 	# do fancy stuff with img pixel values
 	#TODO make fancier
 	def palette(self, n=10):
@@ -245,7 +245,7 @@ class Pict:
 				# compute color resulting in merge of closest colors:
 				# value per color channel times color frequency in ratio to other color freq
 				# ((r1*cnt1+r2*cnt2)/(cnt1+cnt2), (g1*...
-				col = tuple([(t[0]*i[0]+t[1]*i[1])/cmb for 
+				col = tuple([(t[0]*i[0]+t[1]*i[1])/cmb for
 					t in zip(col1[0], col2[0])])
 				# delete distinct colors, store merge product
 				del cols[col1[0]]
@@ -254,10 +254,10 @@ class Pict:
 		ss = img.size[0]*img.size[1]/100
 		del img
 		#TODO: save primary colors as object fields!!
-		return sorted([(t[0], t[1]*100/ss) for t in cols.items()], 
+		return sorted([(t[0], t[1]*100/ss) for t in cols.items()],
 			key=lambda t:t[1], reverse=True)
 
-	
+
 	# show siginificant colors [returns PIL image. delete after usage!]
 	def show_pal(self, n=6):
 		pal = self.get_prim_col(n=n)
@@ -299,7 +299,7 @@ class Pict:
 		else:
 			self.path = None
 
-	
+
 	@property
 	def origin(self):
 		if len(self.sources)>0:
@@ -307,7 +307,7 @@ class Pict:
 		return None
 
 
-	
+
 	# calculates similarity measure between two images
 	# -1: negative correlation, 1: perfect correlation/identity
 	def similarity(self, pict):
@@ -340,7 +340,7 @@ class Pict:
 			#res *= msr.pop()
 		return sum(msr)/len(msr)
 		#return res
-	
+
 	# finds related images
 	def similar(self, n=10):
 		sim=[]
@@ -387,9 +387,9 @@ class Pict:
 			print '\tSources:\n\t\t',
 			for source in p.sources:
 				print source.name,
-			print 
+			print
 
-	
+
 	# tostring
 	def __repr__(self):
 		orig = 'unknown'
@@ -468,11 +468,11 @@ class Pict:
 		return image
 
 	# remove string identifiers from link list, either by
-	# replacing them with their corresponding instance, or 
+	# replacing them with their corresponding instance, or
 	# by deleting them
 	def clean_links(self):
 		# generate objects for str keys
-		objects = [(k, reify(k)) for k in self.relates.keys() ] 
+		objects = [(k, reify(k)) for k in self.relates.keys() ]
 		# repopulate link list
 		links = {}
 		for k, obj in objects:
@@ -574,10 +574,22 @@ def connect(p,q,sim):
 
 # combines two instances of an identical picture to one
 def merge(p,q):
-	parts = sorted([p,q], key=lambda i:i.size[0]*i.size[1])
+	q,p = sorted([p,q], key=lambda i:i.size[0]*i.size[1])
 	#TODO: todo!
-	pict = parts[-1]
-	delete(parts[0])
+	p.dim = max(p.dim, q.dim)
+	p.rating = max(p.rating, q.rating)
+	p.sources.extend(q.sources)
+	p.date = min(p.date, q.date)
+	p.reviewed = max(p.reviewed, q.reviewed)
+	# update references
+	Pict.imgs[q.name] = p
+	q.name = p.name
+	# TODO: what else?
+	# remove absorbed image
+	if q in p.relates:
+		p.relates.remove(q)
+	delete(q)
+	return p
 
 
 # update collection. filter removed files, clean references

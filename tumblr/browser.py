@@ -131,10 +131,11 @@ class Browser:
 	def merge_cand(self):
 		if len(self.img.relates)>0:
 			minsim = min([s for s in self.img.relates.values() if s>0])
+			print 'smallest similarity value: {:.2f}'.format(minsim)
 			cand = [(p,s) for p,s in self.img.relates.items()
 				if s>.9333+minsim/15]
 			cand = [p for p,s in sorted(cand, key=lambda t:t[1], reverse=True)]
-			return cand
+			return cand[:5]
 		return []
 
 
@@ -323,7 +324,7 @@ class Browser:
 			# print time(), 'place curr img decoration'
 			#
 			# merge candidate in line
-			mimg = self.merge_candidates.pop(0)
+			mimg = self.merge_candidates[0]
 			img2 = self.load_img(mimg, size=(360, 720))
 			self.cur_imgs.append(img2)
 			# print time(), 'place curr img preview'
@@ -477,13 +478,23 @@ class Browser:
 
 	# enter merge view
 	def merge_view(self, key):
-		if self.mode in [Browser.BROWSE, Browser.BLOG, Browser.POPULAR]:
-			if len(self.merge_candidates)>0:
-				self.cnv.create_rectangle((0,0,1024,740), fill='black')
-				self.display_merge_cands()
-				self.mode = Browser.MERGE
-			# TODO: respond to keys [y=merge, ....
+		if key == 58:
+			if self.mode in [Browser.BROWSE, Browser.BLOG, Browser.POPULAR,
+					Browser.MERGE]:
+				if len(self.merge_candidates)>int(self.mode == Browser.MERGE):
+					self.cnv.create_rectangle((0,0,1024,740), fill='black')
+					if self.mode == Browser.MERGE:
+						self.merge_candidates.pop(0)
+					self.display_merge_cands()
+					self.mode = Browser.MERGE
+					return
+				# TODO: respond to keys [y=merge, ....
+			self.mode = Browser.BROWSE
+			self.redraw = True
 		elif self.mode == Browser.MERGE:
+			if len(self.merge_candidates)>0:
+				self.img = picture.merge(self.img, self.merge_candidates[0])
+				self.message('merged', confirm=True)
 			self.cnv.create_rectangle((0,0,780,740), fill='black')
 			self.cnv.create_rectangle((0,724,780,740), fill='black')
 			# TODO: not as long as more merge cands are coming up
@@ -898,6 +909,7 @@ handlers={113:Browser.back, # lkey
 					53:Browser.export, # x
 					56:Browser.blog_mode, # b
 					58:Browser.merge_view, # m
+					59:Browser.merge_view, # ,
 					25:Browser.crawl, # w
 					26:Browser.empty_trash, # e
 					27:Browser.rnd_img, # r
