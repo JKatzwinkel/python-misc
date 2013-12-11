@@ -83,6 +83,7 @@ class Browser:
 
 
 	# init default image selection from favorites and newsies
+	# NOTE: actually extends img pool, without reset!
 	def repool(self):
 		pics = picture.to_review()
 		if len(pics)<3:
@@ -492,17 +493,35 @@ class Browser:
 			self.mode = Browser.BROWSE
 			self.redraw = True
 		elif self.mode == Browser.MERGE:
+			# actually merge!
 			if len(self.merge_candidates)>0:
 				q = self.merge_candidates.pop(0)
 				self.img = picture.merge(self.img, q)
-				self.message('merged', confirm=True)
+				self.message('\n'.join(['merged. absorber is:','']
+					+self.img.short_desc()), confirm=True)
+				# detect remaining merge candidates
+				self.merge_candidates = self.merge_cand()
+				# remove absorbed img from history
+				if q in self.hist:
+					self.hist.remove(q)
+				# ... from selection
+				if q in self.selection:
+					self.selection.remove(q)
+				# ... from imgs/preview/thumbnail stores
+				self.img_reg.pop(q, None)
+				self.thmb_reg.pop(q, None)
+				self.preview_reg.pop(q, None)
+				# reset and repopulate image browse pool
+				self.pool = []
+				self.repool()
+				# leave merge view, enter normal view
+				# TODO: not as long as more merge cands are coming up
+				# self.display()
+			# clean up GUI
 			self.cnv.create_rectangle((0,0,780,740), fill='black')
 			self.cnv.create_rectangle((0,724,780,740), fill='black')
-			# TODO: not as long as more merge cands are coming up
-			self.merge_candidates = self.merge_cand()
-			self.repool()
-			self.display()
 			self.mode = Browser.BROWSE
+			self.redraw = True
 		# TODO: ojemine...
 
 

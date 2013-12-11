@@ -472,7 +472,8 @@ class Pict:
 	# by deleting them
 	def clean_links(self):
 		# generate objects for str keys
-		objects = [(k, reify(k)) for k in self.relates.keys() ]
+		# [makes sure no image links itself as similar...]
+		objects = [(k, reify(k)) for k in self.relates.keys() if k != self.name]
 		# repopulate link list
 		links = {}
 		for k, obj in objects:
