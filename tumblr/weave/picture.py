@@ -582,7 +582,7 @@ def merge(p,q):
 	p.date = min(p.date, q.date)
 	p.reviewed = max(p.reviewed, q.reviewed)
 	# update references
-	Pict.imgs[q.name] = p
+	del Pict.imgs[q.name]
 	# TODO: what else?
 	# remove absorbed image
 	if q in p.relates:

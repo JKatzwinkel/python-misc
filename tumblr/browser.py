@@ -500,6 +500,15 @@ class Browser:
 			self.cnv.create_rectangle((0,724,780,740), fill='black')
 			# TODO: not as long as more merge cands are coming up
 			self.merge_candidates = self.merge_cand()
+			# remove absorbed img from history
+			if q in self.hist:
+				self.hist.remove(q)
+			if q in self.img_reg:
+				del self.img_reg[q]
+			if q in self.thmb_reg:
+				del self.thmb_reg[q]
+			if q in self.preview_reg:
+				del self.preview_reg[q]
 			self.repool()
 			self.display()
 			self.mode = Browser.BROWSE
