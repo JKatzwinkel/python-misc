@@ -16,6 +16,8 @@ def save_log(filename):
 	global log_msgs
 	if not filename.endswith('.log'):
 		filename = '{}.log'.format(filename)
+	if not os.path.isdir('logs'):
+		os.mkdir('logs')
 	f=open(os.sep.join(['logs', filename]), 'w+')
 	f.write('\n\nIO LOG MSGS {}\n'.format(time()))
 	for m in log_msgs:
@@ -65,7 +67,7 @@ def saveImages(images, filename):
 		for s in p.sources:
 			f.write('   <at when="{}">{}</at>\n'.format(
 				s.images_times.get(p,0),s.name))
-		f.write('  </hosted>\n')			
+		f.write('  </hosted>\n')
 		f.write(' </image>\n')
 	f.write('</images>\n')
 	f.close()
@@ -91,7 +93,7 @@ def loadImages(filename):
 			if elem.tag == 'image':
 				data=elem.attrib
 			if elem.tag == 'size':
-				data['size'] = (int(elem.attrib.get('width',0)), 
+				data['size'] = (int(elem.attrib.get('width',0)),
 												int(elem.attrib.get('height',0)))
 			if elem.tag == 'palette':
 				data['palette'] = []
@@ -119,7 +121,7 @@ def loadImages(filename):
 			# primary palette
 			if elem.tag == 'col':
 				color = tuple([int(elem.attrib.get(ch, 0)) for ch in 'rgb'])
-				data['palette'] = data.get('palette', []) + [(color, 
+				data['palette'] = data.get('palette', []) + [(color,
 					int(elem.attrib.get('freq',0)))]
 			# image tag closed:
 			if elem.tag == 'image':
@@ -341,14 +343,14 @@ def dot_render(blogs, filename):
 	graph = dot.AGraph(directed=True, overlap=False, splines=True, sep=.1)
 	#for i,t in enumerate(blogs):
 		#size = min(.01+t._score/20,.9)
-		#graph.add_node('n{}'.format(i), label=t.name, color='black', 
-			#width=size, 
-			#height=size, 
+		#graph.add_node('n{}'.format(i), label=t.name, color='black',
+			#width=size,
+			#height=size,
 			#fontsize=11)
 	# outgoing:
 	#for t in blogs:
 		#for l in [l for l in t.links if l in blogs]:
-			#graph.add_edge(t.name,l.name, color='blue', 
+			#graph.add_edge(t.name,l.name, color='blue',
 				#len=.5+min(len(t.links)/50,2.))
 	# incoming:
 	for t in blogs:

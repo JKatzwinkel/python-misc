@@ -319,6 +319,8 @@ class Pict:
 		#widths=sorted(dimensions[0])
 		#heights=sorted(dimensions[1])
 		#msr.append(sqr(1.*widths[0]/widths[1]*heights[0]/heights[1]))
+		#FIXME: hier irgendwo bleibts haengen, wenn ca. bilder
+		# beim instanziieren ihre local copies nicht laden konnten
 		dimcor = stats.pearson(self.size, pict.size)
 		if dimcor:
 			msr.append(dimcor)
@@ -410,7 +412,9 @@ class Pict:
 			'Size: {}x{} Pixels'.format(self.size[0], self.size[1]),
 			'Filename: {}'.format(self.name),
 			'Mode: {} {}'.format(self.mode, self.ext),
-			'Seen {} times, first on {}'.format(len(self.sources), self.origin),
+			'Seen {} times: [{} {}]'.format(len(self.sources),
+				'\n'.join([t.name for t in self.sources[:5]]),
+				'...'*int(len(self.sources)>5)),
 			'Timestamp {}, downloaded {}'.format(self.date, ago),
 			'',
 			'Histogram channel medians: {}'.format(

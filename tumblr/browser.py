@@ -46,9 +46,11 @@ class Browser:
 			self.new_votes = set(favs)
 			for n in newsies:
 				for p in favs:
-					sim = p.similarity(n)
-					if sim > .5:
-						picture.connect(n, p, sim)
+					if n != p:
+						sim = p.similarity(n)
+						if sim > .6:
+							picture.connect(n, p, sim)
+			print 'done doing that.'
 		# merge candidates for currentlt selected image
 		self.merge_candidates=[]
 		# img clusters
@@ -180,6 +182,8 @@ class Browser:
 				if not im:
 					im = pict.load()
 					self.img_reg[pict] = im
+				if not im:
+					im = Image.new('RGB', (140,280), 'pink')
 				mw,mh = size
 				ratio = min([float(mw)/w, float(mh)/h])
 				im = im.resize((int(w*ratio),int(h*ratio)), Image.ANTIALIAS)
@@ -202,7 +206,10 @@ class Browser:
 		if not thmb:
 			im = self.img_reg.get(pict)
 			if not im:
+				print 'oh. no thmb in registry. try to open:', pict.filename
 				im = pict.load()
+			if not im:
+				im = Image.new('RGB', (70,140), 'pink')
 			w,h = pict.size
 			ratio = min([140./w, 140./h])
 			img = im.resize((int(w*ratio),int(h*ratio)), Image.LINEAR)
@@ -227,7 +234,7 @@ class Browser:
 		imgs=[]
 		cover=0
 		for p in self.hist[1:15]:
-			img = self.load_thmb(p)
+			img = self.load_thmb(p) # FIXME: nullpointer? warum???
 			self.cnv.create_image((0,y),
 				anchor=tk.NW, image=img)
 			#self.cnv.create_text(0+4, y+4, anchor=tk.NW,
@@ -257,7 +264,7 @@ class Browser:
 				#pos[0]+img.width(), pos[1]+img.height()), fill='black')
 		# current img
 		# print time(), 'load curr img preview'
-		img = self.load_img(self.img, size=(720, 740))
+		img = self.load_img(self.img, size=(720, 740)) # FIXME: nullpointer???
 		self.cur_imgs.append(img)
 		# print time(), 'place curr img preview'
 		self.cnv.create_image((500,370), anchor=tk.CENTER, image=img)
@@ -331,8 +338,13 @@ class Browser:
 			# print time(), 'place curr img preview'
 			self.cnv.create_image((500,370-img2.height()/2), anchor=tk.NW, image=img2)
 			# print time(), 'place curr img decoration'
-			self.mini_desc((504,374-img2.height()/2), mimg)
-			self.mini_desc((400,374-img2.height()/2),self.img)
+			y=326+img2.height()/2
+			self.mini_desc((504,y), mimg)
+			self.text(self.img.details(), (490,4), anchor=tk.NE, justify='right',
+					font='roman', size=10)
+			self.mini_desc((400,y),self.img)
+			self.text(mimg.details(), (510,4), anchor=tk.NW,
+					font='roman', size=10)
 
 
 	# single image view
@@ -353,10 +365,10 @@ class Browser:
 		self.cnv.create_rectangle((10,y+20,100,y+84),
 			outline='#fff',
 			fill=med_col)
-		self.text('Color code {}'.format(med_col), (0,y+90))
-		if self.img.origin:
-			blogtxt = self.img.origin.details()
-			self.text(blogtxt, (0,y+130))
+		x,y = self.text('Color code {}'.format(med_col), (0,y+90))
+		for t in self.img.sources[:2]:
+			blogtxt = t.details()
+			x,y = self.text(blogtxt, (0,y+55))
 		self.text('Source: {}'.format(self.img.url), (0,724))
 		self.cur_imgs = [img]
 
@@ -496,22 +508,30 @@ class Browser:
 			# actually merge!
 			if len(self.merge_candidates)>0:
 				q = self.merge_candidates.pop(0)
-				self.img = picture.merge(self.img, q)
-				self.message('\n'.join(['merged. absorber is:','']
-					+self.img.short_desc()), confirm=True)
+				# important: if absorbee is active image, change it to absorber!
+				# after this, q could be the absorber all of a sudden, if we did't
+				# get an absorber, absorbee tuple as return value
+				self.img, q = index.merge_images(self.img, q)
+				self.message('merged. absorber is:\n\n'+self.img.short_desc(), confirm=True)
 				# detect remaining merge candidates
 				self.merge_candidates = self.merge_cand()
+				# FIXME: absorbed images somehow prevail and keep popping up in some cases
+				# [in history, but also in browse suggestions]
 				# remove absorbed img from history
 				if q in self.hist:
 					self.hist.remove(q)
 				# ... from selection
 				if q in self.selection:
 					self.selection.remove(q)
+				# ... from browsing suggestions
+				if q in self.choices:
+					self.choices.remove(q)
 				# ... from imgs/preview/thumbnail stores
 				self.img_reg.pop(q, None)
 				self.thmb_reg.pop(q, None)
 				self.preview_reg.pop(q, None)
-				# reset and repopulate image browse pool
+				# reset and repopulate image browse pool, add merge product to hist
+				self.hist.insert(0,self.img)
 				self.pool = []
 				self.repool()
 				# leave merge view, enter normal view

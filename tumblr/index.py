@@ -209,6 +209,7 @@ def merge_images(p,q):
 	p.dim = max(p.dim, q.dim)
 	p.rating = max(p.rating, q.rating)
 	p.sources.extend(q.sources)
+	p.sources = list(set(p.sources)) # but make sure blogs dont count twice
 	# of both urls, keep that one that seems to have been accessbl more recently
 	p.url = sorted([p,q], key=lambda i:i.date)[-1].url
 	p.date = min(p.date, q.date) # date of retrieval: keep older
@@ -241,6 +242,8 @@ def merge_images(p,q):
 	picture.delete(q)
 	# make absorbed img live on as exact copy of absorber?
 	# q.__dict__ = p.__dict__
+	# return tuple absorber, absorbee for erasure of absorbee in calling applications
+	return (p, q)
 
 
 ##############################################################
