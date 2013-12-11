@@ -587,7 +587,7 @@ def merge(p,q):
 	# TODO: what else?
 	# remove absorbed image
 	if q in p.relates:
-		p.relates.remove(q)
+		del p.relates[q]
 	delete(q)
 	return p
 
