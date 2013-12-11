@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# -*- coding: utf-8 -*- 
+# -*- coding: utf-8 -*-
 import Tkinter as tk
 from tkFont import Font, families
 from PIL import Image, ImageTk
@@ -22,6 +22,7 @@ class Browser:
 	DETAIL='detail'
 	BLOG='blog'
 	POPULAR='pop'
+	MERGE='merge'
 	def __init__(self, root):
 		self.cur_imgs = [] # backup references against garbage coll.
 		self.img_reg = {} # registry to avoid disk access
@@ -48,6 +49,8 @@ class Browser:
 					sim = p.similarity(n)
 					if sim > .5:
 						picture.connect(n, p, sim)
+		# merge candidates for currentlt selected image
+		self.merge_candidates=[]
 		# img clusters
 		self.clusters=[]
 		# init img tracking
@@ -75,6 +78,7 @@ class Browser:
 		# put a button on the image panel to test it
 		#self.button = tk.Button(self.cnv, text='button2')
 		#self.button.pack(side='top')
+		self.merge_candidates = self.merge_cand()
 		self.display()
 
 
@@ -123,10 +127,22 @@ class Browser:
 		return [t[0] for t in choices[::-1]]
 
 
-	# set pict as currently viewed 
+	# determine likely merge candidates of new img choice
+	def merge_cand(self):
+		if len(self.img.relates)>0:
+			minsim = min([s for s in self.img.relates.values() if s>0])
+			cand = [(p,s) for p,s in self.img.relates.items()
+				if s>.9333+minsim/15]
+			cand = [p for p,s in sorted(cand, key=lambda t:t[1], reverse=True)]
+			return cand
+		return []
+
+
+	# set pict as currently viewed
 	def choose(self, pict):
 		self.img = pict
 		pict.reviewed = time()
+		self.merge_candidates = self.merge_cand()
 		self.changes = True
 
 
@@ -210,20 +226,26 @@ class Browser:
 		cover=0
 		for p in self.hist[1:15]:
 			img = self.load_thmb(p)
-			self.cnv.create_image((0,y), 
+			self.cnv.create_image((0,y),
 				anchor=tk.NW, image=img)
-			#self.cnv.create_text(0+4, y+4, anchor=tk.NW, 
+			#self.cnv.create_text(0+4, y+4, anchor=tk.NW,
 				#font='Arial 12 bold', fill='white', text='*'*p.rating)
 			self.mini_desc((img.width()+4, y+4),p)
 			if p == self.img:
 				self.cnv.create_rectangle((3,y+3,img.width()-3,y+img.height()-3),
 					outline='yellow', width='3')
+			# image in trash?
 			if self.trash.get(p):
-				self.cnv.create_text(img.width()-4, y+4, anchor=tk.NE, 
+				self.cnv.create_text(img.width()-4, y+4, anchor=tk.NE,
 						font='Arial 14 bold', fill='red', text='X')
+			# image in selection?
 			if p in self.selection:
-				self.cnv.create_text(img.width()-4, y+4, anchor=tk.NE, 
+				self.cnv.create_text(img.width()-4, y+4, anchor=tk.NE,
 						font='Arial 10 bold', fill='green', text='[In Selection]')
+			# image candidate for merge?
+			if p in self.merge_candidates:
+				self.cnv.create_text(img.width()-4, y+14, anchor=tk.NE,
+						font='Arial 10 bold', fill='blue', text='[duplicate?]')
 			y += img.height()
 			#imgs.append((img, (0,y), p.rating))
 			self.cur_imgs.append(img)
@@ -236,17 +258,25 @@ class Browser:
 		img = self.load_img(self.img, size=(720, 740))
 		self.cur_imgs.append(img)
 		# print time(), 'place curr img preview'
-		self.cnv.create_image((500,370), anchor=tk.CENTER, image=img) 
+		self.cnv.create_image((500,370), anchor=tk.CENTER, image=img)
 		# print time(), 'place curr img decoration'
 		self.mini_desc((504-img.width()/2,374-img.height()/2),self.img)
+		# img in trash?
 		if self.trash.get(self.img):
-			self.cnv.create_text(500, 374-img.height()/2, anchor=tk.CENTER, 
-					font='Arial 14 bold', fill='red', 
+			self.cnv.create_text(500, 374-img.height()/2, anchor=tk.CENTER,
+					font='Arial 14 bold', fill='red',
 					text='In Trash. Hit <Del> to Restore.')
+		# img in selection?
 		if self.img in self.selection:
-			self.cnv.create_text(500, 392-img.height()/2, anchor=tk.CENTER, 
-					font='Arial 12 bold', fill='green', 
+			self.cnv.create_text(500, 392-img.height()/2, anchor=tk.CENTER,
+					font='Arial 12 bold', fill='green',
 					text='[In Selection. Hit <space> to deselect]')
+		# img has merge candidates?
+		if len(self.merge_candidates)>0:
+			self.cnv.create_text(500, 406-img.height()/2, anchor=tk.CENTER,
+					font='Arial 12 bold', fill='blue',
+					text='[{} merge candidates. Press m to compare]'.format(
+						len(self.merge_candidates)))
 		# topleft= NW
 		# similars
 		posx = min([max([500+self.img.size[0]/2, 724]),784])
@@ -263,20 +293,44 @@ class Browser:
 				img = self.load_thmb(s)
 				#self.cnv.create_rectangle((1024-img.width(),y,1024,y+img.height()),
 					#fill='black')
-				self.cnv.create_image((1024,y), 
+				self.cnv.create_image((1024,y),
 					anchor=tk.NE, image=img)
-				#self.cnv.create_text(1028-img.width(), y+4, anchor=tk.NW, 
+				# image candidate for merge?
+				if s in self.merge_candidates:
+					self.cnv.create_text(1020, y+14, anchor=tk.NE,
+							font='Arial 10 bold', fill='blue', text='[duplicate?]')
+				#self.cnv.create_text(1028-img.width(), y+4, anchor=tk.NW,
 					#font='Arial 14 bold', fill='white', text='*'*s.rating)
 				# write little info caption
 				self.mini_desc((1020-img.width(),y+4),s,justify='right')
-				#self.cnv.create_text(1020-img.width(), y+4, anchor=tk.NE, 
-					#font='Arial 9', justify='right', fill='white', 
+				#self.cnv.create_text(1020-img.width(), y+4, anchor=tk.NE,
+					#font='Arial 9', justify='right', fill='white',
 					#text='\n'.join(notes))
 				y += img.height()
 				self.cur_imgs.append(img)
 				self.choices.append(s)
 		# print time(), 'return from display'
 
+
+	# some kind of merge view
+	def display_merge_cands(self):
+		if len(self.merge_candidates)>0:
+			# active image
+			img1 = self.load_img(self.img, size=(360, 720))
+			self.cur_imgs.append(img1)
+			# print time(), 'place curr img preview'
+			self.cnv.create_image((500,370-img1.height()/2), anchor=tk.NE, image=img1)
+			# print time(), 'place curr img decoration'
+			#
+			# merge candidate in line
+			mimg = self.merge_candidates.pop(0)
+			img2 = self.load_img(mimg, size=(360, 720))
+			self.cur_imgs.append(img2)
+			# print time(), 'place curr img preview'
+			self.cnv.create_image((500,370-img2.height()/2), anchor=tk.NW, image=img2)
+			# print time(), 'place curr img decoration'
+			self.mini_desc((504,374-img2.height()/2), mimg)
+			self.mini_desc((400,374-img2.height()/2),self.img)
 
 
 	# single image view
@@ -324,13 +378,13 @@ class Browser:
 		# start aligning output
 		x, y = pos
 		for xx,yy in [(0,1),(1,0),(0,-1),(-1,0),(1,1),(2,0)]:
-			self.cnv.create_text(x+xx, y+yy, anchor=anchor, 
-				font=f, 
+			self.cnv.create_text(x+xx, y+yy, anchor=anchor,
+				font=f,
 				justify=justify,
 				fill='black',
 				text=output)
-		self.cnv.create_text(x, y, anchor=anchor, 
-			font=f, 
+		self.cnv.create_text(x, y, anchor=anchor,
+			font=f,
 			justify=justify,
 			fill='white',
 			text=output)
@@ -347,7 +401,7 @@ class Browser:
 		sim = self.img.relates.get(p)
 		if sim:
 			desc = '\n'.join(['{:.1f}%'.format(sim*100),desc])
-		return self.text(desc, pos, anchor=a, 
+		return self.text(desc, pos, anchor=a,
 			justify=justify, font='Arial', size=10)
 
 
@@ -359,12 +413,12 @@ class Browser:
 		y = 780/((sqr(5)+1)/2)-h/((sqr(5)+1)/2)
 		self.cnv.create_rectangle((x,y,x+w,y+h),
 			fill='black', outline='red', width='5')
-		self.text(text, (x+10,y+10), font='Liberation Serif', 
+		self.text(text, (x+10,y+10), font='Liberation Serif',
 			anchor=tk.NW)
 		if confirm:
 			self.mode = 'message'
-			self.text('Hit any key to continue', 
-				(x+w-10,y+h-20), font='Liberation Serif', 
+			self.text('Hit any key to continue',
+				(x+w-10,y+h-20), font='Liberation Serif',
 				anchor=tk.NE)
 		self.cnv.update_idletasks()
 
@@ -419,6 +473,24 @@ class Browser:
 				self.forward(0)
 		else:
 			self.forward(0)
+
+
+	# enter merge view
+	def merge_view(self, key):
+		if self.mode in [Browser.BROWSE, Browser.BLOG, Browser.POPULAR]:
+			if len(self.merge_candidates)>0:
+				self.cnv.create_rectangle((0,0,1024,740), fill='black')
+				self.display_merge_cands()
+				self.mode = Browser.MERGE
+			# TODO: respond to keys [y=merge, ....
+		elif self.mode == Browser.MERGE:
+			self.cnv.create_rectangle((0,0,780,740), fill='black')
+			self.cnv.create_rectangle((0,724,780,740), fill='black')
+			# TODO: not as long as more merge cands are coming up
+			self.display()
+			self.mode = Browser.BROWSE
+		# TODO: ojemine...
+
 
 
 
@@ -494,7 +566,7 @@ class Browser:
 			self.repool()
 			self.redraw=True
 		else:
-			self.pool = [p for p in picture.favorites() 
+			self.pool = [p for p in picture.favorites()
 				if not p in self.hist and p.rating>0]
 			self.pool = sorted(self.pool, key=lambda p:p.rating, reverse=True)[:50]
 			self.mode = Browser.POPULAR
@@ -551,7 +623,7 @@ class Browser:
 			self.redraw=True
 			self.changes = True
 
-	
+
 	# select/deselect images for whatever, probably export
 	def select(self, key):
 		if self.img in self.selection:
@@ -559,7 +631,7 @@ class Browser:
 		else:
 			self.selection.append(self.img)
 		self.redraw=True
-	
+
 
 	# compute similarities for current image
 	def compute_sim(self, key):
@@ -583,11 +655,12 @@ class Browser:
 					#x=0
 					#for q in res[:10]:
 						#img = self.load_thmb(q)
-						#self.cnv.create_image((x,780), 
+						#self.cnv.create_image((x,780),
 							#anchor=tk.SW, image=img)
 						#self.cur_imgs.append(img)
 						#x += img.width()
 		print 'done. found {} images.'.format(len(res))
+		self.merge_candidates = self.merge_cand()
 		self.redraw=True
 		return res
 
@@ -664,7 +737,7 @@ class Browser:
 			for p in srcimgs:
 				if not os.path.exists('images/{}'.format(p.filename)):
 					os.rename('exports/{}'.format(p.filename), 'images/{}'.format(p.filename))
-					imgs.append(p)			
+					imgs.append(p)
 			# remove images xml records so that missing images cannot be imported again
 			os.remove('exports/images.xml')
 		if os.path.exists('exports/blogs.xml'):
@@ -675,7 +748,7 @@ class Browser:
 				index.clean_img_refs(t)
 			# remove xml file because import is successful
 			os.remove('exports/blogs.xml')
-		# now that we have our blogs imported, we can reify blog/img references 
+		# now that we have our blogs imported, we can reify blog/img references
 		# in img instances
 		# TODO: reification of source blogs, interblog references, interimg links!!
 		for p in srcimgs:
@@ -692,7 +765,7 @@ class Browser:
 				if q != p:
 					sims[q] = p.similarity(q)
 			minsim,maxsim = (min(sims.values()), max(sims.values()))
-			p.relates.update({q:s for q,s in sims.items() 
+			p.relates.update({q:s for q,s in sims.items()
 				if s > maxsim-(maxsim-minsim)/3})
 			# keep track of best match
 			bestsim = max(bestsim, maxsim)
@@ -707,7 +780,7 @@ class Browser:
 			'Highest similarity between old and new image was {:.2f}'.format(bestsim)]),
 			confirm=True)
 
-		
+
 
 
 	# generate path that connects all selected or upvoted? images and export it
@@ -735,7 +808,7 @@ class Browser:
 		if self.mode in [Browser.BROWSE, Browser.BLOG, Browser.POPULAR]:
 			#if len(self.clusters)<1:
 			self.message('Clustering...')
-			self.clusters = index.clustering(picture.pictures(), 
+			self.clusters = index.clustering(picture.pictures(),
 				len(picture.pictures())-100)
 			self.mode='cluster'
 			for c in self.clusters:
@@ -763,7 +836,7 @@ class Browser:
 		for i in range(3):
 			msg += [index.get_crawler().message()]
 			self.message('\n'.join(['Wait for crawler...','',
-				'Seed URL: {} {}'.format(seed, score),''] + msg + 
+				'Seed URL: {} {}'.format(seed, score),''] + msg +
 				['','{}/3'.format(i),
 				'{} images (+{})'.format(len(pool), len(imgs)),
 				'time: {:.1f}'.format(time()-dur)]))
@@ -782,15 +855,15 @@ class Browser:
 				len(pool), dur),
 			'({:.2f} img/sec avg.).'.format(len(pool)/dur),
 			'']+
-			msg+['', 'Crawler status:', 
+			msg+['', 'Crawler status:',
 			' {} visited,'.format(len(crl.visited)),
-			' {} in queue.'.format(len(crl.frontier))]), 
+			' {} in queue.'.format(len(crl.frontier))]),
 			confirm=True)
 		self.redraw = True
 
 	# just pick random image
 	def rnd_img(self, key):
-		p = choice([p for p in index.pictures() 
+		p = choice([p for p in index.pictures()
 			if not p in self.hist and not p == self.img])
 		self.choose(p)
 		self.hist.insert(0,self.img)
@@ -803,7 +876,7 @@ class Browser:
 		img.show()
 		self.message("displaying image most significant colors..", confirm=True)
 		del img
-	
+
 
 
 
@@ -824,6 +897,7 @@ handlers={113:Browser.back, # lkey
 					54:Browser.cluster_mode, # c
 					53:Browser.export, # x
 					56:Browser.blog_mode, # b
+					58:Browser.merge_view, # m
 					25:Browser.crawl, # w
 					26:Browser.empty_trash, # e
 					27:Browser.rnd_img, # r
@@ -872,7 +946,7 @@ browser = Browser(root)
 
 # screen size:
 w = root.winfo_screenwidth()
-h = root.winfo_screenheight() 
+h = root.winfo_screenheight()
 print 'screen size {}x{}'.format(w,h)
 # start the event loop
 root.mainloop()

@@ -7,9 +7,6 @@ TODO
 : similarity mesaure is incredibly discriminative against image 
 orientation - impossible to browse from portrait to landscape format
 : consider image similarities in distributive blog score calculation
-: implement export function; maintain list of export images of which an xml dump 
-is created on request, both for images and for blogs to 'export' folder
-: implement import functionality; check 'import' folder for images.xml/blogs.xml
 : calculation of path between selected images takes like forever for great numbers 
 of selected images [like, say, 94]. find a way to take shortcuts more daringly 
 or whatevs
@@ -19,4 +16,7 @@ or whatevs
 
 DONE
 : show most significant colors in image in detail view in browser
+: implement export function; maintain list of export images of which an xml dump 
+  is created on request, both for images and for blogs to 'export' folder
+: implement import functionality; check 'import' folder for images.xml/blogs.xml
 
