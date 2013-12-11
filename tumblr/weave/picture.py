@@ -572,27 +572,6 @@ def connect(p,q,sim):
 	q.relates[p]=sim
 
 
-# combines two instances of an identical picture to one
-def merge(p,q):
-	q,p = sorted([p,q], key=lambda i:i.size[0]*i.size[1])
-	#TODO: todo!
-	p.dim = max(p.dim, q.dim)
-	p.rating = max(p.rating, q.rating)
-	p.sources.extend(q.sources)
-	p.date = min(p.date, q.date)
-	p.reviewed = max(p.reviewed, q.reviewed)
-	# update references
-	Pict.imgs[q.name] = p
-	# TODO: what else?
-	# remove absorbed image
-	if q in p.relates:
-		del p.relates[q]
-	delete(q)
-	q.name = p.name
-	q.relates = p.relates
-	q.sources = p.sources
-	return p
-
 
 # update collection. filter removed files, clean references
 def sync():

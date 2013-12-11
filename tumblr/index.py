@@ -112,7 +112,7 @@ def chain(query=None):
 			# make one step forward
 			p = frontier[i]
 			# checkpoint?
-			if p in query: 
+			if p in query:
 				# yay!
 				query.remove(p)
 				pb = p # walk backwards
@@ -130,7 +130,7 @@ def chain(query=None):
 			# what will be appended to todo list next?
 			neigh = front(p)
 			if tolerance>5:
-				neigh.extend([stars.pop(0) for x in range(tolerance-5) 
+				neigh.extend([stars.pop(0) for x in range(tolerance-5)
 					if len(stars)>0])
 			# get current cost of having arrived at node p
 			_, cost = steps.get(p,(None,0))
@@ -162,7 +162,7 @@ def chain(query=None):
 					path.pop(0)
 			res.extend(path)
 	return res
-				
+
 
 
 
@@ -201,6 +201,48 @@ def clustering(imgs, num):
 def scores(n, reset=True):
 	return tumblr.dist_scores(n=n, reset=reset)
 
+
+# combines two image instances of an identical picture to one
+def merge_images(p,q):
+	q,p = sorted([p,q], key=lambda i:i.size[0]*i.size[1])
+	#TODO: todo!
+	p.dim = max(p.dim, q.dim)
+	p.rating = max(p.rating, q.rating)
+	p.sources.extend(q.sources)
+	# of both urls, keep that one that seems to have been accessbl more recently
+	p.url = sorted([p,q], key=lambda i:i.date)[-1].url
+	p.date = min(p.date, q.date) # date of retrieval: keep older
+	p.reviewed = max(p.reviewed, q.reviewed)
+	# replace references to q in blog image lists
+	for t in q.sources:
+		if q in t.images:
+			t.images.remove(q) # if q is removed, insert p henceforth
+			t.images.add(p)
+	# remove q from central images list
+	picture.Pict.imgs.pop(q.name,None)
+	# TODO: what else?
+	# remove absorbed image
+	#if q in p.relates:
+		#del p.relates[q]
+	# replace all references to q made from blogs and other images with p
+	# images: links to similar images
+	for i in pictures():
+		if i.relates.pop(q,None): # if link to q is to be removed, link to p instead
+			if i != p: # unless we are at p, of course
+				i.relates[p] = p.similarity(i)
+	# blogs: links to hosted images
+	# TODO: if everything is like its meant to be,
+	# this should be unnecessary, since we can just update all blogs in q.sources
+	#for t in blogs():
+		#if q in t.images:
+			#t.images.remove(q) # if q is removed, insert p henceforth
+			#t.images.add(p)
+	# delete local image copy
+	picture.delete(q)
+	# make absorbed img live on as exact copy of absorber?
+	# q.__dict__ = p.__dict__
+
+
 ##############################################################
 ####             Images / Blog IO                      #######
 ##############################################################
@@ -234,7 +276,7 @@ def loadBlogs(filename):
 	return blgs
 
 # remove string identifiers from an image's link list, either by
-# replacing them with their corresponding instance, or 
+# replacing them with their corresponding instance, or
 # by --deleting-- creating them
 def clean_sources(p):
 	src = p.sources[:]
@@ -327,7 +369,7 @@ def load(recover=False):
 	print 'ok'
 	if len(picture.Pict.imgs)>0:
 		print 'imported {} images, {} of which are locally present ({:.1f}%),'.format(
-			len(picture.Pict.imgs), len(pictures()), 
+			len(picture.Pict.imgs), len(pictures()),
 			100.*len(pictures())/len(picture.Pict.imgs))
 	known = [t for t in blogs() if t.seen > 0]
 	if len(blogs())>0:
