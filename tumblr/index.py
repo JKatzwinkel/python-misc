@@ -371,7 +371,7 @@ def load(recover=False):
 	# remove irrelevant blgos like www, staff...
 	if os.path.exists('ignore.txt'):
 		for blg in open('ignore.txt', 'r'):
-			tumblr.remove(blg)
+			tumblr.remove(blg.strip())
 	# yeah! done!
 	print 'ok'
 	if len(picture.Pict.imgs)>0:
