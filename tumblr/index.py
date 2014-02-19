@@ -368,6 +368,10 @@ def load(recover=False):
 	print 'resolving blog image links'
 	for t in blogs():
 		clean_img_refs(t)
+	# remove irrelevant blgos like www, staff...
+	if os.path.exists('ignore.txt'):
+		for blg in open('ignore.txt', 'r'):
+			tumblr.remove(blg)
 	# yeah! done!
 	print 'ok'
 	if len(picture.Pict.imgs)>0:
