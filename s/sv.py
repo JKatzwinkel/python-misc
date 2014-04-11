@@ -3,20 +3,26 @@
 import socket
 import sys
 import sqlite3 as sql
-from time import time
+import time
 
 
 dbcon = sql.connect('list.db')
 dbcsr = dbcon.cursor()
 items = {}
 
+def fmtitem(item):
+	lct = time.gmtime(item[1])
+	return '  {} [{}]'.format(item[0],
+		time.strftime('%Y-%m-%d', lct))
+
 def shoppinglist():
-	return u'\n'.join(['Einkaufen:']+[' {}'.format(i) for i in list(items.keys())]+[''])
+	return u'\n'.join(['Einkaufen:']+[fmtitem(i) for i in itemschron()]+[''])
 
 def splitline(line):
-	return {i.strip():time() for i in line.split(' ') if len(i)>0}
+	return {i.strip():time.time() for i in line.split(' ') if len(i)>0}
 
-
+def itemschron(asc=False):
+	return sorted(items.items(), key=lambda t:t[1], reverse=not asc)
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
