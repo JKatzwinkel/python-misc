@@ -12,8 +12,9 @@ items = {}
 
 def fmtitem(item):
 	lct = time.gmtime(item[1])
-	return '  {} [{}]'.format(item[0],
-		time.strftime('%Y-%m-%d', lct))
+	#return '  {} [{}]'.format(item[0],
+		#time.strftime('%Y-%m-%d', lct))
+	return '  {}'.format(item[0])
 
 def shoppinglist():
 	return u'\n'.join(['Einkaufen:']+[fmtitem(i) for i in itemschron()]+[''])
