@@ -10,8 +10,9 @@ import time
 db = sql.connect('list.db')
 dbc = db.cursor()
 # initialize if necessary
-dbc.execute('''create table if not exists needs (name text,
-time int)''')
+dbc.execute('''create table if not exists needs (name text, time int)''')
+dbc.execute('''create table if not exists bought (name text, time int)''')
+db.commit()
 
 items = {}
 # read item list from db, if possible
