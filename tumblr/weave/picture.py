@@ -79,8 +79,11 @@ class Histogram:
 		for band in self.data:
 			aa.extend(band)
 		if bands:
-			while len(aa) < bands*32:
-				aa.extend(aa)
+			if len(aa) > 0:
+				while len(aa) < bands*32:
+					aa.extend(aa)
+			else:
+				return None
 		return aa
 
 
@@ -507,7 +510,7 @@ idex=re.compile('_(\w{19,20})_')
 
 # find image by name
 def get(name):
-	if type(name) == str:
+	if type(name) in [str, unicode]:
 		p = Pict.imgs.get(name)
 		if p:
 			return p

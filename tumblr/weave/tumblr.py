@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# -*- coding: utf-8 -*- 
+# -*- coding: utf-8 -*-
 
 import re
 from time import time
@@ -33,10 +33,10 @@ class Blog:
 		else:
 			print 'Blog id "{}" already assigned! Omitting instance!'.format(
 				self.name)
-	
+
 	# interlinks this blog with another one
 	def link(self, blogname):
-		if type(blogname) == str:
+		if type(blogname) in [str, unicode]:
 			b2=get(blogname)
 		else:
 			b2 = blogname
@@ -46,7 +46,7 @@ class Blog:
 			self.links.add(b2)
 			b2.linked.add(self)
 		return b2
-	
+
 	# prints out links from and to other blogs
 	def connections(self):
 		for l in self.links:
@@ -54,7 +54,7 @@ class Blog:
 		for l in self.linked:
 			print ' {0} <-- {1}'.format(self, l)
 
-	
+
 	# interlinks a blog and an image
 	# returns true if link hadnt been there so far
 	def assign_img(self, img, time=None):
@@ -85,7 +85,7 @@ class Blog:
 			print 'tumblr.assign_img: invalid img ref. wtf!!!'
 		return res
 
-	
+
 	# how many of the images that this blog featured did remain on disk
 	@property
 	def score(self):
@@ -111,7 +111,7 @@ class Blog:
 					stars_out /= len(self.links)
 				# score is kept image ratio times avg stars plus
 				# avg incoming stars and outgoing stars
-				self._score = .001 + kept_img * (1+stars)**2 
+				self._score = .001 + kept_img * (1+stars)**2
 				self._score *= (.9+stars_in)*(.95+stars_out)**2
 			else:
 				self._score = stars_in / (1+sum([len(t.links) for t in self.linked]))
@@ -119,12 +119,12 @@ class Blog:
 
 	@property
 	def proper_imgs(self):
-		return [i for i in self.images 
+		return [i for i in self.images
 			if isinstance(i, picture.Pict) and i.path]
 
 	@property
 	def dead_imgs(self):
-		return [i for i in self.images 
+		return [i for i in self.images
 			if not isinstance(i, picture.Pict) or i.path == None]
 
 	# returns hosted images ordered by popularity
@@ -138,11 +138,11 @@ class Blog:
 	# reviewed, divided by time since review
 	def reviewed_imgs(self):
 		if len(self.proper_imgs)>0:
-			return sum([1/(1+util.days_since(p.reviewed)/31) for 
-				p in self.proper_imgs 
+			return sum([1/(1+util.days_since(p.reviewed)/31) for
+				p in self.proper_imgs
 				if p.reviewed > 0]) / len(self.proper_imgs)
 		return 0.
-	
+
 	# ratio of images kept on disk and reviewed
 	def imgs_ratio(self):
 		if len(self.images)>0:
@@ -193,14 +193,14 @@ class Blog:
 			'Score: {:.2f}'.format(self.score),
 			'Last visit: {}'.format(util.time_span_str(self.seen)),
 			'Retrieved images: {}'.format(len(self.images)),
-			'Images kept on disk: {} ({}%)'.format(len(self.proper_imgs), 
+			'Images kept on disk: {} ({}%)'.format(len(self.proper_imgs),
 				disk_ratio),
 			'Average rating of remaining images: {:.2f}/6'.format(ratings),
 			'Reviewed imgs score: {:.2f}'.format(self.reviewed_imgs())
 			]
 		if len(self.linked)>0:
 			infos.append('Linked by {} blogs with an average score of {:.2f}'.format(
-				len(self.linked), 
+				len(self.linked),
 				sum([t.score for t in self.linked])/len(self.linked)))
 			ll=[t.name for t in list(self.linked)[:3]]
 			if len(self.linked)>3:
@@ -208,7 +208,7 @@ class Blog:
 			infos.append(' [{}]'.format(', '.join(ll)))
 		if len(self.links)>0:
 			infos.append('Links {} blogs with an average score of {:.2f}'.format(
-				len(self.links), 
+				len(self.links),
 				sum([t.score for t in self.links])/len(self.links)))
 			ll=[t.name for t in list(self.links)[:3]]
 			if len(self.links)>3:
@@ -309,7 +309,7 @@ def proper_url(url):
 	if len(mm) > 0:
 		return True
 	return False
-	
+
 
 ################################################################
 ################################################################
@@ -331,6 +331,7 @@ def remove(tid, links=True):
 	else:
 		name = tid
 		tid = Blog.blogs.get(name)
+	print('try to remove blog {}.'.format(name))
 	if tid and name:
 		del Blog.blogs[name]
 		ll = 0

@@ -46,7 +46,7 @@ class Crawler:
 	def rewind(self, n):
 		self.numblogs = n
 		self.images = {}
-	
+
 	# have I been at this particular url?
 	def been_at(self, url):
 		t = tumblr.get(url)
@@ -84,6 +84,7 @@ class Crawler:
 			now = time()
 			t.seen = now
 			self.visited[t] = now
+			#print('visit {} at {:.1f}.'.format(t.name, now))
 			# get extracted stuff from parser
 			data = self.extract(t.url())
 			if data:
@@ -130,7 +131,7 @@ class Crawler:
 		temp = '{:4} < {:4} \t{:5} Img. \t {}: {:2.2f} {:.2f}'
 		n = sum([len(l) for l in self.images.values()])
 		return temp.format(len(self.visited), len(self.frontier),
-			n, t.name, t.score, 
+			n, t.name, t.score,
 			queue_score(t))
 
 	def message(self):
@@ -142,7 +143,7 @@ class Crawler:
 ##############################################################
 ##############################################################
 
-# parser. 
+# parser.
 class Parser:
 	def __init__(self, crawler):
 		self.crawler = crawler
@@ -167,8 +168,9 @@ class Parser:
 			src = link.get('src')
 			if src:
 				if imgex.match(src):
-					# is it worth downloading or do we already have it?
+					# FIXME: is it worth downloading or do we already have it?
 					imgs.add(src)
+					#print('found img url {}.'.format(src))
 		# save
 		#for link in list(links):
 		#	self.addpage(link)
@@ -251,7 +253,7 @@ def crawl(url, n=30):
 	# if no query is given, we try to get some blogs
 	# with good image output from out database
 	# TODO: heuristik ausdenken!
-	#query = sorted(tumblr.blogs(), 
+	#query = sorted(tumblr.blogs(),
 		#key=lambda t:len(t.proper_imgs)/(len(t.images)+1),
 		#key = lambda t: t.score*len(t.links),
 		#reverse=True)
@@ -284,14 +286,14 @@ def crawl(url, n=30):
 		#crawler.add(seed)
 		#query = list(crawler.frontier)[:n] + [seed]
 		crawler = init(n, [seed])
-	
+
 	# clean retrieval buffer
 	crawler.rewind(n)
 
 	# wait for the crawler to be done
 	while crawler.crawling():
 		print crawler.message()
-	
+
 	print 'Done.'
 
 	images = []
@@ -308,6 +310,7 @@ def crawl(url, n=30):
 				name = m.group(1)
 				# lookup
 				pict = picture.get(name)
+				#print('img id {} links to {} so far.'.format(name, pict))
 				# if image is not on the disk yet, or if its resolution
 				# is lower than the available ones, download the image
 				best, dim = img, dim_class(img)
@@ -315,12 +318,16 @@ def crawl(url, n=30):
 					# image not known so far
 					best, dim = best_version(img)
 					pict = picture.openurl(best)
+					#print('img not known so far, download it from {}.'.format(
+						#best))
 				else:
 					if pict.dim < 1280:
 						best, dim = best_version(img)
+					#print('img {} known already in resolution {}.'.format(
+						#name, pict.dim))
 					# if we have local copy, but it is smaller than possible
 					# look for high resolutions
-					if pict.path and pict.dim < dim:
+					if pict.path != None and pict.dim < dim:
 						# better version of known image available
 						print 'upgradable image: {} from {} to {}'.format(
 							name, pict.dim, dim)
@@ -338,7 +345,7 @@ def crawl(url, n=30):
 								print 'up to {} refs'.format(len(pict.sources))
 						pict.url = best
 						pict = None
-				# if downloading was succesful, append it to list of 
+				# if downloading was succesful, append it to list of
 				# retrieved images and assign it to the blog it appeared on
 				if pict:
 					pict.date = time()
